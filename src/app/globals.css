@@ -1,0 +1,200 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base: #060a14;
+  --bg-sidebar: #080d1a;
+  --bg-card: #0e1629;
+  --bg-card-hover: #131d33;
+  --bg-input: #111827;
+  --border: #1a2540;
+  --border-bright: #253352;
+  --teal: #14b8a6;
+  --teal-dim: #0d9488;
+  --teal-glow: #14b8a620;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --purple: #a78bfa;
+  --blue: #60a5fa;
+  --orange: #fb923c;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: #e2e8f0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+}
+
+/* ─── Scrollbar ───────────────────────────────────────────────────────────────*/
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1e2d45; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #2a3d5c; }
+
+/* ─── Animations ─────────────────────────────────────────────────────────────*/
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes pulse-ring {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes bounce-in {
+  0%   { transform: scale(0.8); opacity: 0; }
+  60%  { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+.fade-in-up  { animation: fadeInUp 0.35s ease forwards; }
+.fade-in     { animation: fadeIn 0.25s ease forwards; }
+.bounce-in   { animation: bounce-in 0.3s ease forwards; }
+.spin-slow   { animation: spin-slow 2s linear infinite; }
+
+/* ─── Score gauge ────────────────────────────────────────────────────────────*/
+.score-ring {
+  transition: stroke-dashoffset 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Progress bar ───────────────────────────────────────────────────────────*/
+.progress-fill {
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Food chips ─────────────────────────────────────────────────────────────*/
+.food-chip {
+  @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
+         border transition-all duration-150 cursor-pointer select-none;
+  border-color: var(--border-bright);
+  color: #94a3b8;
+  background: transparent;
+}
+.food-chip:hover {
+  border-color: var(--teal-dim);
+  color: #e2e8f0;
+  background: var(--teal-glow);
+}
+.food-chip.selected {
+  border-color: var(--teal);
+  color: #99f6e4;
+  background: rgba(20, 184, 166, 0.12);
+}
+
+/* ─── Cards ──────────────────────────────────────────────────────────────────*/
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.card-hover:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-bright);
+}
+
+/* ─── Section header ─────────────────────────────────────────────────────────*/
+.section-header {
+  @apply text-xs font-semibold uppercase tracking-widest;
+  color: #475569;
+}
+
+/* ─── Toggle switch ──────────────────────────────────────────────────────────*/
+.toggle-track {
+  @apply relative inline-flex w-10 h-5 rounded-full transition-colors duration-200 cursor-pointer;
+}
+.toggle-thumb {
+  @apply absolute left-0.5 top-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-200;
+}
+.toggle-track.on { background: var(--teal-dim); }
+.toggle-track.off { background: #1e2d45; }
+.toggle-track.on .toggle-thumb { transform: translateX(20px); }
+
+/* ─── Input ──────────────────────────────────────────────────────────────────*/
+.nb-input {
+  @apply w-full bg-[#0e1629] border border-[#1a2540] rounded-lg px-3 py-2 text-sm
+         text-white placeholder-slate-500 focus:outline-none focus:border-teal-600
+         transition-colors;
+}
+.nb-input-sm {
+  @apply w-full bg-[#0e1629] border border-[#1a2540] rounded-md px-2.5 py-1.5 text-xs
+         text-white placeholder-slate-600 focus:outline-none focus:border-teal-700
+         transition-colors;
+}
+
+/* ─── Skeleton shimmer ───────────────────────────────────────────────────────*/
+.skeleton {
+  background: linear-gradient(90deg, #0e1629 25%, #131d33 50%, #0e1629 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+/* ─── Sidebar nav item ───────────────────────────────────────────────────────*/
+.nav-item {
+  @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
+         transition-all duration-150 cursor-pointer select-none;
+  color: #64748b;
+}
+.nav-item:hover {
+  color: #94a3b8;
+  background: rgba(255,255,255,0.04);
+}
+.nav-item.active {
+  color: #99f6e4;
+  background: rgba(20, 184, 166, 0.1);
+  border: 1px solid rgba(20, 184, 166, 0.2);
+}
+
+/* ─── Completion ring (SVG) ──────────────────────────────────────────────────*/
+.ring-track { fill: none; stroke: #1a2540; }
+.ring-fill  { fill: none; stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
+
+/* ─── Meal tab ───────────────────────────────────────────────────────────────*/
+.meal-tab {
+  @apply px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 cursor-pointer;
+  color: #64748b;
+}
+.meal-tab:hover { color: #94a3b8; background: rgba(255,255,255,0.04); }
+.meal-tab.active {
+  color: #14b8a6;
+  background: rgba(20, 184, 166, 0.1);
+}
+
+/* ─── Severity badge ─────────────────────────────────────────────────────────*/
+.badge-critical { @apply text-xs px-2 py-0.5 rounded-full font-semibold bg-red-950 text-red-400 border border-red-800; }
+.badge-high     { @apply text-xs px-2 py-0.5 rounded-full font-semibold bg-orange-950 text-orange-400 border border-orange-800; }
+.badge-medium   { @apply text-xs px-2 py-0.5 rounded-full font-semibold bg-yellow-950 text-yellow-400 border border-yellow-800; }
+.badge-low      { @apply text-xs px-2 py-0.5 rounded-full font-semibold bg-slate-800 text-slate-400 border border-slate-700; }
+
+/* ─── Typing dots ────────────────────────────────────────────────────────────*/
+.typing-dot {
+  display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+  background: #475569; animation: typing-bounce 1.4s infinite ease-in-out;
+}
+.typing-dot:nth-child(1) { animation-delay: 0s; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30%           { transform: translateY(-5px); }
+}

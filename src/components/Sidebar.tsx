@@ -1,0 +1,186 @@
+"use client";
+import { format } from "date-fns";
+import type { DayLog, UserProfile } from "@/types";
+
+export type SectionId = "dashboard" | "food" | "activity" | "medications" | "water-sleep" | "reports";
+
+interface NavItem {
+  id: SectionId;
+  label: string;
+  icon: string;
+  desc: string;
+}
+
+const NAV: NavItem[] = [
+  { id: "dashboard",   label: "Dashboard",    icon: "🏠", desc: "Today at a glance" },
+  { id: "food",        label: "Food Log",     icon: "🍽️", desc: "Meals & nutrition" },
+  { id: "activity",    label: "Activity",     icon: "🏃", desc: "Gym & movement" },
+  { id: "medications", label: "Medications",  icon: "💊", desc: "Meds & supplements" },
+  { id: "water-sleep", label: "Water & Sleep",icon: "💧", desc: "Hydration & rest" },
+  { id: "reports",     label: "Reports",      icon: "📊", desc: "AI insights" },
+];
+
+// ─── Completion helpers ───────────────────────────────────────────────────────
+
+function ringColor(pct: number) {
+  if (pct >= 80) return "#22c55e";
+  if (pct >= 50) return "#f59e0b";
+  return "#ef4444";
+}
+
+function MiniRing({ pct, color }: { pct: number; color: string }) {
+  const r = 9; const circ = 2 * Math.PI * r;
+  const fill = circ - (pct / 100) * circ;
+  return (
+    <svg width="22" height="22" className="shrink-0" viewBox="0 0 22 22">
+      <circle cx="11" cy="11" r={r} className="ring-track" strokeWidth="2.5" />
+      <circle
+        cx="11" cy="11" r={r}
+        className="ring-fill"
+        stroke={color}
+        strokeWidth="2.5"
+        strokeDasharray={circ}
+        strokeDashoffset={fill}
+        transform="rotate(-90 11 11)"
+      />
+    </svg>
+  );
+}
+
+function computeCompletion(log: DayLog | null, profile: UserProfile | null) {
+  if (!log || !profile) return { food: 0, water: 0, meds: 0, activity: 0, sleep: 0 };
+
+  const totalFood = Object.values(log.food).flat().length;
+  const foodPct = Math.min(100, (totalFood / 6) * 100); // 6 items = 100%
+
+  const waterTarget = profile.daily_targets.water_ml || 3000;
+  const waterPct = Math.min(100, (log.water_ml / waterTarget) * 100);
+
+  const totalMeds = log.medications.length + log.supplements.length;
+  const takenMeds = log.medications.filter(m => m.taken).length + log.supplements.filter(s => s.taken).length;
+  const medsPct = totalMeds > 0 ? Math.round((takenMeds / totalMeds) * 100) : 0;
+
+  const gymDone = log.activity.gym.did_gym ? 50 : 0;
+  const walksDone = Math.min(50, (log.activity.post_prandial_walks.length / 3) * 50);
+  const activityPct = Math.min(100, gymDone + walksDone);
+
+  const sleepPct = log.sleep.hours >= 7 ? 100 : log.sleep.hours > 0 ? Math.round((log.sleep.hours / 7) * 100) : 0;
+
+  return { food: Math.round(foodPct), water: Math.round(waterPct), meds: medsPct, activity: Math.round(activityPct), sleep: sleepPct };
+}
+
+function sectionCompletion(id: SectionId, c: ReturnType<typeof computeCompletion>) {
+  switch (id) {
+    case "food":        return c.food;
+    case "water-sleep": return Math.round((c.water + c.sleep) / 2);
+    case "medications": return c.meds;
+    case "activity":    return c.activity;
+    default:            return -1; // no ring for dashboard/reports
+  }
+}
+
+// ─── Props ────────────────────────────────────────────────────────────────────
+
+interface SidebarProps {
+  active: SectionId;
+  onNavigate: (s: SectionId) => void;
+  dayLog: DayLog | null;
+  profile: UserProfile | null;
+  saveStatus: "saved" | "saving" | "error" | "idle";
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function Sidebar({ active, onNavigate, dayLog, profile, saveStatus }: SidebarProps) {
+  const completion = computeCompletion(dayLog, profile);
+  const today = new Date();
+  const isSunday = today.getDay() === 0;
+
+  return (
+    <aside
+      className="shrink-0 flex flex-col h-screen border-r"
+      style={{ width: 230, background: "var(--bg-sidebar)", borderColor: "var(--border)" }}
+    >
+      {/* Logo */}
+      <div className="px-4 py-4 border-b" style={{ borderColor: "var(--border)" }}>
+        <div className="flex items-center gap-2.5">
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0"
+            style={{ background: "rgba(20,184,166,0.15)", border: "1px solid rgba(20,184,166,0.3)" }}
+          >
+            🧬
+          </div>
+          <div>
+            <div className="text-sm font-bold text-white tracking-tight">NutriTrack</div>
+            <div className="text-xs" style={{ color: "#475569" }}>Cardiac-safe AI</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Date */}
+      <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
+        <div className="text-xs font-semibold text-white">{format(today, "EEEE, dd MMM yyyy")}</div>
+        {isSunday && (
+          <div className="text-xs mt-0.5" style={{ color: "#f59e0b" }}>☀️ Rest day — flexible choices</div>
+        )}
+        {profile && (
+          <div className="text-xs mt-1" style={{ color: "#475569" }}>
+            {profile.display_name} · {profile.weight_kg}kg · BMI {profile.bmi}
+          </div>
+        )}
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
+        {NAV.map(item => {
+          const pct = sectionCompletion(item.id, completion);
+          const isActive = active === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => onNavigate(item.id)}
+              className={`nav-item w-full text-left ${isActive ? "active" : ""}`}
+            >
+              <span className="text-base leading-none shrink-0">{item.icon}</span>
+              <span className="flex-1 min-w-0">
+                <span className="block truncate">{item.label}</span>
+                {!isActive && (
+                  <span className="block text-xs truncate" style={{ color: "#334155" }}>{item.desc}</span>
+                )}
+              </span>
+              {pct >= 0 && (
+                <MiniRing pct={pct} color={ringColor(pct)} />
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Save status + profile footer */}
+      <div className="px-4 py-3 border-t space-y-2" style={{ borderColor: "var(--border)" }}>
+        {/* Save status */}
+        <div className="flex items-center gap-1.5 text-xs">
+          {saveStatus === "saving" && (
+            <>
+              <span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" />
+              <span style={{ color: "#475569" }}>Saving…</span>
+            </>
+          )}
+          {saveStatus === "saved" && (
+            <span style={{ color: "#22c55e" }}>✓ All changes saved</span>
+          )}
+          {saveStatus === "error" && (
+            <span style={{ color: "#ef4444" }}>⚠ Save failed — check connection</span>
+          )}
+        </div>
+        {/* Profile */}
+        {profile && (
+          <div className="text-xs" style={{ color: "#334155" }}>
+            <span className="block">← data/profile.json</span>
+            <span className="block">← data/food_items.json</span>
+          </div>
+        )}
+      </div>
+    </aside>
+  );
+}

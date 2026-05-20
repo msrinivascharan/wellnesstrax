@@ -1,0 +1,87 @@
+{
+  "_comment": "Pre-decided food items for Mr. X. Edit any section, category, or item freely — the app loads this file dynamically on every load.",
+  "meals": {
+    "breakfast": {
+      "Fruits": [
+        "Blueberries",
+        "Guava",
+        "Avocado"
+      ],
+      "Protein": [
+        "Eggs",
+        "Chicken",
+        "Fish"
+      ],
+      "Beverages": [
+        "Black coffee",
+        "Milk coffee without sugar"
+      ],
+      "Custom": [
+        "Groundnuts",
+        "Walnuts"
+      ]
+    },
+    "lunch": {
+      "Vegetables": [
+        "Drumsticks",
+        "Cucumber",
+        "Mixed vegetables, Peas, Red beans, Chickpea cooked along with Sesame seed powder and Olive oil, slat, turmeric, cumin, coriander seed powder .",
+        "Raw banana cooked in Olive oil, slat, turmeric, cumin, coriander seed powder",
+        "Curd, Banana, Blueberries based lassi, no sugar"
+      ],
+      "Beans & Legumes": [
+        "Red bean",
+        "Green pea",
+        "Moong"
+      ],
+      "Protein": [
+        "Eggs",
+        "Chicken",
+        "Fish"
+      ],
+      "Spices": [
+        "Garam masala"
+      ]
+    },
+    "dinner": {
+      "Vegetables": [
+        "Drumsticks",
+        "Cucumber",
+        "Carrot"
+      ],
+      "Beans & Legumes": [
+        "Red bean",
+        "Green pea",
+        "Moong"
+      ],
+      "Protein": [
+        "Eggs",
+        "Chicken",
+        "Fish"
+      ],
+      "Spices": [
+        "Garam masala"
+      ]
+    },
+    "snacks": {
+      "Nuts & Seeds": [
+        "Almonds",
+        "Walnuts",
+        "Pumpkin seeds",
+        "Milk based sugar less tea",
+        "Unsalted roasted Sunflower seeds",
+        "Unsalted roasted Muskmelon seeds"
+      ],
+      "Fruit": [
+        "Apple",
+        "Banana",
+        "Orange"
+      ],
+      "Other": [
+        "Greek yogurt",
+        "Cucumber slices",
+        "Roasted chana"
+      ]
+    }
+  }
+}

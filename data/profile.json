@@ -1,0 +1,88 @@
+{
+  "name": "Mr. X",
+  "display_name": "X",
+  "age": 38,
+  "weight_kg": 89,
+  "height_ft": 5.8,
+  "bmi": 29,
+  "target_bmi_range": "22-25",
+  "gender": "Male",
+  "cardiac_status": "Stents in coronary arteries. ALL analysis must be cardiac-safe and anti-inflammatory at its core. This is the highest priority constraint in every response.",
+  "medications": [
+    {
+      "name": "Thyroxin Sodium",
+      "dose": "75mcg",
+      "time": "5AM",
+      "condition": "empty stomach",
+      "interactions": [
+        "Do NOT pair with soy products at this meal",
+        "Do NOT pair with raw cruciferous vegetables at this meal",
+        "Do NOT pair with high-fiber foods at this meal",
+        "Must be taken strictly on empty stomach — no food within 30 minutes"
+      ]
+    },
+    {
+      "name": "Metoprolol",
+      "dose": "25mg",
+      "time": "8AM",
+      "interactions": [
+        "Monitor high-sodium foods — keep under 400mg sodium per serving",
+        "Avoid sudden high-caffeine intake or large caffeine doses"
+      ]
+    },
+    {
+      "name": "Ticagrelor",
+      "dose": "90mg",
+      "time": "9AM and 9PM",
+      "interactions": [
+        "STRICTLY NO grapefruit or grapefruit juice — serious drug interaction",
+        "Avoid very high-fat single meals near dose time",
+        "Flag if Omega-3 or fish oil is being added — bleeding risk requires cardiologist clearance"
+      ]
+    },
+    {
+      "name": "Inclisiran",
+      "dose": "injectable",
+      "frequency": "every 6 months",
+      "last_dose": "January 2026",
+      "interactions": [
+        "No daily food interaction but supports lipid management goals"
+      ]
+    },
+    {
+      "name": "Pitavastatin",
+      "dose": "4mg",
+      "time": "9PM",
+      "interactions": [
+        "STRICTLY NO grapefruit or grapefruit juice — serious drug interaction",
+        "Avoid very high saturated fat meals",
+        "CoQ10 depletion is a known risk — flag if CoQ10 supplementation is not in place"
+      ]
+    }
+  ],
+  "exercise": {
+    "frequency": "Monday to Saturday",
+    "duration_min": 75,
+    "routine": "15 min treadmill → Legs press, Body weight squats, Chest press, lat pull down, Seated row, Dumbbell shoulder press→ Plank hold (3x30 sec) → 10 min elliptical",
+    "additional": "10 min walk after lunch and dinner 10 mins soleus pump exercise after breakfast, lunch, dinner",
+    "rest_day": "Sunday"
+  },
+  "lifestyle": {
+    "profession": "Desk job, sedentary 6-8 hours per day",
+    "alcohol": false,
+    "added_sugar": false,
+    "smoker": false
+  },
+  "score_targets": {
+    "metabolic_efficiency": 78,
+    "food_habit": 80,
+    "cardiac_safety": 85,
+    "longevity": 70
+  },
+  "daily_targets": {
+    "water_ml": 3000,
+    "protein_g": 120,
+    "fiber_g": 35,
+    "calories": 2200
+  }
+}
