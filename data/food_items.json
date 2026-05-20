@@ -12,11 +12,11 @@
         "Chicken",
         "Fish"
       ],
-      "Beverages": [
+      "Beverages & Drinks": [
         "Black coffee",
         "Milk coffee without sugar"
       ],
-      "Custom": [
+      "Nuts & Seeds": [
         "Groundnuts",
         "Walnuts"
       ]
@@ -24,9 +24,13 @@
     "lunch": {
       "Vegetables": [
         "Drumsticks",
-        "Cucumber",
+        "Cucumber"
+      ],
+      "One-Pot Dish": [
         "Mixed vegetables, Peas, Red beans, Chickpea cooked along with Sesame seed powder and Olive oil, slat, turmeric, cumin, coriander seed powder .",
-        "Raw banana cooked in Olive oil, slat, turmeric, cumin, coriander seed powder",
+        "Raw banana cooked in Olive oil, slat, turmeric, cumin, coriander seed powder"
+      ],
+      "Beverages & Drinks": [
         "Curd, Banana, Blueberries based lassi, no sugar"
       ],
       "Beans & Legumes": [
@@ -68,9 +72,11 @@
         "Almonds",
         "Walnuts",
         "Pumpkin seeds",
-        "Milk based sugar less tea",
         "Unsalted roasted Sunflower seeds",
         "Unsalted roasted Muskmelon seeds"
+      ],
+      "Beverages & Drinks": [
+        "Milk based sugar less tea"
       ],
       "Fruit": [
         "Apple",

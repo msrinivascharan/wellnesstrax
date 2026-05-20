@@ -184,10 +184,17 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onSaveToList }: P
     const qty = parseFloat(pendingItem.qty);
     if (isNaN(qty) || qty <= 0) { setPendingItem(null); return; }
 
+    // If the JSON bucket is literally "Custom", run autoCategory so the entry
+    // gets a meaningful label (e.g. a chip mis-filed in JSON "Custom" is still correct in the log).
+    const resolvedCategory =
+      pendingItem.category.toLowerCase() === "custom"
+        ? autoCategory(pendingItem.name)
+        : pendingItem.category;
+
     const entry: FoodEntry = {
       id: genId(),
       name: pendingItem.name,
-      category: pendingItem.category,
+      category: resolvedCategory,
       quantity_g: qty,
       unit: pendingItem.unit,
       custom: pendingItem.custom,
