@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       ],
       response_format: { type: "json_object" },
       temperature: 0.3,
-      max_tokens: 4000,
+      max_tokens: 6000,
     });
 
     const raw = completion.choices[0].message.content ?? "{}";

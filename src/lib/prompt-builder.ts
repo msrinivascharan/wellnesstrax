@@ -113,6 +113,18 @@ Return ONLY this JSON structure (all fields required):
   "sleep_note": "<sleep quality assessment and any recommendation>",
   "cardiac_safety_note": "<MOST IMPORTANT — cardiac safety assessment. Patient has coronary stents. Flag any risks.>",
   "inflammation_note": "<anti vs pro-inflammatory balance of today's food choices>",
+  "foods_to_avoid_forever": [
+    {
+      "food": "<exact name of a specific item from today's log that this cardiac patient should permanently eliminate>",
+      "reason": "<precise reason — link it to cardiac risk, drug interaction, inflammation, or metabolic harm for THIS patient. Do NOT give generic nutrition advice. If nothing from today warrants permanent elimination, return an empty array []>"
+    }
+  ],
+  "add_from_tomorrow": [
+    {
+      "item": "<specific, realistic food or habit to introduce — name the actual food, not a vague category>",
+      "benefit": "<precise benefit for THIS cardiac patient — relate to anti-inflammation, lipid management, blood pressure, stent health, or filling a gap visible in today's log>"
+    }
+  ],
   "top_wins": ["<win 1>", "<win 2>", "<win 3>"],
   "areas_to_improve": ["<area 1>", "<area 2>"],
   "tomorrow_focus": ["<specific action 1>", "<specific action 2>", "<specific action 3>"],

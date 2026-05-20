@@ -578,6 +578,48 @@ export default function Reports({ dayLog, profile, onAnalysisComplete }: Props) 
             <p className="text-xs" style={{ color: "#94a3b8" }}>{analysis.inflammation_note}</p>
           </InsightCard>
 
+          {/* Foods to avoid permanently */}
+          {(analysis.foods_to_avoid_forever ?? []).length > 0 && (
+            <InsightCard title="Foods to avoid permanently" icon="🚫">
+              <p className="text-xs mb-2" style={{ color: "#64748b" }}>
+                Specific items from today's log that your cardiac profile says to eliminate for good.
+              </p>
+              <div className="space-y-2">
+                {(analysis.foods_to_avoid_forever ?? []).map((item, i) => (
+                  <div key={i} className="p-2.5 rounded-xl"
+                    style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-red-400 text-xs font-bold shrink-0">✕</span>
+                      <span className="text-xs font-semibold text-red-300">{item.food}</span>
+                    </div>
+                    <p className="text-xs" style={{ color: "#fca5a5" }}>{item.reason}</p>
+                  </div>
+                ))}
+              </div>
+            </InsightCard>
+          )}
+
+          {/* Add from tomorrow */}
+          {(analysis.add_from_tomorrow ?? []).length > 0 && (
+            <InsightCard title="Start adding from tomorrow" icon="🌱">
+              <p className="text-xs mb-2" style={{ color: "#64748b" }}>
+                Specific foods or habits to introduce based on gaps in today's log.
+              </p>
+              <div className="space-y-2">
+                {(analysis.add_from_tomorrow ?? []).map((item, i) => (
+                  <div key={i} className="p-2.5 rounded-xl"
+                    style={{ background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.2)" }}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-green-400 text-xs font-bold shrink-0">+</span>
+                      <span className="text-xs font-semibold text-green-300">{item.item}</span>
+                    </div>
+                    <p className="text-xs" style={{ color: "#86efac" }}>{item.benefit}</p>
+                  </div>
+                ))}
+              </div>
+            </InsightCard>
+          )}
+
           {/* Tomorrow's focus */}
           <InsightCard title="Tomorrow's focus" icon="🎯">
             <div className="space-y-2">
