@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import type { DayAnalysis, DayLog, MealType, UserProfile } from "@/types";
+import type { DayAnalysis, DayLog, FoodEntry, MealType, UserProfile } from "@/types";
 import { resolveCategory } from "@/lib/food-utils";
 
 interface Props {
@@ -110,6 +110,89 @@ function InsightCard({ title, icon, children }: { title: string; icon: string; c
   );
 }
 
+// ─── Meal-wise plate balance helpers ─────────────────────────────────────────
+
+function getMealCatData(entries: FoodEntry[]): Array<{ cat: string; count: number; color: string }> {
+  const map = new Map<string, number>();
+  for (const e of entries) {
+    const cat = resolveCategory(e);
+    map.set(cat, (map.get(cat) ?? 0) + 1);
+  }
+  return [...map.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([cat, count]) => ({ cat, count, color: CAT_COLOR_MAP[cat] ?? "#64748b" }));
+}
+
+function mealBalanceScore(entries: FoodEntry[]): { score: number; missing: string[] } {
+  if (entries.length === 0) return { score: 0, missing: [] };
+  const cats = new Set(entries.map(e => resolveCategory(e)));
+
+  const hasProtein = cats.has("Protein") || cats.has("Legumes & Beans") || cats.has("Dairy");
+  const hasColor   = cats.has("Vegetables") || cats.has("Fruits");
+  const hasFiber   = cats.has("Dietary Fiber") || cats.has("Grains & Carbs") || cats.has("Legumes & Beans");
+  const hasHFat    = cats.has("Nuts & Seeds");
+
+  let pts = 0;
+  const missing: string[] = [];
+
+  if (hasProtein) pts += 25; else missing.push("Protein");
+  if (hasColor)   pts += 25; else missing.push("Veg / Fruit");
+  if (hasFiber)   pts += 20; else missing.push("Fiber");
+  if (hasHFat)    pts += 15; else missing.push("Healthy fats");
+  if (cats.size >= 2) pts += 15;
+
+  return { score: pts, missing };
+}
+
+function DonutChart({ data, size = 100 }: {
+  data: Array<{ cat: string; count: number; color: string }>;
+  size?: number;
+}) {
+  const total = data.reduce((s, d) => s + d.count, 0);
+  if (total === 0) {
+    return (
+      <div className="flex items-center justify-center rounded-full flex-shrink-0"
+        style={{ width: size, height: size, background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.08)" }}>
+        <span style={{ fontSize: size * 0.12, color: "#334155" }}>empty</span>
+      </div>
+    );
+  }
+
+  const cx = size / 2;
+  const cy = size / 2;
+  const R  = size * 0.40;
+  const ri = size * 0.24;
+  let angle = -Math.PI / 2;
+
+  const segments = data.map(d => {
+    const pct = d.count / total;
+    const a0  = angle;
+    angle += pct * 2 * Math.PI;
+    const a1    = angle;
+    const large = pct > 0.5 ? 1 : 0;
+    const path  = [
+      `M ${cx + R  * Math.cos(a0)} ${cy + R  * Math.sin(a0)}`,
+      `A ${R}  ${R}  0 ${large} 1 ${cx + R  * Math.cos(a1)} ${cy + R  * Math.sin(a1)}`,
+      `L ${cx + ri * Math.cos(a1)} ${cy + ri * Math.sin(a1)}`,
+      `A ${ri} ${ri} 0 ${large} 0 ${cx + ri * Math.cos(a0)} ${cy + ri * Math.sin(a0)}`,
+      "Z",
+    ].join(" ");
+    return { path, color: d.color };
+  });
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="flex-shrink-0">
+      {segments.map((s, i) => (
+        <path key={i} d={s.path} fill={s.color} stroke="#0f1729" strokeWidth="1.5" />
+      ))}
+      <text x={cx} y={cy - 4} textAnchor="middle" dominantBaseline="middle"
+        fill="white" fontSize={Math.round(size * 0.18)} fontWeight="bold">{total}</text>
+      <text x={cx} y={cy + size * 0.16} textAnchor="middle" dominantBaseline="middle"
+        fill="#475569" fontSize={Math.round(size * 0.11)}>items</text>
+    </svg>
+  );
+}
+
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export default function Reports({ dayLog, profile, onAnalysisComplete }: Props) {
@@ -172,16 +255,6 @@ export default function Reports({ dayLog, profile, onAnalysisComplete }: Props) 
   // ── Chart data computations ───────────────────────────────────────────────
   const totalFood = Object.values(dayLog.food).flat().length;
   const takenMeds = dayLog.medications.filter(m => m.taken).length;
-
-  // Plate balance: count items per category across all meals.
-  // resolveCategory re-maps stale "custom" labels from old sessions on-the-fly.
-  const allEntries = Object.values(dayLog.food).flat();
-  const catMap = new Map<string, number>();
-  for (const e of allEntries) {
-    const cat = resolveCategory(e);
-    catMap.set(cat, (catMap.get(cat) ?? 0) + 1);
-  }
-  const plateCats = [...catMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 7);
 
   const gymDone   = dayLog.activity.gym.did_gym;
   const walksDone = dayLog.activity.post_prandial_walks.length;
@@ -281,62 +354,113 @@ export default function Reports({ dayLog, profile, onAnalysisComplete }: Props) 
       <div className="space-y-4">
         <div className="section-header">Today&apos;s data snapshot</div>
 
-        {/* Row 1: Meal composition + Plate balance */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* Meal composition */}
-          <div className="card p-4 space-y-3">
-            <div className="flex items-center gap-2 mb-1">
-              <span>🍽️</span>
-              <span className="text-sm font-semibold text-white">Meal composition</span>
-            </div>
-            {(["breakfast", "lunch", "dinner", "snacks"] as MealType[]).map(m => {
-              const count = dayLog.food[m]?.length ?? 0;
-              return (
-                <BarRow
-                  key={m}
-                  label={m.charAt(0).toUpperCase() + m.slice(1)}
-                  value={count}
-                  max={Math.max(8, ...Object.values(dayLog.food).map(a => a.length))}
-                  color={MEAL_COLORS[m]}
-                  valueSuffix=""
-                  showValue={false}
-                />
-              );
-            })}
-            <div className="flex flex-wrap gap-2 pt-1">
-              {(["breakfast", "lunch", "dinner", "snacks"] as MealType[]).map(m => {
-                const count = dayLog.food[m]?.length ?? 0;
-                return count > 0 ? (
-                  <span key={m} className="text-xs px-2 py-0.5 rounded-full"
-                    style={{ background: `${MEAL_COLORS[m]}18`, color: MEAL_COLORS[m] }}>
-                    {m.charAt(0).toUpperCase() + m.slice(1)}: {count}
-                  </span>
-                ) : null;
-              })}
-              {totalFood === 0 && (
-                <span className="text-xs" style={{ color: "#475569" }}>No items logged yet</span>
-              )}
-            </div>
+        {/* Meal-wise plate balance */}
+        <div className="card p-4 space-y-4">
+          <div className="flex items-center gap-2">
+            <span>🥗</span>
+            <span className="text-sm font-semibold text-white">Meal-wise plate balance</span>
+            <span className="ml-auto text-xs" style={{ color: "#475569" }}>
+              vs. cardiac-safe plate standard
+            </span>
           </div>
 
-          {/* Plate balance */}
-          <div className="card p-4 space-y-3">
-            <div className="flex items-center gap-2 mb-1">
-              <span>🥗</span>
-              <span className="text-sm font-semibold text-white">Plate balance</span>
-            </div>
-            {plateCats.length === 0 ? (
-              <p className="text-xs" style={{ color: "#475569" }}>No items logged yet</p>
-            ) : plateCats.map(([cat, count]) => (
-              <BarRow
-                key={cat}
-                label={cat}
-                value={count}
-                max={totalFood || 1}
-                color={CAT_COLOR_MAP[cat] ?? "#64748b"}
-                showValue={false}
-              />
-            ))}
+          <div className="grid grid-cols-2 gap-4">
+            {(["breakfast", "lunch", "dinner", "snacks"] as MealType[]).map(meal => {
+              const entries  = dayLog.food[meal] ?? [];
+              const catData  = getMealCatData(entries);
+              const isEmpty  = entries.length === 0;
+              const { score, missing } = mealBalanceScore(entries);
+
+              const scoreColor = isEmpty    ? "#334155"
+                : score >= 80 ? "#22c55e"
+                : score >= 60 ? "#14b8a6"
+                : score >= 35 ? "#f59e0b"
+                : "#ef4444";
+              const scoreLabel = isEmpty    ? "Not logged"
+                : score >= 80 ? "Excellent"
+                : score >= 60 ? "Good"
+                : score >= 35 ? "Needs work"
+                : "Unbalanced";
+
+              return (
+                <div key={meal} className="p-3 rounded-2xl space-y-3"
+                  style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
+
+                  {/* Meal header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full shrink-0 inline-block"
+                        style={{ background: MEAL_COLORS[meal] }} />
+                      <span className="text-xs font-semibold text-white capitalize">{meal}</span>
+                    </div>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                      style={{ background: `${scoreColor}20`, color: scoreColor }}>
+                      {scoreLabel}
+                    </span>
+                  </div>
+
+                  {/* Donut chart + category legend */}
+                  <div className="flex items-center gap-3">
+                    <DonutChart data={catData} size={100} />
+                    <div className="flex-1 space-y-1.5 min-w-0">
+                      {catData.length === 0 ? (
+                        <p className="text-xs" style={{ color: "#334155" }}>Nothing logged yet</p>
+                      ) : catData.slice(0, 5).map(d => (
+                        <div key={d.cat} className="flex items-center gap-1.5 min-w-0">
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0 inline-block"
+                            style={{ background: d.color }} />
+                          <span className="text-xs truncate" style={{ color: "#94a3b8" }}>{d.cat}</span>
+                          <span className="text-xs ml-auto shrink-0 tabular-nums" style={{ color: d.color }}>
+                            {d.count}
+                          </span>
+                        </div>
+                      ))}
+                      {catData.length > 5 && (
+                        <div className="text-xs" style={{ color: "#334155" }}>+{catData.length - 5} more</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Balance score bar */}
+                  {!isEmpty && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs" style={{ color: "#475569" }}>Balance score</span>
+                        <span className="text-xs font-semibold" style={{ color: scoreColor }}>{score}%</span>
+                      </div>
+                      <div className="rounded-full overflow-hidden"
+                        style={{ height: 5, background: "rgba(255,255,255,0.06)" }}>
+                        <div className="h-full rounded-full transition-all duration-700"
+                          style={{ width: `${score}%`, background: scoreColor }} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Missing food groups */}
+                  {!isEmpty && missing.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="text-xs" style={{ color: "#475569" }}>Add to balance:</div>
+                      <div className="flex flex-wrap gap-1">
+                        {missing.map(m => (
+                          <span key={m} className="text-xs px-1.5 py-0.5 rounded-md"
+                            style={{ background: "rgba(239,68,68,0.1)", color: "#f87171" }}>
+                            {m}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Full balance celebration */}
+                  {!isEmpty && missing.length === 0 && (
+                    <div className="text-xs px-2 py-1 rounded-lg"
+                      style={{ background: "rgba(34,197,94,0.08)", color: "#86efac" }}>
+                      ✓ Well-balanced plate
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
