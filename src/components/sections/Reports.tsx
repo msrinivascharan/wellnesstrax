@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { DayAnalysis, DayLog, MealType, UserProfile } from "@/types";
-import { autoCategory } from "@/lib/food-utils";
+import { resolveCategory } from "@/lib/food-utils";
 
 interface Props {
   dayLog: DayLog;
@@ -40,6 +40,7 @@ const CAT_COLOR_MAP: Record<string, string> = {
   "Legumes & Beans":     "#84cc16",
   "Spices & Condiments": "#fde68a",
   "Custom":              "#64748b",
+  "Other":               "#64748b",
 };
 
 // ─── Shared chart helpers ─────────────────────────────────────────────────────
@@ -172,15 +173,11 @@ export default function Reports({ dayLog, profile, onAnalysisComplete }: Props) 
   const takenMeds = dayLog.medications.filter(m => m.taken).length;
 
   // Plate balance: count items per category across all meals.
-  // Entries saved before the auto-category fix may have category "custom" (lowercase) —
-  // resolve those on-the-fly so the chart is always meaningful.
+  // resolveCategory re-maps stale "custom" labels from old sessions on-the-fly.
   const allEntries = Object.values(dayLog.food).flat();
   const catMap = new Map<string, number>();
   for (const e of allEntries) {
-    const raw = e.category ?? "";
-    const cat = raw.toLowerCase() === "custom" || raw === ""
-      ? autoCategory(e.name)
-      : raw;
+    const cat = resolveCategory(e);
     catMap.set(cat, (catMap.get(cat) ?? 0) + 1);
   }
   const plateCats = [...catMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 7);

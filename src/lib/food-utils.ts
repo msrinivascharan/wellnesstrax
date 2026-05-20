@@ -1,6 +1,7 @@
 /**
  * Shared food helpers — used by FoodLog (entry creation) and Reports (plate balance chart).
  */
+import type { FoodEntry } from "@/types";
 
 /**
  * Guesses the best balanced-plate category for a food name.
@@ -63,4 +64,16 @@ export function autoCategory(name: string): string {
   }
 
   return "Other";
+}
+
+/**
+ * Returns the display category for a food entry.
+ * Entries saved before the auto-category fix may have category "custom" (any case) or "".
+ * Those are re-resolved via autoCategory so the UI always shows a meaningful label.
+ */
+export function resolveCategory(entry: Pick<FoodEntry, "name" | "category">): string {
+  const raw = entry.category ?? "";
+  return raw.toLowerCase() === "custom" || raw === ""
+    ? autoCategory(entry.name)
+    : raw;
 }

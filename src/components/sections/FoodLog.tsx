@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { DayLog, FoodEntry, FoodItemsData, MealType } from "@/types";
-import { autoCategory } from "@/lib/food-utils";
+import { autoCategory, resolveCategory } from "@/lib/food-utils";
 
 interface Props {
   dayLog: DayLog;
@@ -310,18 +310,18 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onSaveToList }: P
           <div className="section-header mb-3">
             Logged for {MEAL_META[meal].label} · {entries.length} item{entries.length !== 1 ? "s" : ""}
           </div>
-          {entries.map(entry => (
+          {entries.map(entry => {
+            const displayCat = resolveCategory(entry);
+            return (
             <div key={entry.id}
               className="flex items-center gap-3 p-2.5 rounded-lg"
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
               <div className="flex-1 min-w-0">
                 <span className="text-sm font-medium text-white">{entry.name}</span>
+                <span className="ml-2 text-xs" style={{ color: "#475569" }}>{displayCat}</span>
                 {entry.custom && (
-                  <span className="ml-2 text-xs px-1.5 py-0.5 rounded"
-                    style={{ background: "#1e2d45", color: "#64748b" }}>custom</span>
-                )}
-                {!entry.custom && (
-                  <span className="ml-2 text-xs" style={{ color: "#475569" }}>{entry.category}</span>
+                  <span className="ml-1.5 text-xs px-1 py-0.5 rounded"
+                    style={{ background: "#1e293b", color: "#334155" }}>+added</span>
                 )}
               </div>
               {/* Inline quantity + unit edit */}
@@ -349,7 +349,8 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onSaveToList }: P
                 className="text-xs p-1.5 rounded-lg transition-colors hover:bg-red-950/50"
                 style={{ color: "#ef4444" }}>✕</button>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
