@@ -71,6 +71,11 @@ export function autoCategory(name: string): string {
     return "Spices & Condiments";
   }
 
+  // ── Dietary Fiber ─────────────────────────────────────────────────────────────
+  if (/\b(psyllium|isabgol|husk|flaxseed|inulin|pectin|bran)/.test(lc)) {
+    return "Dietary Fiber";
+  }
+
   return "Other";
 }
 

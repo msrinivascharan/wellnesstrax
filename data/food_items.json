@@ -10,7 +10,8 @@
       "Protein": [
         "Eggs",
         "Chicken",
-        "Fish"
+        "Fish",
+        "Boiled egg whites"
       ],
       "Beverages & Drinks": [
         "Black coffee",
@@ -19,6 +20,9 @@
       "Nuts & Seeds": [
         "Groundnuts",
         "Walnuts"
+      ],
+      "Dietary Fiber": [
+        "Psyllium husk"
       ]
     },
     "lunch": {
@@ -42,6 +46,9 @@
         "Eggs",
         "Chicken",
         "Fish"
+      ],
+      "Dietary Fiber": [
+        "Psyllium husk"
       ],
       "Spices": [
         "Garam masala"

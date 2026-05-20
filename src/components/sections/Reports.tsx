@@ -39,6 +39,7 @@ const CAT_COLOR_MAP: Record<string, string> = {
   "One-Pot Dish":        "#f472b6",
   "Legumes & Beans":     "#84cc16",
   "Spices & Condiments": "#fde68a",
+  "Dietary Fiber":       "#2dd4bf",
   "Custom":              "#64748b",
   "Other":               "#64748b",
 };
