@@ -578,12 +578,18 @@ export default function Reports({ dayLog, profile, onAnalysisComplete }: Props) 
             <p className="text-xs" style={{ color: "#94a3b8" }}>{analysis.inflammation_note}</p>
           </InsightCard>
 
-          {/* Foods to avoid permanently */}
-          {(analysis.foods_to_avoid_forever ?? []).length > 0 && (
-            <InsightCard title="Foods to avoid permanently" icon="🚫">
-              <p className="text-xs mb-2" style={{ color: "#64748b" }}>
-                Specific items from today's log that your cardiac profile says to eliminate for good.
-              </p>
+          {/* Foods to avoid permanently — always shown */}
+          <InsightCard title="Foods to avoid permanently" icon="🚫">
+            <p className="text-xs mb-2" style={{ color: "#64748b" }}>
+              Foods this cardiac patient should never eat — from today's log and known medication interactions.
+            </p>
+            {(analysis.foods_to_avoid_forever ?? []).length === 0 ? (
+              <div className="flex items-center gap-2 p-2.5 rounded-xl"
+                style={{ background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.2)" }}>
+                <span className="text-green-400 text-sm">✓</span>
+                <span className="text-xs text-green-300">Today&apos;s food choices were all cardiac-safe — no permanent eliminations flagged.</span>
+              </div>
+            ) : (
               <div className="space-y-2">
                 {(analysis.foods_to_avoid_forever ?? []).map((item, i) => (
                   <div key={i} className="p-2.5 rounded-xl"
@@ -596,8 +602,8 @@ export default function Reports({ dayLog, profile, onAnalysisComplete }: Props) 
                   </div>
                 ))}
               </div>
-            </InsightCard>
-          )}
+            )}
+          </InsightCard>
 
           {/* Add from tomorrow */}
           {(analysis.add_from_tomorrow ?? []).length > 0 && (

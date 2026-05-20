@@ -89,6 +89,15 @@ Water: ${log.water_ml}ml / ${profile.daily_targets.water_ml}ml target
 Sleep:
 ${sleepSummary}
 
+CRITICAL INSTRUCTIONS FOR foods_to_avoid_forever:
+- ALWAYS return 2–5 items. NEVER return an empty array.
+- Think beyond today's log: include common foods this cardiac patient must permanently
+  avoid given their medications and coronary stents — e.g. grapefruit / grapefruit juice
+  (life-threatening interaction with Ticagrelor and Pitavastatin), trans fats, processed
+  meats, high-sodium packaged foods, refined sugars, high saturated fat meals.
+- If today's log contained something problematic, call it out by name with a direct reason.
+- Be specific — name the actual food, not a vague food group.
+
 Return ONLY this JSON structure (all fields required):
 {
   "overall_score": <0-100 integer based on food quality, med adherence, activity, water, sleep>,
@@ -115,8 +124,8 @@ Return ONLY this JSON structure (all fields required):
   "inflammation_note": "<anti vs pro-inflammatory balance of today's food choices>",
   "foods_to_avoid_forever": [
     {
-      "food": "<exact name of a specific item from today's log that this cardiac patient should permanently eliminate>",
-      "reason": "<precise reason — link it to cardiac risk, drug interaction, inflammation, or metabolic harm for THIS patient. Do NOT give generic nutrition advice. If nothing from today warrants permanent elimination, return an empty array []>"
+      "food": "<food name — from today's log OR any commonly consumed food this cardiac patient must permanently avoid>",
+      "reason": "<precise reason tied to THIS patient: coronary stents, Ticagrelor+Pitavastatin interactions, BMI 29, anti-inflammatory needs, or lipid management>"
     }
   ],
   "add_from_tomorrow": [
