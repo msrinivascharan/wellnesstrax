@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { DayAnalysis, DayLog, MealType, UserProfile } from "@/types";
+import { autoCategory } from "@/lib/food-utils";
 
 interface Props {
   dayLog: DayLog;
@@ -170,11 +171,16 @@ export default function Reports({ dayLog, profile, onAnalysisComplete }: Props) 
   const totalFood = Object.values(dayLog.food).flat().length;
   const takenMeds = dayLog.medications.filter(m => m.taken).length;
 
-  // Plate balance: count items per category across all meals
+  // Plate balance: count items per category across all meals.
+  // Entries saved before the auto-category fix may have category "custom" (lowercase) —
+  // resolve those on-the-fly so the chart is always meaningful.
   const allEntries = Object.values(dayLog.food).flat();
   const catMap = new Map<string, number>();
   for (const e of allEntries) {
-    const cat = e.category || "Custom";
+    const raw = e.category ?? "";
+    const cat = raw.toLowerCase() === "custom" || raw === ""
+      ? autoCategory(e.name)
+      : raw;
     catMap.set(cat, (catMap.get(cat) ?? 0) + 1);
   }
   const plateCats = [...catMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 7);
