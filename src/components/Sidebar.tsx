@@ -2,7 +2,7 @@
 import { format } from "date-fns";
 import type { DayLog, UserProfile } from "@/types";
 
-export type SectionId = "dashboard" | "food" | "activity" | "medications" | "water-sleep" | "reports";
+export type SectionId = "dashboard" | "food" | "activity" | "medications" | "bloodwork" | "water-sleep" | "reports";
 
 interface NavItem {
   id: SectionId;
@@ -16,6 +16,7 @@ const NAV: NavItem[] = [
   { id: "food",        label: "Food Log",     icon: "🍽️", desc: "Meals & nutrition" },
   { id: "activity",    label: "Activity",     icon: "🏃", desc: "Gym & movement" },
   { id: "medications", label: "Medications",  icon: "💊", desc: "Meds & supplements" },
+  { id: "bloodwork",   label: "Blood Work",   icon: "🩸", desc: "Lipid & thyroid labs" },
   { id: "water-sleep", label: "Water & Sleep",icon: "💧", desc: "Hydration & rest" },
   { id: "reports",     label: "Reports",      icon: "📊", desc: "AI insights" },
 ];

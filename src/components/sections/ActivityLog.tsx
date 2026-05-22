@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import type { ActivityLog, ActivitiesData, DayLog, ExerciseEntry, ExerciseSet, MealType, PrandialActivity } from "@/types";
+import type { ActivityLog, ActivitiesData, DayLog, ExerciseEntry, ExerciseSet, MealType, PrandialActivity, BreathingLog } from "@/types";
 
 interface Props {
   dayLog: DayLog;
@@ -185,6 +185,10 @@ export default function ActivityLog({ dayLog, activitiesData, onUpdate }: Props)
     });
   }
 
+  function updateBreathing(key: keyof BreathingLog, val: number) {
+    onUpdate({ ...activity, breathing: { ...activity.breathing, [key]: Math.max(0, val) } });
+  }
+
   const addedNames = new Set(activity.gym.exercises.map(e => e.name));
 
   return (
@@ -192,7 +196,7 @@ export default function ActivityLog({ dayLog, activitiesData, onUpdate }: Props)
       <div>
         <h2 className="text-xl font-bold text-white">Activity Log</h2>
         <p className="text-xs mt-0.5" style={{ color: "#64748b" }}>
-          Track gym, walks, and soleus pump exercises
+          Track gym, walks, soleus pump, and breathing exercises
         </p>
       </div>
 
@@ -339,6 +343,78 @@ export default function ActivityLog({ dayLog, activitiesData, onUpdate }: Props)
                   style={logged ? { background: "#7c3aed" } : { background: "#1a2540" }}>
                   <span className="toggle-thumb" style={{ transform: logged ? "translateX(20px)" : "translateX(0)" }} />
                 </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Breathing exercises ── */}
+      <div className="card p-4 space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-xl">🫁</span>
+          <div>
+            <div className="text-sm font-semibold text-white">Breathing exercises</div>
+            <div className="text-xs" style={{ color: "#475569" }}>Tap + to log each round as you complete it</div>
+          </div>
+        </div>
+
+        {([
+          {
+            key: "box_4444" as keyof BreathingLog,
+            label: "Box breathing (4-4-4-4)",
+            pattern: "Inhale 4s · Hold 4s · Exhale 4s · Hold 4s",
+            target: 5,
+            targetLabel: "5–6 rounds/day",
+            color: "#14b8a6",
+          },
+          {
+            key: "long_exhale_478" as keyof BreathingLog,
+            label: "Long exhale (4-7-8)",
+            pattern: "Inhale 4s · Hold 7s · Exhale 8s",
+            target: 2,
+            targetLabel: "2 rounds/day",
+            color: "#818cf8",
+          },
+        ]).map(ex => {
+          const count = activity.breathing?.[ex.key] ?? 0;
+          const pct = Math.min(100, (count / ex.target) * 100);
+          const met = count >= ex.target;
+          return (
+            <div key={ex.key} className="p-3 rounded-xl space-y-2.5"
+              style={{ background: met ? `${ex.color}0a` : "rgba(255,255,255,0.02)", border: `1px solid ${met ? `${ex.color}30` : "var(--border)"}` }}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-white">{ex.label}</div>
+                  <div className="text-xs mt-0.5" style={{ color: "#475569" }}>{ex.pattern}</div>
+                  <div className="text-xs mt-0.5" style={{ color: "#334155" }}>Target: {ex.targetLabel}</div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => updateBreathing(ex.key, count - 1)}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-base font-bold transition-all"
+                    style={{ background: "rgba(255,255,255,0.05)", color: "#64748b", border: "1px solid var(--border)" }}>
+                    −
+                  </button>
+                  <span className="text-lg font-bold w-7 text-center tabular-nums" style={{ color: met ? ex.color : "white" }}>
+                    {count}
+                  </span>
+                  <button
+                    onClick={() => updateBreathing(ex.key, count + 1)}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-base font-bold transition-all"
+                    style={{ background: `${ex.color}15`, color: ex.color, border: `1px solid ${ex.color}35` }}>
+                    +
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="rounded-full overflow-hidden" style={{ height: 5, background: "rgba(255,255,255,0.06)" }}>
+                  <div className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${pct}%`, background: ex.color }} />
+                </div>
+                <div className="text-xs" style={{ color: met ? ex.color : "#475569" }}>
+                  {met ? `✓ Target met (${count} rounds)` : `${ex.target - count} more round${ex.target - count !== 1 ? "s" : ""} to reach target`}
+                </div>
               </div>
             </div>
           );

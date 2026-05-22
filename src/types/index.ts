@@ -114,10 +114,16 @@ export interface PrandialActivity {
   logged_at: string;
 }
 
+export interface BreathingLog {
+  box_4444: number;        // rounds done today (target 5–6)
+  long_exhale_478: number; // rounds done today (target 2)
+}
+
 export interface ActivityLog {
   gym: GymSession;
   post_prandial_walks: PrandialActivity[];
   soleus_pumps: PrandialActivity[];
+  breathing: BreathingLog;
 }
 
 // ─── Medication & supplement tracking ────────────────────────────────────────
@@ -243,4 +249,31 @@ export interface DailyActivityDef {
 export interface ActivitiesData {
   gym: Record<string, ActivityDefinition[]>;
   daily_activities: Record<string, DailyActivityDef>;
+}
+
+// ─── Blood work ───────────────────────────────────────────────────────────────
+
+export interface LipidProfile {
+  id: string;
+  test_date: string;            // "YYYY-MM-DD"
+  total_cholesterol: number;    // mg/dL
+  hdl: number;                  // mg/dL
+  ldl: number;                  // mg/dL
+  vldl: number;                 // mg/dL
+  triglycerides: number;        // mg/dL
+  chol_hdl_ratio: number;       // ratio
+  non_hdl: number;              // mg/dL
+}
+
+export interface ThyroidProfile {
+  id: string;
+  test_date: string;            // "YYYY-MM-DD"
+  t3_ng_ml: number;             // ng/mL  (normal 0.8–2.0)
+  t4_ug_dl: number;             // μg/dL  (normal 5.1–14.1)
+  tsh_uiu_ml: number;           // μIU/mL (on Thyroxin target 0.5–2.5)
+}
+
+export interface BloodWorkData {
+  lipid_profile: LipidProfile[];
+  thyroid_profile: ThyroidProfile[];
 }

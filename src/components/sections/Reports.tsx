@@ -1,12 +1,14 @@
 "use client";
-import { useState } from "react";
-import type { DayAnalysis, DayLog, FoodEntry, MealType, UserProfile } from "@/types";
+import { useState, useEffect } from "react";
+import { format } from "date-fns";
+import type { DayAnalysis, DayLog, FoodEntry, MealType, UserProfile, BloodWorkData } from "@/types";
 import { resolveCategory } from "@/lib/food-utils";
 
 interface Props {
   dayLog: DayLog;
   profile: UserProfile;
   onAnalysisComplete: (analysis: DayAnalysis) => void;
+  bloodWork?: BloodWorkData;
 }
 
 const LOADING_MSGS = [
@@ -195,13 +197,51 @@ function DonutChart({ data, size = 100 }: {
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
-export default function Reports({ dayLog, profile, onAnalysisComplete }: Props) {
+export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork }: Props) {
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState("");
   const [error, setError] = useState("");
   const [backingUp, setBackingUp] = useState(false);
 
-  const analysis = dayLog.analysis;
+  // ── History navigation ────────────────────────────────────────────────────
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const [viewDate, setViewDate] = useState(todayStr);
+  const [availDates, setAvailDates] = useState<string[]>([]);
+  const [histLog, setHistLog]       = useState<DayLog | null>(null);
+  const [histLoading, setHistLoading] = useState(false);
+
+  const isToday   = viewDate === todayStr;
+  const activeLog = isToday ? dayLog : histLog;
+  const analysis  = activeLog?.analysis;
+
+  useEffect(() => {
+    fetch("/api/sessions")
+      .then(r => r.json())
+      .then((d: { sessions?: string[] }) => setAvailDates(d.sessions ?? []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (isToday) { setHistLog(null); return; }
+    setHistLoading(true);
+    fetch(`/api/sessions/${viewDate}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { log?: DayLog } | null) => setHistLog(d?.log ?? null))
+      .catch(() => setHistLog(null))
+      .finally(() => setHistLoading(false));
+  }, [viewDate, isToday]);
+
+  function goPrev() {
+    const idx = availDates.indexOf(viewDate);
+    if (idx < availDates.length - 1) setViewDate(availDates[idx + 1]);
+    else if (idx === -1 && availDates.length > 0) setViewDate(availDates[0]);
+  }
+  function goNext() {
+    const idx = availDates.indexOf(viewDate);
+    if (idx > 0) setViewDate(availDates[idx - 1]);
+  }
+  const hasPrev = (() => { const i = availDates.indexOf(viewDate); return i < availDates.length - 1 || i === -1; })();
+  const hasNext = availDates.indexOf(viewDate) > 0;
 
   // ── AI analysis ───────────────────────────────────────────────────────────
   async function runAnalysis() {
@@ -252,13 +292,14 @@ export default function Reports({ dayLog, profile, onAnalysisComplete }: Props) 
     }
   }
 
-  // ── Chart data computations ───────────────────────────────────────────────
-  const totalFood = Object.values(dayLog.food).flat().length;
-  const takenMeds = dayLog.medications.filter(m => m.taken).length;
+  // ── Chart data computations (uses activeLog so history works) ────────────
+  const totalFood  = Object.values(activeLog?.food ?? dayLog.food).flat().length;
+  const takenMeds  = (activeLog?.medications ?? dayLog.medications).filter(m => m.taken).length;
+  const logForChart = activeLog ?? dayLog;
 
-  const gymDone   = dayLog.activity.gym.did_gym;
-  const walksDone = dayLog.activity.post_prandial_walks.length;
-  const soleusDone = dayLog.activity.soleus_pumps.length;
+  const gymDone    = logForChart.activity.gym.did_gym;
+  const walksDone  = logForChart.activity.post_prandial_walks.length;
+  const soleusDone = logForChart.activity.soleus_pumps.length;
 
   return (
     <div className="p-6 max-w-4xl space-y-6">
@@ -272,35 +313,89 @@ export default function Reports({ dayLog, profile, onAnalysisComplete }: Props) 
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Backup button */}
-          <button
-            onClick={downloadBackup}
-            disabled={backingUp}
-            title="Download all data as JSON backup"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all"
-            style={backingUp
-              ? { background: "rgba(255,255,255,0.04)", color: "#475569", border: "1px solid var(--border)", cursor: "not-allowed" }
-              : { background: "rgba(255,255,255,0.04)", color: "#94a3b8", border: "1px solid var(--border)" }}>
-            {backingUp ? (
-              <><span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" /></>
-            ) : "📦 Backup"}
-          </button>
+          {/* Backup button — today only */}
+          {isToday && (
+            <button
+              onClick={downloadBackup}
+              disabled={backingUp}
+              title="Download all data as JSON backup"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all"
+              style={backingUp
+                ? { background: "rgba(255,255,255,0.04)", color: "#475569", border: "1px solid var(--border)", cursor: "not-allowed" }
+                : { background: "rgba(255,255,255,0.04)", color: "#94a3b8", border: "1px solid var(--border)" }}>
+              {backingUp ? (
+                <><span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" /></>
+              ) : "📦 Backup"}
+            </button>
+          )}
 
-          {/* Analyse button */}
-          <button
-            onClick={runAnalysis}
-            disabled={loading}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
-            style={loading
-              ? { background: "rgba(20,184,166,0.08)", color: "#475569", border: "1px solid var(--border)", cursor: "not-allowed" }
-              : { background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.35)" }}>
-            {loading ? (
-              <><span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" /> Analysing</>
-            ) : (
-              <>🔬 {analysis ? "Re-analyse" : "Generate analysis"}</>
-            )}
-          </button>
+          {/* Analyse button — today only */}
+          {isToday && (
+            <button
+              onClick={runAnalysis}
+              disabled={loading}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+              style={loading
+                ? { background: "rgba(20,184,166,0.08)", color: "#475569", border: "1px solid var(--border)", cursor: "not-allowed" }
+                : { background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.35)" }}>
+              {loading ? (
+                <><span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" /> Analysing</>
+              ) : (
+                <>🔬 {analysis ? "Re-analyse" : "Generate analysis"}</>
+              )}
+            </button>
+          )}
         </div>
+      </div>
+
+      {/* ── Date navigation bar ──────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 p-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
+        <button onClick={goPrev} disabled={!hasPrev}
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold transition-all"
+          style={hasPrev
+            ? { background: "rgba(255,255,255,0.06)", color: "#94a3b8", border: "1px solid var(--border)" }
+            : { background: "transparent", color: "#1e3a5f", border: "1px solid transparent", cursor: "not-allowed" }}>
+          ←
+        </button>
+
+        <div className="flex-1 text-center">
+          {isToday ? (
+            <span className="text-sm font-semibold text-white">Today — {format(new Date(todayStr + "T12:00:00"), "EEEE, dd MMM yyyy")}</span>
+          ) : (
+            <span className="text-sm font-semibold" style={{ color: "#f59e0b" }}>
+              {histLoading ? "Loading…" : viewDate
+                ? format(new Date(viewDate + "T12:00:00"), "EEEE, dd MMM yyyy")
+                : "Pick a date"}
+            </span>
+          )}
+        </div>
+
+        <button onClick={goNext} disabled={!hasNext}
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold transition-all"
+          style={hasNext
+            ? { background: "rgba(255,255,255,0.06)", color: "#94a3b8", border: "1px solid var(--border)" }
+            : { background: "transparent", color: "#1e3a5f", border: "1px solid transparent", cursor: "not-allowed" }}>
+          →
+        </button>
+
+        <input
+          type="date"
+          max={todayStr}
+          value={viewDate}
+          onChange={e => e.target.value && setViewDate(e.target.value)}
+          title="Pick any date"
+          className="nb-input-sm"
+          style={{ width: 36, padding: "4px", cursor: "pointer", color: "transparent", background: "rgba(255,255,255,0.04)", border: "1px solid var(--border)" }}
+        />
+        <span className="text-xs" style={{ color: "#334155", marginLeft: -24 }}>📅</span>
+
+        {!isToday && (
+          <button onClick={() => setViewDate(todayStr)}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+            style={{ background: "rgba(20,184,166,0.12)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.3)" }}>
+            Today
+          </button>
+        )}
       </div>
 
       {/* ── Loading ─────────────────────────────────────────────────────────── */}
@@ -331,8 +426,22 @@ export default function Reports({ dayLog, profile, onAnalysisComplete }: Props) 
         </div>
       )}
 
-      {/* ── No analysis prompt ───────────────────────────────────────────────── */}
-      {!analysis && !loading && (
+      {/* ── History: no data for selected date ───────────────────────────────── */}
+      {!isToday && !histLoading && !histLog && (
+        <div className="card p-8 text-center space-y-3">
+          <div className="text-3xl">📭</div>
+          <div className="text-base font-semibold text-white">No data for this date</div>
+          <div className="text-sm" style={{ color: "#64748b" }}>Nothing was logged on {viewDate}.</div>
+          <button onClick={() => setViewDate(todayStr)}
+            className="mt-2 px-4 py-2 rounded-xl text-sm font-medium"
+            style={{ background: "rgba(20,184,166,0.12)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.3)" }}>
+            ← Back to today
+          </button>
+        </div>
+      )}
+
+      {/* ── No analysis prompt (today only) ─────────────────────────────────── */}
+      {isToday && !analysis && !loading && (
         <div className="card p-8 text-center space-y-4">
           <div className="text-4xl">📊</div>
           <div>
@@ -340,10 +449,22 @@ export default function Reports({ dayLog, profile, onAnalysisComplete }: Props) 
             <div className="text-sm mt-1.5" style={{ color: "#64748b" }}>
               You have <strong className="text-white">{totalFood}</strong> food items and{" "}
               <strong className="text-white">{takenMeds}/{dayLog.medications.length}</strong> medications logged today.
+
             </div>
             <div className="text-xs mt-2" style={{ color: "#475569" }}>
               Log your meals, medications, activity, water, and sleep, then hit Generate.
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── History: no analysis run ─────────────────────────────────────────── */}
+      {!isToday && histLog && !analysis && !histLoading && (
+        <div className="card p-6 text-center space-y-2" style={{ border: "1px solid rgba(245,158,11,0.2)", background: "rgba(245,158,11,0.04)" }}>
+          <div className="text-2xl">📋</div>
+          <div className="text-sm font-medium text-white">Data logged but no AI analysis was run</div>
+          <div className="text-xs" style={{ color: "#64748b" }}>
+            {totalFood} food items · {takenMeds} meds taken
           </div>
         </div>
       )}
@@ -366,7 +487,7 @@ export default function Reports({ dayLog, profile, onAnalysisComplete }: Props) 
 
           <div className="grid grid-cols-2 gap-4">
             {(["breakfast", "lunch", "dinner", "snacks"] as MealType[]).map(meal => {
-              const entries  = dayLog.food[meal] ?? [];
+              const entries  = logForChart.food[meal] ?? [];
               const catData  = getMealCatData(entries);
               const isEmpty  = entries.length === 0;
               const { score, missing } = mealBalanceScore(entries);
@@ -474,15 +595,15 @@ export default function Reports({ dayLog, profile, onAnalysisComplete }: Props) 
             </div>
             <BarRow
               label="Water intake"
-              value={dayLog.water_ml}
+              value={logForChart.water_ml}
               max={profile.daily_targets.water_ml}
               color="#60a5fa"
               valueSuffix="ml"
             />
             <div className="text-xs" style={{ color: "#475569" }}>
-              {dayLog.water_ml >= profile.daily_targets.water_ml
+              {logForChart.water_ml >= profile.daily_targets.water_ml
                 ? "✓ Daily target reached!"
-                : `${profile.daily_targets.water_ml - dayLog.water_ml}ml remaining to hit target`}
+                : `${profile.daily_targets.water_ml - logForChart.water_ml}ml remaining to hit target`}
             </div>
           </div>
 
@@ -761,6 +882,76 @@ export default function Reports({ dayLog, profile, onAnalysisComplete }: Props) 
               ))}
             </div>
           </InsightCard>
+
+          {/* ── Blood work snapshot (if data exists) ── */}
+          {bloodWork && (bloodWork.lipid_profile.length > 0 || bloodWork.thyroid_profile.length > 0) && (
+            <InsightCard title="Latest blood work" icon="🩸">
+              <p className="text-xs mb-3" style={{ color: "#64748b" }}>
+                Most recent lab results vs. cardiac-patient targets. Go to Blood Work section to add new results.
+              </p>
+              {bloodWork.lipid_profile.length > 0 && (() => {
+                const latest = bloodWork.lipid_profile[0];
+                type LipidKey = "total_cholesterol" | "hdl" | "ldl" | "triglycerides" | "chol_hdl_ratio";
+                const ranges: Record<LipidKey, { label: string; good: (v: number) => boolean; warn: (v: number) => boolean }> = {
+                  total_cholesterol: { label: "Total Chol", good: v => v < 150, warn: v => v <= 200 },
+                  hdl:               { label: "HDL",        good: v => v >= 60,  warn: v => v >= 40  },
+                  ldl:               { label: "LDL",        good: v => v < 70,   warn: v => v <= 100 },
+                  triglycerides:     { label: "Triglyc.",   good: v => v < 100,  warn: v => v <= 150 },
+                  chol_hdl_ratio:    { label: "Chol/HDL",   good: v => v < 3.5,  warn: v => v <= 5.0 },
+                };
+                return (
+                  <div className="mb-3">
+                    <div className="text-xs font-semibold mb-2" style={{ color: "#94a3b8" }}>
+                      Lipid panel · {new Date(latest.test_date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {(Object.keys(ranges) as LipidKey[]).map(k => {
+                        const v = latest[k] as number;
+                        const s = ranges[k].good(v) ? "good" : ranges[k].warn(v) ? "warn" : "risk";
+                        const c = s === "good" ? "#22c55e" : s === "warn" ? "#f59e0b" : "#ef4444";
+                        return (
+                          <div key={k} className="text-center px-2 py-1.5 rounded-lg" style={{ background: `${c}10`, border: `1px solid ${c}25`, minWidth: 68 }}>
+                            <div className="text-xs" style={{ color: "#64748b" }}>{ranges[k].label}</div>
+                            <div className="text-sm font-bold" style={{ color: c }}>{v}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+              {bloodWork.thyroid_profile.length > 0 && (() => {
+                const latest = bloodWork.thyroid_profile[0];
+                type ThyKey = "t3_ng_ml" | "t4_ug_dl" | "tsh_uiu_ml";
+                const ranges: Record<ThyKey, { label: string; unit: string; good: (v: number) => boolean; warn: (v: number) => boolean }> = {
+                  t3_ng_ml:    { label: "T3",  unit: "ng/mL",  good: v => v >= 0.8 && v <= 2.0, warn: v => v >= 0.6 && v <= 2.5 },
+                  t4_ug_dl:    { label: "T4",  unit: "μg/dL",  good: v => v >= 5.1 && v <= 14.1, warn: v => v >= 3.0 && v <= 16.0 },
+                  tsh_uiu_ml:  { label: "TSH", unit: "μIU/mL", good: v => v >= 0.5 && v <= 2.5, warn: v => v >= 0.3 && v <= 4.0 },
+                };
+                return (
+                  <div>
+                    <div className="text-xs font-semibold mb-2" style={{ color: "#94a3b8" }}>
+                      Thyroid panel · {new Date(latest.test_date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    </div>
+                    <div className="flex gap-2">
+                      {(Object.keys(ranges) as ThyKey[]).map(k => {
+                        const v = latest[k] as number;
+                        const s = ranges[k].good(v) ? "good" : ranges[k].warn(v) ? "warn" : "risk";
+                        const c = s === "good" ? "#22c55e" : s === "warn" ? "#f59e0b" : "#ef4444";
+                        return (
+                          <div key={k} className="flex-1 text-center px-2 py-1.5 rounded-lg" style={{ background: `${c}10`, border: `1px solid ${c}25` }}>
+                            <div className="text-xs" style={{ color: "#64748b" }}>{ranges[k].label}</div>
+                            <div className="text-sm font-bold" style={{ color: c }}>{v}</div>
+                            <div className="text-xs" style={{ color: "#334155" }}>{ranges[k].unit}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+            </InsightCard>
+          )}
         </div>
       )}
     </div>

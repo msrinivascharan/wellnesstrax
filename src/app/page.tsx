@@ -11,6 +11,7 @@ import Dashboard from "@/components/sections/Dashboard";
 import FoodLog from "@/components/sections/FoodLog";
 import ActivityLogSection from "@/components/sections/ActivityLog";
 import MedicationLog from "@/components/sections/MedicationLog";
+import BloodWork from "@/components/sections/BloodWork";
 import WaterSleep from "@/components/sections/WaterSleep";
 import Reports from "@/components/sections/Reports";
 
@@ -70,6 +71,7 @@ function makeEmptyLog(profile: UserProfile, supplements: { name: string; dose: s
       gym: { did_gym: false, started_at: "07:00", exercises: [] },
       post_prandial_walks: [],
       soleus_pumps: [],
+      breathing: { box_4444: 0, long_exhale_478: 0 },
     },
     created_at: now.toISOString(),
     updated_at: now.toISOString(),
@@ -87,6 +89,7 @@ export default function Home() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [booting, setBooting] = useState(true);
   const [bootError, setBootError] = useState("");
+  const [bloodWork, setBloodWork] = useState<import("@/types").BloodWorkData | undefined>(undefined);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const logRef = useRef<DayLog | null>(null);
@@ -127,12 +130,17 @@ export default function Home() {
     async function boot() {
       const today = format(new Date(), "yyyy-MM-dd");
       try {
-        const [profRes, foodRes, actRes, sessRes] = await Promise.all([
+        const [profRes, foodRes, actRes, sessRes, bwRes] = await Promise.all([
           fetch("/api/profile"),
           fetch("/api/food-items"),
           fetch("/api/activities"),
           fetch(`/api/sessions/${today}`),
+          fetch("/api/bloodwork"),
         ]);
+        if (bwRes.ok) {
+          const bwJson = await bwRes.json() as { data: import("@/types").BloodWorkData };
+          setBloodWork(bwJson.data);
+        }
 
         if (!profRes.ok) throw new Error("Failed to load profile.json");
         const { profile: p } = await profRes.json() as { profile: UserProfile };
@@ -190,7 +198,9 @@ export default function Home() {
             food: saved.food ?? fresh.food,
             water_ml: saved.water_ml ?? 0,
             sleep: saved.sleep ?? fresh.sleep,
-            activity: saved.activity ?? fresh.activity,
+            activity: saved.activity
+              ? { ...saved.activity, breathing: saved.activity.breathing ?? { box_4444: 0, long_exhale_478: 0 } }
+              : fresh.activity,
             medications: mergedMeds,
             supplements: mergedSupps,
             analysis: savedAnalysis,                // strip old chatbot-era analysis
@@ -312,11 +322,14 @@ export default function Home() {
         {section === "medications" && (
           <MedicationLog dayLog={dayLog} onUpdate={onMedUpdate} />
         )}
+        {section === "bloodwork" && (
+          <BloodWork />
+        )}
         {section === "water-sleep" && (
           <WaterSleep dayLog={dayLog} profile={profile} onUpdate={onWaterSleepUpdate} />
         )}
         {section === "reports" && (
-          <Reports dayLog={dayLog} profile={profile} onAnalysisComplete={onAnalysisComplete} />
+          <Reports dayLog={dayLog} profile={profile} onAnalysisComplete={onAnalysisComplete} bloodWork={bloodWork} />
         )}
       </main>
     </div>
