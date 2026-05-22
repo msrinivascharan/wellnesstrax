@@ -105,6 +105,7 @@ export interface ExerciseEntry {
 export interface GymSession {
   did_gym: boolean;
   started_at: string;       // "07:00"
+  ended_at?: string;        // "08:15" — optional, enables duration calculation
   exercises: ExerciseEntry[];
 }
 
@@ -161,6 +162,7 @@ export interface DayLog {
   date: string;              // "YYYY-MM-DD"
   day: string;               // "Monday"
   food: Record<MealType, FoodEntry[]>;
+  meal_times?: Partial<Record<MealType, string>>;  // "HH:MM" per meal (optional)
   water_ml: number;
   sleep: SleepLog;
   medications: MedicationEntry[];

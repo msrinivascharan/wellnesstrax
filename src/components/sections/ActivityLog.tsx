@@ -13,6 +13,18 @@ const MEAL_ICONS: Record<string, string> = { breakfast: "☀️", lunch: "🌤�
 
 function genId() { return Math.random().toString(36).slice(2); }
 
+/** Returns formatted duration string (e.g. "1h 15m" or "45m") or null if times are invalid. */
+function calcGymDuration(start: string, end?: string): string | null {
+  if (!start || !end) return null;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const totalMin = (eh * 60 + em) - (sh * 60 + sm);
+  if (totalMin <= 0) return null;
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
 // ─── Set editor (inline sets × reps × weight) ─────────────────────────────────
 function SetRow({
   set, onChange, onRemove,
@@ -190,6 +202,7 @@ export default function ActivityLog({ dayLog, activitiesData, onUpdate }: Props)
   }
 
   const addedNames = new Set(activity.gym.exercises.map(e => e.name));
+  const gymDuration = calcGymDuration(activity.gym.started_at, activity.gym.ended_at);
 
   return (
     <div className="p-6 max-w-4xl space-y-6">
@@ -202,27 +215,51 @@ export default function ActivityLog({ dayLog, activitiesData, onUpdate }: Props)
 
       {/* ── Gym ── */}
       <div className="card overflow-hidden">
-        <div className="flex items-center justify-between p-4">
+        <div className="flex items-center justify-between p-4 gap-3 flex-wrap">
           <div className="flex items-center gap-3">
             <span className="text-2xl">🏋️</span>
             <div>
               <div className="text-sm font-semibold text-white">Gym session</div>
               <div className="text-xs" style={{ color: "#475569" }}>
                 {activity.gym.did_gym
-                  ? `${activity.gym.exercises.length} exercise${activity.gym.exercises.length !== 1 ? "s" : ""} logged`
+                  ? `${activity.gym.exercises.length} exercise${activity.gym.exercises.length !== 1 ? "s" : ""} logged${gymDuration ? ` · ${gymDuration}` : ""}`
                   : "Log today's gym workout"}
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {activity.gym.did_gym && (
-              <input
-                type="time"
-                className="nb-input-sm"
-                style={{ width: 104 }}
-                value={activity.gym.started_at}
-                onChange={e => onUpdate({ ...activity, gym: { ...activity.gym, started_at: e.target.value } })}
-              />
+              <div className="flex items-center gap-3">
+                {/* Gym-in time */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-medium" style={{ color: "#64748b" }}>In</span>
+                  <input
+                    type="time"
+                    className="nb-input-sm"
+                    style={{ width: 94 }}
+                    value={activity.gym.started_at}
+                    onChange={e => onUpdate({ ...activity, gym: { ...activity.gym, started_at: e.target.value } })}
+                  />
+                </div>
+                {/* Gym-out time */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-medium" style={{ color: "#64748b" }}>Out</span>
+                  <input
+                    type="time"
+                    className="nb-input-sm"
+                    style={{ width: 94 }}
+                    value={activity.gym.ended_at ?? ""}
+                    onChange={e => onUpdate({ ...activity, gym: { ...activity.gym, ended_at: e.target.value || undefined } })}
+                  />
+                </div>
+                {/* Duration pill */}
+                {gymDuration && (
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                    style={{ background: "rgba(20,184,166,0.12)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.25)" }}>
+                    ⏱ {gymDuration}
+                  </span>
+                )}
+              </div>
             )}
             <button
               onClick={() => toggleGym(!activity.gym.did_gym)}

@@ -240,6 +240,10 @@ export default function Home() {
 
   // ── Section-specific update handlers ─────────────────────────────────────
   function onFoodUpdate(food: Record<MealType, FoodEntry[]>) { updateLog({ food }); }
+  function onMealTimeUpdate(meal: MealType, time: string) {
+    const meal_times = { ...(dayLog?.meal_times ?? {}), [meal]: time };
+    updateLog({ meal_times });
+  }
   function onActivityUpdate(activity: ActivityLog) { updateLog({ activity }); }
   function onMedUpdate(meds: MedicationEntry[], supps: SupplementEntry[]) {
     updateLog({ medications: meds, supplements: supps });
@@ -316,7 +320,7 @@ export default function Home() {
           <Dashboard dayLog={dayLog} profile={profile} onNavigate={s => setSection(s as SectionId)} />
         )}
         {section === "food" && (
-          <FoodLog dayLog={dayLog} foodItems={foodItems} onUpdate={onFoodUpdate} onSaveToList={onSaveToList} />
+          <FoodLog dayLog={dayLog} foodItems={foodItems} onUpdate={onFoodUpdate} onMealTimeUpdate={onMealTimeUpdate} onSaveToList={onSaveToList} />
         )}
         {section === "activity" && (
           <ActivityLogSection dayLog={dayLog} activitiesData={activitiesData} onUpdate={onActivityUpdate} />

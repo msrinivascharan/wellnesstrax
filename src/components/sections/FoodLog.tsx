@@ -7,6 +7,7 @@ interface Props {
   dayLog: DayLog;
   foodItems: FoodItemsData;
   onUpdate: (food: Record<MealType, FoodEntry[]>) => void;
+  onMealTimeUpdate: (meal: MealType, time: string) => void;
   /** Called when a custom item should be saved to food_items.json */
   onSaveToList: (meal: string, category: string, name: string) => Promise<void>;
 }
@@ -87,7 +88,7 @@ interface SavePrompt {
   saving: boolean;
 }
 
-export default function FoodLog({ dayLog, foodItems, onUpdate, onSaveToList }: Props) {
+export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate, onSaveToList }: Props) {
   const [activeMeal, setActiveMeal] = useState<MealType>("breakfast");
   const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
   const [customText, setCustomText] = useState("");
@@ -206,29 +207,58 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onSaveToList }: P
         {MEALS.map(m => {
           const meta = MEAL_META[m];
           const count = dayLog.food[m]?.length ?? 0;
+          const mealTime = dayLog.meal_times?.[m];
           return (
             <button key={m} onClick={() => { setActiveMeal(m); setPendingItem(null); setSavePrompt(null); }}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 px-2 py-2 rounded-lg text-sm font-medium transition-all"
               style={activeMeal === m
                 ? { background: "rgba(255,255,255,0.07)", color: meta.color, boxShadow: `0 0 0 1px ${meta.color}30` }
                 : { color: "#475569" }}>
-              <span>{meta.icon}</span>
-              <span className="hidden sm:inline">{meta.label}</span>
-              {count > 0 && (
-                <span className="text-xs px-1.5 py-0.5 rounded-full font-bold"
-                  style={{ background: `${meta.color}22`, color: meta.color }}>{count}</span>
+              <div className="flex items-center gap-1.5">
+                <span>{meta.icon}</span>
+                <span className="hidden sm:inline">{meta.label}</span>
+                {count > 0 && (
+                  <span className="text-xs px-1.5 py-0.5 rounded-full font-bold"
+                    style={{ background: `${meta.color}22`, color: meta.color }}>{count}</span>
+                )}
+              </div>
+              {mealTime && (
+                <span className="text-xs font-normal tabular-nums" style={{ color: activeMeal === m ? meta.color : "#334155", opacity: 0.85 }}>
+                  🕐 {mealTime}
+                </span>
               )}
             </button>
           );
         })}
       </div>
 
-      {/* Meal label */}
-      <div className="flex items-center gap-2">
-        <span className="text-lg">{MEAL_META[meal].icon}</span>
-        <span className="text-sm font-semibold text-white">{MEAL_META[meal].label}</span>
-        <span className="text-xs px-2 py-0.5 rounded-full"
-          style={{ background: "var(--bg-card)", color: "#475569" }}>{MEAL_META[meal].time}</span>
+      {/* Meal label + time picker */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{MEAL_META[meal].icon}</span>
+          <span className="text-sm font-semibold text-white">{MEAL_META[meal].label}</span>
+          <span className="text-xs px-2 py-0.5 rounded-full"
+            style={{ background: "var(--bg-card)", color: "#475569" }}>{MEAL_META[meal].time}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs" style={{ color: "#475569" }}>Ate at</span>
+          <input
+            type="time"
+            className="nb-input-sm"
+            style={{ width: 108 }}
+            value={dayLog.meal_times?.[meal] ?? ""}
+            onChange={e => onMealTimeUpdate(meal, e.target.value)}
+          />
+          {dayLog.meal_times?.[meal] && (
+            <button
+              onClick={() => onMealTimeUpdate(meal, "")}
+              className="text-xs transition-colors"
+              style={{ color: "#334155" }}
+              title="Clear time">
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Pre-populated chips */}
