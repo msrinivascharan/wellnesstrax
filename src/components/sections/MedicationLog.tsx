@@ -6,6 +6,17 @@ interface Props {
   onUpdate: (meds: MedicationEntry[], supplements: SupplementEntry[]) => void;
 }
 
+/** Convert "9AM", "1:30PM", "9PM", "1:30 PM post lunch" → "HH:MM" for <input type="time"> */
+function scheduledTimeToHHMM(scheduled: string): string {
+  const m = scheduled.match(/\b(\d{1,2})(?::(\d{2}))?\s*(AM|PM)\b/i);
+  if (!m) return "";
+  let h = parseInt(m[1], 10);
+  const min = m[2] ? parseInt(m[2], 10) : 0;
+  if (m[3].toUpperCase() === "PM" && h !== 12) h += 12;
+  if (m[3].toUpperCase() === "AM" && h === 12) h = 0;
+  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
 const SEVERITY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   CRITICAL: { bg: "rgba(239,68,68,0.08)",  text: "#fca5a5", border: "rgba(239,68,68,0.25)" },
   HIGH:     { bg: "rgba(251,146,60,0.08)", text: "#fdba74", border: "rgba(251,146,60,0.25)" },
@@ -19,7 +30,7 @@ export default function MedicationLog({ dayLog, onUpdate }: Props) {
 
   function toggleMed(i: number) {
     const updated = medications.map((m, idx) =>
-      idx === i ? { ...m, taken: !m.taken, taken_at: !m.taken ? new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "" } : m
+      idx === i ? { ...m, taken: !m.taken, taken_at: !m.taken ? scheduledTimeToHHMM(m.scheduled_time) : "" } : m
     );
     onUpdate(updated, supplements);
   }
@@ -31,7 +42,7 @@ export default function MedicationLog({ dayLog, onUpdate }: Props) {
 
   function toggleSupp(i: number) {
     const updated = supplements.map((s, idx) =>
-      idx === i ? { ...s, taken: !s.taken, taken_at: !s.taken ? new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "" } : s
+      idx === i ? { ...s, taken: !s.taken, taken_at: !s.taken ? scheduledTimeToHHMM(s.scheduled_time) : "" } : s
     );
     onUpdate(medications, updated);
   }
