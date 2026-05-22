@@ -46,8 +46,13 @@ export function autoCategory(name: string): string {
     return "Fruits";
   }
 
-  // ── Vegetables (no trailing \b → handles "drumsticks", "carrots", "tomatoes") ─
-  if (/\b(broccoli|spinach|carrot|cucumber|drumstick|tomato|onion|garlic|capsicum|bell pepper|lettuce|cabbage|cauliflower|kale|zucchini|radish|beetroot|sweet potato|potato|yam|okra|bitter gourd|bottle gourd|ridge gourd|cluster bean|french bean)/.test(lc)) {
+  // ── Fats & Oils — checked BEFORE Vegetables so "vegetable oil" routes here ───
+  if (/\b(olive oil|coconut oil|mustard oil|sunflower oil|rice bran oil|avocado oil|canola oil|groundnut oil|sesame oil|vegetable oil|flaxseed oil|ghee)\b/.test(lc)) {
+    return "Fats & Oils";
+  }
+
+  // ── Vegetables — added "vegetable|sabzi" for "cooked mixed vegetables" etc. ──
+  if (/\b(vegetable|mixed vegetable|sabzi|broccoli|spinach|carrot|cucumber|drumstick|tomato|onion|garlic|capsicum|bell pepper|lettuce|cabbage|cauliflower|kale|zucchini|radish|beetroot|sweet potato|potato|yam|okra|bitter gourd|bottle gourd|ridge gourd|cluster bean|french bean)/.test(lc)) {
     return "Vegetables";
   }
 
@@ -94,4 +99,51 @@ export function resolveCategory(entry: Pick<FoodEntry, "name" | "category">): st
   const raw = entry.category ?? "";
   if (raw && raw.toLowerCase() !== "custom") return raw;      // meaningful stored value
   return "Other";
+}
+
+/**
+ * Maps a fine-grained autoCategory result to one of the 5 balanced plate terms
+ * (or supplementary labels for beverages, one-pot dishes, and uncategorised items).
+ */
+export function mapToBalancedPlate(cat: string): string {
+  switch (cat) {
+    case "Grains & Carbs":      return "Complex Carbohydrates";
+    case "Protein":
+    case "Legumes & Beans":
+    case "Dairy":               return "Lean / Plant Proteins";
+    case "Dietary Fiber":       return "Dietary Fiber";
+    case "Vegetables":
+    case "Fruits":
+    case "Spices & Condiments": return "Micronutrients";
+    case "Nuts & Seeds":
+    case "Fats & Oils":         return "Essential Lipids";
+    case "Beverages & Drinks":  return "Beverages & Drinks";
+    case "One-Pot Dish":        return "One-Pot (Mixed)";
+    default:                    return "Other";
+  }
+}
+
+/**
+ * Checks whether a food item name appears to violate any always_avoid rule.
+ * Each rule string is expected in the format "Food description — reason".
+ * Only the description part (before the dash) is used for matching.
+ *
+ * Returns the violated rule label (before the dash), or null if no match.
+ */
+export function checkAlwaysAvoidRules(foodName: string, rules: string[]): string | null {
+  const lc = foodName.toLowerCase();
+  for (const rule of rules) {
+    // Use only the label part (before em-dash / en-dash / plain hyphen-dash)
+    const label = rule.split(/\s*[—–]\s*/)[0].trim();
+    // Strip contextual qualifiers that describe when/how much — not what the food is
+    const stripped = label.toLowerCase()
+      .replace(/\b(added|excessive|very|raw|high.?sodium|in excess|at the same meal as|at meal time|near \S+ dose time|more than \d+\S*( per \w+)?|longer than \d+\S*|per week|single|packaged)\b/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    if (!stripped) continue;
+    // Split into individual keyword phrases by comma, semicolon, or "or"
+    const phrases = stripped.split(/\s*[,;]\s*|\s+or\s+/).map(p => p.trim()).filter(p => p.length >= 3);
+    if (phrases.some(p => lc.includes(p))) return label;
+  }
+  return null;
 }

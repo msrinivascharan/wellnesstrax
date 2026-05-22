@@ -1,9 +1,19 @@
 "use client";
+import { useState, useEffect } from "react";
 import type { DayLog, MedicationEntry, SupplementEntry } from "@/types";
 
 interface Props {
   dayLog: DayLog;
   onUpdate: (meds: MedicationEntry[], supplements: SupplementEntry[]) => void;
+}
+
+interface InjectionRecord {
+  id: string;
+  medication: string;
+  dose: string;
+  date_given: string;
+  notes: string;
+  next_due: string;
 }
 
 /** Convert "9AM", "1:30PM", "9PM", "1:30 PM post lunch" → "HH:MM" for <input type="time"> */
@@ -17,17 +27,79 @@ function scheduledTimeToHHMM(scheduled: string): string {
   return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
 }
 
-const SEVERITY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  CRITICAL: { bg: "rgba(239,68,68,0.08)",  text: "#fca5a5", border: "rgba(239,68,68,0.25)" },
-  HIGH:     { bg: "rgba(251,146,60,0.08)", text: "#fdba74", border: "rgba(251,146,60,0.25)" },
-  MEDIUM:   { bg: "rgba(250,204,21,0.06)", text: "#fde047", border: "rgba(250,204,21,0.2)"  },
-};
+/** Add 6 months to a YYYY-MM-DD string */
+function addSixMonths(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00");
+  d.setMonth(d.getMonth() + 6);
+  return d.toISOString().split("T")[0];
+}
+
+function injectionStatus(nextDue: string): { label: string; color: string; bg: string } {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(nextDue + "T12:00:00");
+  const daysUntil = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysUntil > 60) return { label: "Not due yet",                color: "#22c55e", bg: "rgba(34,197,94,0.08)"  };
+  if (daysUntil >= 0) return { label: `Due in ${daysUntil}d`,      color: "#f59e0b", bg: "rgba(245,158,11,0.08)" };
+  return             { label: `Overdue ${Math.abs(daysUntil)}d`,   color: "#ef4444", bg: "rgba(239,68,68,0.08)"  };
+}
+
+function formatDate(d: string): string {
+  if (!d) return "—";
+  return new Date(d + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
 
 export default function MedicationLog({ dayLog, onUpdate }: Props) {
   const { medications, supplements } = dayLog;
   const totalMeds = medications.length + supplements.length;
   const taken = medications.filter(m => m.taken).length + supplements.filter(s => s.taken).length;
 
+  // ── Injectable meds state ───────────────────────────────────────────────────
+  const [injections, setInjections]       = useState<InjectionRecord[]>([]);
+  const [injLoading, setInjLoading]       = useState(true);
+  const [showAddForm, setShowAddForm]     = useState(false);
+  const [formDate, setFormDate]           = useState(() => new Date().toISOString().split("T")[0]);
+  const [formDose, setFormDose]           = useState("284mg");
+  const [formNotes, setFormNotes]         = useState("");
+  const [saving, setSaving]               = useState(false);
+
+  useEffect(() => {
+    fetch("/api/injectable-meds")
+      .then(r => r.json())
+      .then((d: { data?: { injections: InjectionRecord[] } }) => {
+        setInjections(d.data?.injections ?? []);
+      })
+      .catch(() => {})
+      .finally(() => setInjLoading(false));
+  }, []);
+
+  async function saveInjection() {
+    if (!formDate) return;
+    setSaving(true);
+    const newRec: InjectionRecord = {
+      id: `inj_${Date.now()}`,
+      medication: "Inclisiran (Leqvio)",
+      dose: formDose,
+      date_given: formDate,
+      notes: formNotes,
+      next_due: addSixMonths(formDate),
+    };
+    const updated = [newRec, ...injections];
+    try {
+      await fetch("/api/injectable-meds", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: { injections: updated } }),
+      });
+      setInjections(updated);
+      setShowAddForm(false);
+      setFormNotes("");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // ── Daily med toggle helpers ─────────────────────────────────────────────────
   function toggleMed(i: number) {
     const updated = medications.map((m, idx) =>
       idx === i ? { ...m, taken: !m.taken, taken_at: !m.taken ? scheduledTimeToHHMM(m.scheduled_time) : "" } : m
@@ -53,6 +125,11 @@ export default function MedicationLog({ dayLog, onUpdate }: Props) {
   }
 
   const adherencePct = totalMeds > 0 ? Math.round((taken / totalMeds) * 100) : 0;
+
+  // Latest injection for status display
+  const latestInj = injections[0] ?? null;
+  const nextDueDate = latestInj?.next_due ?? "";
+  const status = nextDueDate ? injectionStatus(nextDueDate) : null;
 
   return (
     <div className="p-6 max-w-3xl space-y-6">
@@ -85,7 +162,7 @@ export default function MedicationLog({ dayLog, onUpdate }: Props) {
         </div>
       </div>
 
-      {/* Medications list */}
+      {/* ── Medications list ───────────────────────────────────────────────────── */}
       <div className="card overflow-hidden">
         <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
           <div className="section-header">Prescribed medications</div>
@@ -150,7 +227,7 @@ export default function MedicationLog({ dayLog, onUpdate }: Props) {
         </div>
       </div>
 
-      {/* Supplements */}
+      {/* ── Supplements ───────────────────────────────────────────────────────── */}
       {supplements.length > 0 && (
         <div className="card overflow-hidden">
           <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
@@ -206,7 +283,138 @@ export default function MedicationLog({ dayLog, onUpdate }: Props) {
         </div>
       )}
 
-      {/* Drug interaction reminder */}
+      {/* ── Inclisiran (Injectable) ────────────────────────────────────────────── */}
+      <div className="card overflow-hidden">
+        {/* Header */}
+        <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: "var(--border)" }}>
+          <div>
+            <div className="section-header">Inclisiran (Leqvio) — Injectable</div>
+            <div className="text-xs mt-0.5" style={{ color: "#475569" }}>
+              Every 6 months · LDL-lowering PCSK9 inhibitor
+            </div>
+          </div>
+          <button
+            onClick={() => setShowAddForm(v => !v)}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+            style={{ background: "rgba(20,184,166,0.12)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.3)" }}>
+            {showAddForm ? "✕ Cancel" : "+ Record dose"}
+          </button>
+        </div>
+
+        {/* Add form */}
+        {showAddForm && (
+          <div className="px-4 py-4 border-b space-y-3" style={{ borderColor: "var(--border)", background: "rgba(20,184,166,0.03)" }}>
+            <div className="text-xs font-semibold" style={{ color: "#14b8a6" }}>Record new injection</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs" style={{ color: "#64748b" }}>Date given</label>
+                <input type="date" className="nb-input w-full"
+                  max={new Date().toISOString().split("T")[0]}
+                  value={formDate}
+                  onChange={e => setFormDate(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs" style={{ color: "#64748b" }}>Dose</label>
+                <input type="text" className="nb-input w-full"
+                  value={formDose}
+                  onChange={e => setFormDose(e.target.value)}
+                  placeholder="e.g. 284mg" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs" style={{ color: "#64748b" }}>Notes (optional)</label>
+              <input type="text" className="nb-input w-full"
+                value={formNotes}
+                onChange={e => setFormNotes(e.target.value)}
+                placeholder="e.g. Given at Yashoda hospital, thigh injection" />
+            </div>
+            {formDate && (
+              <div className="text-xs" style={{ color: "#475569" }}>
+                Next due will be auto-calculated as: <strong className="text-teal-400">{formatDate(addSixMonths(formDate))}</strong>
+              </div>
+            )}
+            <button
+              onClick={saveInjection}
+              disabled={saving || !formDate}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              style={saving || !formDate
+                ? { background: "rgba(255,255,255,0.04)", color: "#475569", cursor: "not-allowed" }
+                : { background: "rgba(20,184,166,0.2)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.4)" }}>
+              {saving ? "Saving…" : "Save injection record"}
+            </button>
+          </div>
+        )}
+
+        {/* Status / last dose summary */}
+        <div className="px-4 py-4">
+          {injLoading ? (
+            <div className="flex items-center gap-2 text-xs" style={{ color: "#475569" }}>
+              <span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" />
+              Loading…
+            </div>
+          ) : latestInj ? (
+            <div className="space-y-3">
+              {/* Status row */}
+              <div className="flex flex-wrap items-center gap-3">
+                {status && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                    style={{ background: status.bg, border: `1px solid ${status.color}30` }}>
+                    <span className="text-lg">{status.color === "#22c55e" ? "✅" : status.color === "#f59e0b" ? "⚠️" : "🔴"}</span>
+                    <div>
+                      <div className="text-xs font-bold" style={{ color: status.color }}>{status.label}</div>
+                      <div className="text-xs" style={{ color: "#64748b" }}>Next due: {formatDate(nextDueDate)}</div>
+                    </div>
+                  </div>
+                )}
+                <div className="text-xs" style={{ color: "#64748b" }}>
+                  Last given: <span className="text-white font-medium">{formatDate(latestInj.date_given)}</span>
+                  {latestInj.dose && <span className="ml-2 px-2 py-0.5 rounded-full text-xs"
+                    style={{ background: "var(--bg-input)", color: "#94a3b8" }}>{latestInj.dose}</span>}
+                </div>
+              </div>
+
+              {/* History table */}
+              {injections.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold mb-2" style={{ color: "#475569" }}>Injection history</div>
+                  <div className="overflow-hidden rounded-xl" style={{ border: "1px solid var(--border)" }}>
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr style={{ background: "rgba(255,255,255,0.03)" }}>
+                          <th className="px-3 py-2 text-left font-semibold" style={{ color: "#64748b" }}>Date</th>
+                          <th className="px-3 py-2 text-left font-semibold" style={{ color: "#64748b" }}>Dose</th>
+                          <th className="px-3 py-2 text-left font-semibold" style={{ color: "#64748b" }}>Next due</th>
+                          <th className="px-3 py-2 text-left font-semibold" style={{ color: "#64748b" }}>Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {injections.map((inj, i) => (
+                          <tr key={inj.id} style={{ borderTop: i > 0 ? "1px solid var(--border)" : undefined }}>
+                            <td className="px-3 py-2 text-white">{formatDate(inj.date_given)}</td>
+                            <td className="px-3 py-2" style={{ color: "#94a3b8" }}>{inj.dose || "—"}</td>
+                            <td className="px-3 py-2" style={{ color: "#94a3b8" }}>{formatDate(inj.next_due)}</td>
+                            <td className="px-3 py-2 truncate max-w-xs" style={{ color: "#64748b" }}>{inj.notes || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-4 space-y-2">
+              <div className="text-2xl">💉</div>
+              <div className="text-sm font-medium" style={{ color: "#64748b" }}>No injections recorded yet</div>
+              <div className="text-xs" style={{ color: "#334155" }}>
+                Hit &ldquo;+ Record dose&rdquo; above to log your first Inclisiran injection.
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Drug interaction reminder ─────────────────────────────────────────── */}
       <div className="card p-4 space-y-2"
         style={{ border: "1px solid rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.04)" }}>
         <div className="flex items-center gap-2">
@@ -217,6 +425,7 @@ export default function MedicationLog({ dayLog, onUpdate }: Props) {
           <p>• <strong className="text-red-300">Ticagrelor + Pitavastatin:</strong> STRICTLY NO grapefruit or grapefruit juice — ever</p>
           <p>• <strong className="text-red-300">Thyroxin:</strong> Taken at 5AM on strict empty stomach — no food for 30 min after</p>
           <p>• <strong className="text-orange-300">Metoprolol:</strong> Monitor sodium — keep under 400mg per serving</p>
+          <p>• <strong className="text-purple-300">Inclisiran:</strong> No dose adjustments needed — administered by healthcare provider only</p>
         </div>
       </div>
     </div>

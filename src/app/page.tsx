@@ -90,6 +90,7 @@ export default function Home() {
   const [booting, setBooting] = useState(true);
   const [bootError, setBootError] = useState("");
   const [bloodWork, setBloodWork] = useState<import("@/types").BloodWorkData | undefined>(undefined);
+  const [alwaysAvoid, setAlwaysAvoid] = useState<string[]>([]);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const logRef = useRef<DayLog | null>(null);
@@ -158,13 +159,14 @@ export default function Home() {
         // We pass them from food_rules.json — use the api route
         const rulesRes = await fetch("/api/food-rules");
         const { rules } = rulesRes.ok
-          ? await rulesRes.json() as { rules: { supplements_to_track: { name: string; dose?: string; target: string }[] } }
-          : { rules: { supplements_to_track: [] } };
+          ? await rulesRes.json() as { rules: { supplements_to_track: { name: string; dose?: string; target: string }[]; always_avoid?: string[] } }
+          : { rules: { supplements_to_track: [], always_avoid: [] } };
         const suppDefs = rules.supplements_to_track.map(s => ({
           name: s.name,
           dose: s.dose ?? "",
           scheduled_time: s.target,
         }));
+        if (rules.always_avoid?.length) setAlwaysAvoid(rules.always_avoid);
 
         const fresh = makeEmptyLog(p, suppDefs);
 
@@ -329,7 +331,7 @@ export default function Home() {
           <WaterSleep dayLog={dayLog} profile={profile} onUpdate={onWaterSleepUpdate} />
         )}
         {section === "reports" && (
-          <Reports dayLog={dayLog} profile={profile} onAnalysisComplete={onAnalysisComplete} bloodWork={bloodWork} />
+          <Reports dayLog={dayLog} profile={profile} onAnalysisComplete={onAnalysisComplete} bloodWork={bloodWork} alwaysAvoid={alwaysAvoid} />
         )}
       </main>
     </div>

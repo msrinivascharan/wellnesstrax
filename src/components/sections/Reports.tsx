@@ -2,13 +2,14 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import type { DayAnalysis, DayLog, FoodEntry, MealType, UserProfile, BloodWorkData } from "@/types";
-import { resolveCategory } from "@/lib/food-utils";
+import { resolveCategory, mapToBalancedPlate, checkAlwaysAvoidRules } from "@/lib/food-utils";
 
 interface Props {
   dayLog: DayLog;
   profile: UserProfile;
   onAnalysisComplete: (analysis: DayAnalysis) => void;
   bloodWork?: BloodWorkData;
+  alwaysAvoid?: string[];
 }
 
 const LOADING_MSGS = [
@@ -30,20 +31,17 @@ const MEAL_COLORS: Record<MealType, string> = {
   snacks:    "#fb923c",
 };
 
-const CAT_COLOR_MAP: Record<string, string> = {
-  "Protein":             "#a78bfa",
-  "Fruits":              "#fb923c",
-  "Vegetables":          "#22c55e",
-  "Nuts & Seeds":        "#f59e0b",
-  "Dairy":               "#60a5fa",
-  "Grains & Carbs":      "#fbbf24",
-  "Beverages & Drinks":  "#34d399",
-  "One-Pot Dish":        "#f472b6",
-  "Legumes & Beans":     "#84cc16",
-  "Spices & Condiments": "#fde68a",
-  "Dietary Fiber":       "#2dd4bf",
-  "Custom":              "#64748b",
-  "Other":               "#64748b",
+// ─── Balanced plate colour palette ───────────────────────────────────────────
+
+const BP_COLORS: Record<string, string> = {
+  "Complex Carbohydrates": "#fbbf24",
+  "Lean / Plant Proteins": "#a78bfa",
+  "Dietary Fiber":         "#2dd4bf",
+  "Micronutrients":        "#22c55e",
+  "Essential Lipids":      "#fb923c",
+  "Beverages & Drinks":    "#34d399",
+  "One-Pot (Mixed)":       "#f472b6",
+  "Other":                 "#64748b",
 };
 
 // ─── Shared chart helpers ─────────────────────────────────────────────────────
@@ -112,36 +110,39 @@ function InsightCard({ title, icon, children }: { title: string; icon: string; c
   );
 }
 
-// ─── Meal-wise plate balance helpers ─────────────────────────────────────────
+// ─── Meal-wise balanced plate helpers ────────────────────────────────────────
 
-function getMealCatData(entries: FoodEntry[]): Array<{ cat: string; count: number; color: string }> {
+/** Aggregate food entries into balanced-plate buckets for the donut chart. */
+function getBalancedPlateData(entries: FoodEntry[]): Array<{ cat: string; count: number; color: string }> {
   const map = new Map<string, number>();
   for (const e of entries) {
-    const cat = resolveCategory(e);
-    map.set(cat, (map.get(cat) ?? 0) + 1);
+    const bp = mapToBalancedPlate(resolveCategory(e));
+    map.set(bp, (map.get(bp) ?? 0) + 1);
   }
   return [...map.entries()]
     .sort((a, b) => b[1] - a[1])
-    .map(([cat, count]) => ({ cat, count, color: CAT_COLOR_MAP[cat] ?? "#64748b" }));
+    .map(([cat, count]) => ({ cat, count, color: BP_COLORS[cat] ?? "#64748b" }));
 }
 
+/** Score a meal against the 5 balanced plate categories (max 100 pts). */
 function mealBalanceScore(entries: FoodEntry[]): { score: number; missing: string[] } {
   if (entries.length === 0) return { score: 0, missing: [] };
-  const cats = new Set(entries.map(e => resolveCategory(e)));
+  const bpCats = new Set(entries.map(e => mapToBalancedPlate(resolveCategory(e))));
 
-  const hasProtein = cats.has("Protein") || cats.has("Legumes & Beans") || cats.has("Dairy");
-  const hasColor   = cats.has("Vegetables") || cats.has("Fruits");
-  const hasFiber   = cats.has("Dietary Fiber") || cats.has("Grains & Carbs") || cats.has("Legumes & Beans");
-  const hasHFat    = cats.has("Nuts & Seeds");
+  const hasProtein = bpCats.has("Lean / Plant Proteins");
+  const hasMicro   = bpCats.has("Micronutrients");
+  const hasCarbs   = bpCats.has("Complex Carbohydrates");
+  const hasFiber   = bpCats.has("Dietary Fiber");
+  const hasLipids  = bpCats.has("Essential Lipids");
 
   let pts = 0;
   const missing: string[] = [];
 
-  if (hasProtein) pts += 25; else missing.push("Protein");
-  if (hasColor)   pts += 25; else missing.push("Veg / Fruit");
-  if (hasFiber)   pts += 20; else missing.push("Fiber");
-  if (hasHFat)    pts += 15; else missing.push("Healthy fats");
-  if (cats.size >= 2) pts += 15;
+  if (hasProtein) pts += 25; else missing.push("Proteins");
+  if (hasMicro)   pts += 25; else missing.push("Micronutrients");
+  if (hasCarbs)   pts += 20; else missing.push("Complex Carbs");
+  if (hasFiber)   pts += 15; else missing.push("Dietary Fiber");
+  if (hasLipids)  pts += 15; else missing.push("Essential Lipids");
 
   return { score: pts, missing };
 }
@@ -197,7 +198,7 @@ function DonutChart({ data, size = 100 }: {
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
-export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork }: Props) {
+export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork, alwaysAvoid }: Props) {
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState("");
   const [error, setError] = useState("");
@@ -487,10 +488,15 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
 
           <div className="grid grid-cols-2 gap-4">
             {(["breakfast", "lunch", "dinner", "snacks"] as MealType[]).map(meal => {
-              const entries  = logForChart.food[meal] ?? [];
-              const catData  = getMealCatData(entries);
-              const isEmpty  = entries.length === 0;
+              const entries   = logForChart.food[meal] ?? [];
+              const catData   = getBalancedPlateData(entries);
+              const isEmpty   = entries.length === 0;
               const { score, missing } = mealBalanceScore(entries);
+              const avoidFlags = alwaysAvoid && entries.length > 0
+                ? entries
+                    .map(e => ({ name: e.name, rule: checkAlwaysAvoidRules(e.name, alwaysAvoid) }))
+                    .filter(f => f.rule !== null)
+                : [];
 
               const scoreColor = isEmpty    ? "#334155"
                 : score >= 80 ? "#22c55e"
@@ -573,10 +579,24 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
                   )}
 
                   {/* Full balance celebration */}
-                  {!isEmpty && missing.length === 0 && (
+                  {!isEmpty && missing.length === 0 && avoidFlags.length === 0 && (
                     <div className="text-xs px-2 py-1 rounded-lg"
                       style={{ background: "rgba(34,197,94,0.08)", color: "#86efac" }}>
                       ✓ Well-balanced plate
+                    </div>
+                  )}
+
+                  {/* Always-avoid violations */}
+                  {avoidFlags.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="text-xs font-semibold" style={{ color: "#ef4444" }}>⚠ Avoid list:</div>
+                      {avoidFlags.map(f => (
+                        <div key={f.name} className="p-1.5 rounded-lg space-y-0.5"
+                          style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                          <div className="text-xs font-semibold" style={{ color: "#f87171" }}>✕ {f.name}</div>
+                          <div className="text-xs" style={{ color: "#94a3b8" }}>{f.rule}</div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
