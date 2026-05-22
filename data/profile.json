@@ -58,7 +58,18 @@
         "Avoid very high saturated fat meals",
         "CoQ10 depletion is a known risk — flag if CoQ10 supplementation is not in place"
       ]
-    }
+    },
+    {
+  "name": "Aspirin (Low-Dose)",
+  "dose": "75mg",
+  "time": "1:30PM",
+  "interactions": [
+    "STRICTLY take with or right after a meal — even at low doses, it can irritate the stomach lining and increase the risk of GI ulcers over time",
+    "Avoid taking other NSAID painkillers (like Ibuprofen, Naproxen, or Diclofenac) without consulting your doctor — they can block aspirin's antiplatelet effects and raise bleeding risks",
+    "Limit or avoid alcohol — combining alcohol with daily aspirin significantly increases the risk of bleeding in the digestive tract",
+    "Inform your dentist or surgeon before any upcoming procedures — because it alters your blood's clotting ability, it may need to be paused a few days prior"
+  ]
+}
   ],
   "exercise": {
     "frequency": "Monday to Saturday",

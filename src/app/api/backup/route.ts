@@ -36,7 +36,7 @@ export async function GET() {
 
     const backup = {
       exported_at: new Date().toISOString(),
-      app: "NutriTrack",
+      app: "WellnessTrax",
       version: "1.0.0",
       data_files: {
         profile:     profileResult.status    === "fulfilled" ? profileResult.value    : null,
@@ -50,7 +50,7 @@ export async function GET() {
     return new NextResponse(JSON.stringify(backup, null, 2), {
       headers: {
         "Content-Type": "application/json",
-        "Content-Disposition": `attachment; filename="nutritrack-backup-${today}.json"`,
+        "Content-Disposition": `attachment; filename="wellnesstrax-backup-${today}.json"`,
       },
     });
   } catch (err) {

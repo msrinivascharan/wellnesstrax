@@ -274,7 +274,7 @@ export default function Home() {
       <div className="flex h-screen items-center justify-center" style={{ background: "var(--bg-base)" }}>
         <div className="text-center space-y-4">
           <div className="text-4xl spin-slow inline-block">🧬</div>
-          <div className="text-sm font-medium text-white">Loading NutriTrack…</div>
+          <div className="text-sm font-medium text-white">Loading WellnessTrax…</div>
           <div className="flex justify-center gap-1.5">
             <span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" />
           </div>

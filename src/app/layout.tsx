@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "NutriBot — Daily Nutrition Intelligence",
-  description: "AI-powered cardiac-safe daily nutrition tracking and analysis",
+  title: "WellnessTrax — Daily Health Intelligence",
+  description: "AI-powered daily wellness tracking, nutrition, activity, and health analysis",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

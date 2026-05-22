@@ -5,7 +5,9 @@
       "Fruits": [
         "Blueberries",
         "Guava",
-        "Avocado"
+        "Avocado",
+        "Pomegranate",
+        "Pitaya"
       ],
       "Protein": [
         "Eggs",
@@ -15,11 +17,13 @@
       ],
       "Beverages & Drinks": [
         "Black coffee",
-        "Milk coffee without sugar"
+        "Milk coffee without sugar",
+        "Milk Tea with Sugar"
       ],
       "Nuts & Seeds": [
         "Groundnuts",
-        "Walnuts"
+        "Walnuts",
+        "Overnight soaked Almonds skin pealed"
       ],
       "Dietary Fiber": [
         "Psyllium husk"
@@ -28,14 +32,17 @@
     "lunch": {
       "Vegetables": [
         "Drumsticks",
-        "Cucumber"
+        "Cucumber",
+        "Cooked mixed vegitables",
+        "Cooked mixed vegetables"
       ],
       "One-Pot Dish": [
         "Mixed vegetables, Peas, Red beans, Chickpea cooked along with Sesame seed powder and Olive oil, slat, turmeric, cumin, coriander seed powder .",
         "Raw banana cooked in Olive oil, slat, turmeric, cumin, coriander seed powder"
       ],
       "Beverages & Drinks": [
-        "Curd, Banana, Blueberries based lassi, no sugar"
+        "Curd, Banana, Blueberries based lassi, no sugar",
+        "Curd, Banana based Lassi"
       ],
       "Beans & Legumes": [
         "Red bean",
@@ -52,13 +59,20 @@
       ],
       "Spices": [
         "Garam masala"
+      ],
+      "Legumes & Beans": [
+        "Cooked Yellow Moong dal"
+      ],
+      "Other": [
+        "Olive oil"
       ]
     },
     "dinner": {
       "Vegetables": [
         "Drumsticks",
         "Cucumber",
-        "Carrot"
+        "Carrot",
+        "Mixed vegitables"
       ],
       "Beans & Legumes": [
         "Red bean",
@@ -68,10 +82,21 @@
       "Protein": [
         "Eggs",
         "Chicken",
-        "Fish"
+        "Fish",
+        "Chicken curry"
       ],
       "Spices": [
         "Garam masala"
+      ],
+      "Grains & Carbs": [
+        "Cooked white rice",
+        "Oats"
+      ],
+      "Custom": [
+        "Spinach"
+      ],
+      "Beverages & Drinks": [
+        "Green tea"
       ]
     },
     "snacks": {
@@ -80,10 +105,12 @@
         "Walnuts",
         "Pumpkin seeds",
         "Unsalted roasted Sunflower seeds",
-        "Unsalted roasted Muskmelon seeds"
+        "Unsalted roasted Muskmelon seeds",
+        "Unsalted roasted Groundnuts"
       ],
       "Beverages & Drinks": [
-        "Milk based sugar less tea"
+        "Milk based sugar less tea",
+        "Tea with Milk and Sugar"
       ],
       "Fruit": [
         "Apple",
@@ -93,7 +120,11 @@
       "Other": [
         "Greek yogurt",
         "Cucumber slices",
-        "Roasted chana"
+        "Roasted chana",
+        "Olive oil"
+      ],
+      "Grains & Carbs": [
+        "Broken Wheat"
       ]
     }
   }

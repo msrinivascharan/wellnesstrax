@@ -112,8 +112,8 @@ export default function Sidebar({ active, onNavigate, dayLog, profile, saveStatu
             🧬
           </div>
           <div>
-            <div className="text-sm font-bold text-white tracking-tight">NutriTrack</div>
-            <div className="text-xs" style={{ color: "#475569" }}>Cardiac-safe AI</div>
+            <div className="text-sm font-bold text-white tracking-tight">WellnessTrax</div>
+            <div className="text-xs" style={{ color: "#475569" }}>Smart wellness tracker</div>
           </div>
         </div>
       </div>
