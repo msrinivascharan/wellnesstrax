@@ -43,10 +43,17 @@ export default function WaterSleep({ dayLog, profile, onUpdate }: Props) {
 
   function updateSleep(updates: Partial<SleepLog>) {
     const next = { ...sleep, ...updates };
-    // Auto-calculate hours when times change
-    if ((updates.bedtime !== undefined || updates.wake_time !== undefined)) {
+    // Auto-calculate night hours when bedtime / wake_time change
+    if (updates.bedtime !== undefined || updates.wake_time !== undefined) {
       const hours = calcHours(next.bedtime, next.wake_time);
       if (hours > 0) next.hours = hours;
+    }
+    // Auto-calculate nap hours when nap start / end change
+    if (updates.nap_start !== undefined || updates.nap_end !== undefined) {
+      if (next.nap_start && next.nap_end) {
+        const napH = calcHours(next.nap_start, next.nap_end);
+        if (napH > 0) next.nap_hours = napH;
+      }
     }
     onUpdate(water_ml, next);
   }
@@ -226,37 +233,69 @@ export default function WaterSleep({ dayLog, profile, onUpdate }: Props) {
         </div>
 
         {/* Daytime nap */}
-        <div className="p-3 rounded-xl space-y-2"
+        <div className="p-4 rounded-xl space-y-3"
           style={{ background: "rgba(167,139,250,0.05)", border: "1px solid rgba(167,139,250,0.15)" }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-base">😴</span>
-              <div>
-                <div className="text-xs font-semibold text-white">Daytime nap</div>
-                <div className="text-xs" style={{ color: "#475569" }}>Afternoon rest or siesta</div>
-              </div>
+          <div className="flex items-center gap-2">
+            <span className="text-base">😴</span>
+            <div>
+              <div className="text-xs font-semibold text-white">Daytime nap</div>
+              <div className="text-xs" style={{ color: "#475569" }}>Afternoon rest or siesta</div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => updateSleep({ nap_hours: Math.max(0, (sleep.nap_hours ?? 0) - 0.5) })}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-base font-bold transition-all"
-                style={{ background: "rgba(255,255,255,0.05)", color: "#64748b", border: "1px solid var(--border)" }}>
-                −
-              </button>
-              <span className="text-base font-bold w-10 text-center tabular-nums"
-                style={{ color: (sleep.nap_hours ?? 0) > 0 ? "#a78bfa" : "#334155" }}>
-                {(sleep.nap_hours ?? 0) > 0 ? `${sleep.nap_hours}h` : "0"}
-              </span>
-              <button
-                onClick={() => updateSleep({ nap_hours: Math.min(4, (sleep.nap_hours ?? 0) + 0.5) })}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-base font-bold transition-all"
-                style={{ background: "rgba(167,139,250,0.12)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.3)" }}>
-                +
-              </button>
+            {(sleep.nap_hours ?? 0) > 0 && (
+              <div className="ml-auto text-right">
+                <div className="text-lg font-bold tabular-nums" style={{ color: "#a78bfa" }}>{sleep.nap_hours}h</div>
+              </div>
+            )}
+          </div>
+
+          {/* Nap start + end times */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="section-header mb-1.5">Nap start</div>
+              <input
+                type="time"
+                className="nb-input"
+                value={sleep.nap_start ?? ""}
+                onChange={e => updateSleep({ nap_start: e.target.value })}
+              />
+            </div>
+            <div>
+              <div className="section-header mb-1.5">Nap end</div>
+              <input
+                type="time"
+                className="nb-input"
+                value={sleep.nap_end ?? ""}
+                onChange={e => updateSleep({ nap_end: e.target.value })}
+              />
             </div>
           </div>
+
+          {/* Nap duration — manual override, auto-filled from times */}
+          <div>
+            <div className="section-header mb-1.5">Nap duration</div>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                max="4"
+                step="0.5"
+                className="nb-input"
+                style={{ maxWidth: 100 }}
+                value={sleep.nap_hours || ""}
+                placeholder="0"
+                onChange={e => updateSleep({ nap_hours: parseFloat(e.target.value) || 0 })}
+              />
+              <span className="text-sm" style={{ color: "#64748b" }}>hours</span>
+              {sleep.nap_start && sleep.nap_end && (
+                <span className="text-xs" style={{ color: "#475569" }}>
+                  (auto: {calcHours(sleep.nap_start, sleep.nap_end)}h)
+                </span>
+              )}
+            </div>
+          </div>
+
           {(sleep.nap_hours ?? 0) > 0 && (
-            <div className="text-xs" style={{ color: "#a78bfa" }}>
+            <div className="text-xs pt-1" style={{ color: "#a78bfa", borderTop: "1px solid rgba(167,139,250,0.12)" }}>
               Total sleep today: <strong>{(sleep.hours + (sleep.nap_hours ?? 0)).toFixed(1)}h</strong>
               <span className="ml-1" style={{ color: "#64748b" }}>({sleep.hours}h night + {sleep.nap_hours}h nap)</span>
             </div>

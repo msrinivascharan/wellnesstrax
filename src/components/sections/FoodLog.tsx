@@ -12,6 +12,8 @@ interface Props {
   onSaveToList: (meal: string, category: string, name: string) => Promise<void>;
   /** Called when an item should be removed from the pre-defined list */
   onRemoveFromList: (meal: string, category: string, name: string) => Promise<void>;
+  /** Called when an item should be moved to a different category */
+  onMoveItem: (meal: string, oldCat: string, newCat: string, name: string) => Promise<void>;
 }
 
 // ─── Unit helpers ─────────────────────────────────────────────────────────────
@@ -90,7 +92,7 @@ interface SavePrompt {
   saving: boolean;
 }
 
-export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate, onSaveToList, onRemoveFromList }: Props) {
+export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate, onSaveToList, onRemoveFromList, onMoveItem }: Props) {
   const [activeMeal, setActiveMeal] = useState<MealType>("breakfast");
   const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
   const [customText, setCustomText] = useState("");
@@ -98,6 +100,8 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
   const [customUnit, setCustomUnit] = useState<string>("g");
   const [savePrompt, setSavePrompt] = useState<SavePrompt | null>(null);
   const [editingList, setEditingList] = useState(false);
+  const [recatItem, setRecatItem] = useState<{ cat: string; name: string } | null>(null);
+  const [newCatName, setNewCatName] = useState("");
 
   const meal = activeMeal;
   const entries = dayLog.food[meal] ?? [];
@@ -184,6 +188,13 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
     setSavePrompt(null);
   }
 
+  async function handleRecat(newCat: string) {
+    if (!recatItem || !newCat.trim()) return;
+    await onMoveItem(meal, recatItem.cat, newCat.trim(), recatItem.name);
+    setRecatItem(null);
+    setNewCatName("");
+  }
+
   // Update quantity or unit of already-logged entry
   function updateEntry(id: string, patch: Partial<Pick<FoodEntry, "quantity_g" | "unit">>) {
     onUpdate({ ...dayLog.food, [meal]: entries.map(e => e.id === id ? { ...e, ...patch } : e) });
@@ -212,7 +223,7 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
           const count = dayLog.food[m]?.length ?? 0;
           const mealTime = dayLog.meal_times?.[m];
           return (
-            <button key={m} onClick={() => { setActiveMeal(m); setPendingItem(null); setSavePrompt(null); setEditingList(false); }}
+            <button key={m} onClick={() => { setActiveMeal(m); setPendingItem(null); setSavePrompt(null); setEditingList(false); setRecatItem(null); setNewCatName(""); }}
               className="flex-1 flex flex-col items-center justify-center gap-0.5 px-2 py-2 rounded-lg text-sm font-medium transition-all"
               style={activeMeal === m
                 ? { background: "rgba(255,255,255,0.07)", color: meta.color, boxShadow: `0 0 0 1px ${meta.color}30` }
@@ -282,48 +293,116 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
         {Object.keys(categories).length === 0 ? (
           <p className="text-xs" style={{ color: "#475569" }}>No pre-defined items for this meal. Add via the custom input below.</p>
         ) : (
-          Object.entries(categories).map(([cat, items], ci) => {
-            const cc = catColor(ci);
-            return (
-              <div key={cat}>
-                <div className="text-xs font-semibold mb-2" style={{ color: cc.text }}>{cat}</div>
-                <div className="flex flex-wrap gap-2">
-                  {items.map(item => {
-                    const selected = isSelected(item);
-                    if (editingList) {
+          <>
+            {Object.entries(categories).map(([cat, items], ci) => {
+              const cc = catColor(ci);
+              return (
+                <div key={cat}>
+                  <div className="text-xs font-semibold mb-2" style={{ color: cc.text }}>{cat}</div>
+                  <div className="flex flex-wrap gap-2">
+                    {items.map(item => {
+                      const selected = isSelected(item);
+                      if (editingList) {
+                        const isRecat = recatItem?.name === item && recatItem?.cat === cat;
+                        return (
+                          <div key={item} className="flex items-center gap-1">
+                            <span
+                              className="food-chip cursor-default select-none"
+                              style={selected ? { borderColor: cc.border, background: cc.bg, color: cc.text } : undefined}>
+                              {selected && <span>✓</span>}
+                              {item}
+                            </span>
+                            {!selected && (
+                              <>
+                                {/* Recategorize toggle */}
+                                <button
+                                  onClick={() => { setRecatItem(isRecat ? null : { cat, name: item }); setNewCatName(""); }}
+                                  className="h-5 px-1.5 rounded text-xs font-bold transition-all shrink-0"
+                                  style={isRecat
+                                    ? { background: "rgba(20,184,166,0.2)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.4)" }
+                                    : { background: "rgba(255,255,255,0.04)", color: "#64748b", border: "1px solid var(--border)" }}
+                                  title={`Change category for "${item}"`}>
+                                  ↷
+                                </button>
+                                {/* Remove */}
+                                <button
+                                  onClick={() => { onRemoveFromList(meal, cat, item); if (isRecat) setRecatItem(null); }}
+                                  className="w-5 h-5 rounded-full flex items-center justify-center text-xs transition-all shrink-0"
+                                  style={{ background: "rgba(239,68,68,0.15)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)" }}
+                                  title={`Remove "${item}" from list`}>
+                                  ✕
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        );
+                      }
                       return (
-                        <div key={item} className="flex items-center gap-1">
-                          <span
-                            className="food-chip cursor-default select-none"
-                            style={selected ? { borderColor: cc.border, background: cc.bg, color: cc.text } : undefined}>
-                            {selected && <span>✓</span>}
-                            {item}
-                          </span>
-                          {!selected && (
-                            <button
-                              onClick={() => onRemoveFromList(meal, cat, item)}
-                              className="w-5 h-5 rounded-full flex items-center justify-center text-xs transition-all shrink-0"
-                              style={{ background: "rgba(239,68,68,0.15)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)" }}
-                              title={`Remove "${item}" from list`}>
-                              ✕
-                            </button>
-                          )}
-                        </div>
+                        <button key={item} onClick={() => handleChipClick(item, cat)}
+                          className="food-chip"
+                          style={selected ? { borderColor: cc.border, background: cc.bg, color: cc.text } : undefined}>
+                          {selected && <span>✓</span>}
+                          {item}
+                        </button>
                       );
-                    }
-                    return (
-                      <button key={item} onClick={() => handleChipClick(item, cat)}
-                        className="food-chip"
-                        style={selected ? { borderColor: cc.border, background: cc.bg, color: cc.text } : undefined}>
-                        {selected && <span>✓</span>}
-                        {item}
-                      </button>
-                    );
-                  })}
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* ── Inline recat picker ── */}
+            {recatItem && editingList && (
+              <div className="mt-1 p-3 rounded-xl space-y-2.5 fade-in-up"
+                style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.2)" }}>
+                <div className="text-xs font-semibold text-white">
+                  Move <span style={{ color: "#14b8a6" }}>&ldquo;{recatItem.name}&rdquo;</span> to category:
+                </div>
+                {/* Existing categories (exclude current) */}
+                {Object.keys(categories).filter(c => c !== recatItem.cat).length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.keys(categories)
+                      .filter(c => c !== recatItem.cat)
+                      .map(c => (
+                        <button key={c} onClick={() => handleRecat(c)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                          style={{ background: "var(--bg-input)", color: "#94a3b8", border: "1px solid var(--border)" }}>
+                          {c}
+                        </button>
+                      ))}
+                  </div>
+                )}
+                {/* New category input */}
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    className="nb-input-sm"
+                    style={{ maxWidth: 190 }}
+                    placeholder="New category name…"
+                    value={newCatName}
+                    onChange={e => setNewCatName(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && handleRecat(newCatName)}
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => handleRecat(newCatName)}
+                    disabled={!newCatName.trim()}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                    style={newCatName.trim()
+                      ? { background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.3)" }
+                      : { background: "transparent", color: "#334155", border: "1px solid var(--border)", opacity: 0.5 }}>
+                    Move ✓
+                  </button>
+                  <button
+                    onClick={() => { setRecatItem(null); setNewCatName(""); }}
+                    className="text-xs px-2 py-1.5 transition-colors"
+                    style={{ color: "#475569" }}>
+                    Cancel
+                  </button>
                 </div>
               </div>
-            );
-          })
+            )}
+          </>
         )}
       </div>
 

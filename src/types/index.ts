@@ -155,6 +155,8 @@ export interface SleepLog {
   wake_time: string;
   notes: string;
   nap_hours?: number;   // daytime / afternoon nap duration (default 0)
+  nap_start?: string;   // "HH:MM" — nap start time
+  nap_end?: string;     // "HH:MM" — nap end time (auto-calculates nap_hours)
 }
 
 // ─── Day Log (main daily record) ─────────────────────────────────────────────

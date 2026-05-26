@@ -358,6 +358,20 @@ export default function Home() {
     } catch { /* non-critical */ }
   }
 
+  async function onMoveItem(meal: string, oldCat: string, newCat: string, name: string) {
+    try {
+      const res = await fetch("/api/food-items", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ meal, oldCategory: oldCat, newCategory: newCat, name }),
+      });
+      if (res.ok) {
+        const { data } = await res.json() as { data: FoodItemsData };
+        setFoodItems(data);
+      }
+    } catch { /* non-critical */ }
+  }
+
   // ── Boot screen ───────────────────────────────────────────────────────────
   if (booting) {
     return (
@@ -447,7 +461,7 @@ export default function Home() {
               <Dashboard dayLog={dayLog} profile={profile} onNavigate={s => setSection(s as SectionId)} />
             )}
             {section === "food" && (
-              <FoodLog dayLog={dayLog} foodItems={foodItems} onUpdate={onFoodUpdate} onMealTimeUpdate={onMealTimeUpdate} onSaveToList={onSaveToList} onRemoveFromList={onRemoveFromList} />
+              <FoodLog dayLog={dayLog} foodItems={foodItems} onUpdate={onFoodUpdate} onMealTimeUpdate={onMealTimeUpdate} onSaveToList={onSaveToList} onRemoveFromList={onRemoveFromList} onMoveItem={onMoveItem} />
             )}
             {section === "activity" && (
               <ActivityLogSection dayLog={dayLog} activitiesData={activitiesData} onUpdate={onActivityUpdate} />

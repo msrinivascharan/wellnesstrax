@@ -76,6 +76,46 @@ export async function removeFoodItem(
   return { meals: fullFile.meals ?? {} } as FoodItemsData;
 }
 
+/**
+ * Move an item from one category to another within the same meal.
+ * Creates the target category if it doesn't exist.
+ * Removes the source category key if it becomes empty after the move.
+ */
+export async function moveFoodItem(
+  meal: string,
+  oldCategory: string,
+  newCategory: string,
+  name: string
+): Promise<FoodItemsData> {
+  const filePath = path.join(DATA_DIR, "food_items.json");
+  const raw = await fs.readFile(filePath, "utf-8");
+  const fullFile = JSON.parse(raw) as Record<string, unknown> & { meals?: Record<string, Record<string, string[]>> };
+
+  if (!fullFile.meals) fullFile.meals = {};
+
+  // Remove from old category
+  const srcItems = fullFile.meals[meal]?.[oldCategory];
+  if (srcItems) {
+    const filtered = srcItems.filter(i => i.toLowerCase() !== name.toLowerCase());
+    if (filtered.length === 0) {
+      delete fullFile.meals[meal][oldCategory];
+    } else {
+      fullFile.meals[meal][oldCategory] = filtered;
+    }
+  }
+
+  // Add to new category (create if needed, skip if already present)
+  if (!fullFile.meals[meal]) fullFile.meals[meal] = {};
+  if (!fullFile.meals[meal][newCategory]) fullFile.meals[meal][newCategory] = [];
+  const destItems = fullFile.meals[meal][newCategory];
+  if (!destItems.some(i => i.toLowerCase() === name.toLowerCase())) {
+    destItems.push(name);
+  }
+
+  await fs.writeFile(filePath, JSON.stringify(fullFile, null, 2), "utf-8");
+  return { meals: fullFile.meals } as FoodItemsData;
+}
+
 export async function loadActivities(): Promise<ActivitiesData> {
   const raw = await fs.readFile(path.join(DATA_DIR, "activities.json"), "utf-8");
   return JSON.parse(raw) as ActivitiesData;
