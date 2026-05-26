@@ -10,6 +10,8 @@ interface Props {
   onMealTimeUpdate: (meal: MealType, time: string) => void;
   /** Called when a custom item should be saved to food_items.json */
   onSaveToList: (meal: string, category: string, name: string) => Promise<void>;
+  /** Called when an item should be removed from the pre-defined list */
+  onRemoveFromList: (meal: string, category: string, name: string) => Promise<void>;
 }
 
 // ─── Unit helpers ─────────────────────────────────────────────────────────────
@@ -88,13 +90,14 @@ interface SavePrompt {
   saving: boolean;
 }
 
-export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate, onSaveToList }: Props) {
+export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate, onSaveToList, onRemoveFromList }: Props) {
   const [activeMeal, setActiveMeal] = useState<MealType>("breakfast");
   const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
   const [customText, setCustomText] = useState("");
   const [customQty, setCustomQty] = useState("");
   const [customUnit, setCustomUnit] = useState<string>("g");
   const [savePrompt, setSavePrompt] = useState<SavePrompt | null>(null);
+  const [editingList, setEditingList] = useState(false);
 
   const meal = activeMeal;
   const entries = dayLog.food[meal] ?? [];
@@ -209,7 +212,7 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
           const count = dayLog.food[m]?.length ?? 0;
           const mealTime = dayLog.meal_times?.[m];
           return (
-            <button key={m} onClick={() => { setActiveMeal(m); setPendingItem(null); setSavePrompt(null); }}
+            <button key={m} onClick={() => { setActiveMeal(m); setPendingItem(null); setSavePrompt(null); setEditingList(false); }}
               className="flex-1 flex flex-col items-center justify-center gap-0.5 px-2 py-2 rounded-lg text-sm font-medium transition-all"
               style={activeMeal === m
                 ? { background: "rgba(255,255,255,0.07)", color: meta.color, boxShadow: `0 0 0 1px ${meta.color}30` }
@@ -263,7 +266,19 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
 
       {/* Pre-populated chips */}
       <div className="card p-4 space-y-4">
-        <div className="section-header">Pre-defined items — tap to add</div>
+        <div className="flex items-center justify-between">
+          <div className="section-header">{editingList ? "Edit list — tap ✕ to remove" : "Pre-defined items — tap to add"}</div>
+          {Object.keys(categories).length > 0 && (
+            <button
+              onClick={() => setEditingList(e => !e)}
+              className="text-xs px-2.5 py-1 rounded-lg transition-all"
+              style={editingList
+                ? { background: "rgba(239,68,68,0.12)", color: "#f87171", border: "1px solid rgba(239,68,68,0.25)" }
+                : { background: "var(--bg-input)", color: "#64748b", border: "1px solid var(--border)" }}>
+              {editingList ? "✓ Done" : "✏ Edit list"}
+            </button>
+          )}
+        </div>
         {Object.keys(categories).length === 0 ? (
           <p className="text-xs" style={{ color: "#475569" }}>No pre-defined items for this meal. Add via the custom input below.</p>
         ) : (
@@ -275,6 +290,27 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
                 <div className="flex flex-wrap gap-2">
                   {items.map(item => {
                     const selected = isSelected(item);
+                    if (editingList) {
+                      return (
+                        <div key={item} className="flex items-center gap-1">
+                          <span
+                            className="food-chip cursor-default select-none"
+                            style={selected ? { borderColor: cc.border, background: cc.bg, color: cc.text } : undefined}>
+                            {selected && <span>✓</span>}
+                            {item}
+                          </span>
+                          {!selected && (
+                            <button
+                              onClick={() => onRemoveFromList(meal, cat, item)}
+                              className="w-5 h-5 rounded-full flex items-center justify-center text-xs transition-all shrink-0"
+                              style={{ background: "rgba(239,68,68,0.15)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)" }}
+                              title={`Remove "${item}" from list`}>
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      );
+                    }
                     return (
                       <button key={item} onClick={() => handleChipClick(item, cat)}
                         className="food-chip"
@@ -437,7 +473,7 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
                 Save &ldquo;{savePrompt.name}&rdquo; to your food list?
               </div>
               <div className="text-xs mt-0.5" style={{ color: "#94a3b8" }}>
-                It will appear as a chip in future sessions. To remove it, edit <code className="text-teal-400">data/food_items.json</code>.
+                It will appear as a chip in future sessions. You can remove it later using the ✏ Edit list button.
               </div>
             </div>
           </div>

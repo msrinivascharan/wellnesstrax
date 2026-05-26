@@ -3,7 +3,8 @@
   "gym": {
     "Cardio": [
       { "name": "Treadmill", "type": "cardio", "default_duration_min": 15 },
-      { "name": "Elliptical", "type": "cardio", "default_duration_min": 10 }
+      { "name": "Elliptical", "type": "cardio", "default_duration_min": 10 },
+      { "name": "Indoor bike", "type": "cardio", "default_duration_min": 20 }
     ],
     "Legs": [
       { "name": "Leg press", "type": "strength", "default_sets": 3, "default_reps": 12, "default_weight_kg": 60 },

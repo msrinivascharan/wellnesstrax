@@ -225,6 +225,44 @@ export default function WaterSleep({ dayLog, profile, onUpdate }: Props) {
           </div>
         </div>
 
+        {/* Daytime nap */}
+        <div className="p-3 rounded-xl space-y-2"
+          style={{ background: "rgba(167,139,250,0.05)", border: "1px solid rgba(167,139,250,0.15)" }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-base">😴</span>
+              <div>
+                <div className="text-xs font-semibold text-white">Daytime nap</div>
+                <div className="text-xs" style={{ color: "#475569" }}>Afternoon rest or siesta</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => updateSleep({ nap_hours: Math.max(0, (sleep.nap_hours ?? 0) - 0.5) })}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-base font-bold transition-all"
+                style={{ background: "rgba(255,255,255,0.05)", color: "#64748b", border: "1px solid var(--border)" }}>
+                −
+              </button>
+              <span className="text-base font-bold w-10 text-center tabular-nums"
+                style={{ color: (sleep.nap_hours ?? 0) > 0 ? "#a78bfa" : "#334155" }}>
+                {(sleep.nap_hours ?? 0) > 0 ? `${sleep.nap_hours}h` : "0"}
+              </span>
+              <button
+                onClick={() => updateSleep({ nap_hours: Math.min(4, (sleep.nap_hours ?? 0) + 0.5) })}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-base font-bold transition-all"
+                style={{ background: "rgba(167,139,250,0.12)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.3)" }}>
+                +
+              </button>
+            </div>
+          </div>
+          {(sleep.nap_hours ?? 0) > 0 && (
+            <div className="text-xs" style={{ color: "#a78bfa" }}>
+              Total sleep today: <strong>{(sleep.hours + (sleep.nap_hours ?? 0)).toFixed(1)}h</strong>
+              <span className="ml-1" style={{ color: "#64748b" }}>({sleep.hours}h night + {sleep.nap_hours}h nap)</span>
+            </div>
+          )}
+        </div>
+
         {/* Notes */}
         <div>
           <div className="section-header mb-2">Notes (optional)</div>

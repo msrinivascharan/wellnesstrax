@@ -344,6 +344,20 @@ export default function Home() {
     } catch { /* non-critical */ }
   }
 
+  async function onRemoveFromList(meal: string, category: string, name: string) {
+    try {
+      const res = await fetch("/api/food-items", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ meal, category, name }),
+      });
+      if (res.ok) {
+        const { data } = await res.json() as { data: FoodItemsData };
+        setFoodItems(data);
+      }
+    } catch { /* non-critical */ }
+  }
+
   // ── Boot screen ───────────────────────────────────────────────────────────
   if (booting) {
     return (
@@ -433,7 +447,7 @@ export default function Home() {
               <Dashboard dayLog={dayLog} profile={profile} onNavigate={s => setSection(s as SectionId)} />
             )}
             {section === "food" && (
-              <FoodLog dayLog={dayLog} foodItems={foodItems} onUpdate={onFoodUpdate} onMealTimeUpdate={onMealTimeUpdate} onSaveToList={onSaveToList} />
+              <FoodLog dayLog={dayLog} foodItems={foodItems} onUpdate={onFoodUpdate} onMealTimeUpdate={onMealTimeUpdate} onSaveToList={onSaveToList} onRemoveFromList={onRemoveFromList} />
             )}
             {section === "activity" && (
               <ActivityLogSection dayLog={dayLog} activitiesData={activitiesData} onUpdate={onActivityUpdate} />

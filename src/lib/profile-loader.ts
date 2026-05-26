@@ -48,6 +48,34 @@ export async function addFoodItem(
   return { meals: fullFile.meals } as FoodItemsData;
 }
 
+/**
+ * Remove an item from food_items.json under meal → category.
+ * If the category becomes empty after removal, the category key is deleted too.
+ */
+export async function removeFoodItem(
+  meal: string,
+  category: string,
+  name: string
+): Promise<FoodItemsData> {
+  const filePath = path.join(DATA_DIR, "food_items.json");
+  const raw = await fs.readFile(filePath, "utf-8");
+  const fullFile = JSON.parse(raw) as Record<string, unknown> & { meals?: Record<string, Record<string, string[]>> };
+
+  const items = fullFile.meals?.[meal]?.[category];
+  if (items) {
+    const filtered = items.filter(i => i.toLowerCase() !== name.toLowerCase());
+    if (filtered.length === 0) {
+      // Remove empty category
+      delete fullFile.meals![meal][category];
+    } else {
+      fullFile.meals![meal][category] = filtered;
+    }
+  }
+
+  await fs.writeFile(filePath, JSON.stringify(fullFile, null, 2), "utf-8");
+  return { meals: fullFile.meals ?? {} } as FoodItemsData;
+}
+
 export async function loadActivities(): Promise<ActivitiesData> {
   const raw = await fs.readFile(path.join(DATA_DIR, "activities.json"), "utf-8");
   return JSON.parse(raw) as ActivitiesData;

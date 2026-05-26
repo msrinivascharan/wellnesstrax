@@ -154,6 +154,7 @@ export interface SleepLog {
   bedtime: string;
   wake_time: string;
   notes: string;
+  nap_hours?: number;   // daytime / afternoon nap duration (default 0)
 }
 
 // ─── Day Log (main daily record) ─────────────────────────────────────────────

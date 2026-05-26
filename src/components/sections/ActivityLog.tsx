@@ -236,7 +236,7 @@ export default function ActivityLog({ dayLog, activitiesData, onUpdate }: Props)
                   <input
                     type="time"
                     className="nb-input-sm"
-                    style={{ width: 94 }}
+                    style={{ width: 116 }}
                     value={activity.gym.started_at}
                     onChange={e => onUpdate({ ...activity, gym: { ...activity.gym, started_at: e.target.value } })}
                   />
@@ -247,7 +247,7 @@ export default function ActivityLog({ dayLog, activitiesData, onUpdate }: Props)
                   <input
                     type="time"
                     className="nb-input-sm"
-                    style={{ width: 94 }}
+                    style={{ width: 116 }}
                     value={activity.gym.ended_at ?? ""}
                     onChange={e => onUpdate({ ...activity, gym: { ...activity.gym, ended_at: e.target.value || undefined } })}
                   />
