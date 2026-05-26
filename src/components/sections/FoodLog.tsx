@@ -312,27 +312,25 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
                               {selected && <span>✓</span>}
                               {item}
                             </span>
+                            {/* Recategorize — available for ALL items, even ones logged today */}
+                            <button
+                              onClick={() => { setRecatItem(isRecat ? null : { cat, name: item }); setNewCatName(""); }}
+                              className="h-5 px-1.5 rounded text-xs font-bold transition-all shrink-0"
+                              style={isRecat
+                                ? { background: "rgba(20,184,166,0.2)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.4)" }
+                                : { background: "rgba(255,255,255,0.04)", color: "#64748b", border: "1px solid var(--border)" }}
+                              title={`Change category for "${item}"`}>
+                              ↷
+                            </button>
+                            {/* Remove — locked for items already in today's log */}
                             {!selected && (
-                              <>
-                                {/* Recategorize toggle */}
-                                <button
-                                  onClick={() => { setRecatItem(isRecat ? null : { cat, name: item }); setNewCatName(""); }}
-                                  className="h-5 px-1.5 rounded text-xs font-bold transition-all shrink-0"
-                                  style={isRecat
-                                    ? { background: "rgba(20,184,166,0.2)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.4)" }
-                                    : { background: "rgba(255,255,255,0.04)", color: "#64748b", border: "1px solid var(--border)" }}
-                                  title={`Change category for "${item}"`}>
-                                  ↷
-                                </button>
-                                {/* Remove */}
-                                <button
-                                  onClick={() => { onRemoveFromList(meal, cat, item); if (isRecat) setRecatItem(null); }}
-                                  className="w-5 h-5 rounded-full flex items-center justify-center text-xs transition-all shrink-0"
-                                  style={{ background: "rgba(239,68,68,0.15)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)" }}
-                                  title={`Remove "${item}" from list`}>
-                                  ✕
-                                </button>
-                              </>
+                              <button
+                                onClick={() => { onRemoveFromList(meal, cat, item); if (isRecat) setRecatItem(null); }}
+                                className="w-5 h-5 rounded-full flex items-center justify-center text-xs transition-all shrink-0"
+                                style={{ background: "rgba(239,68,68,0.15)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)" }}
+                                title={`Remove "${item}" from list`}>
+                                ✕
+                              </button>
                             )}
                           </div>
                         );
