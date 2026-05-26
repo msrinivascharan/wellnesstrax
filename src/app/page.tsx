@@ -25,7 +25,7 @@ import Reports from "@/components/sections/Reports";
  */
 function buildMedEntries(profile: UserProfile): MedicationEntry[] {
   return profile.medications.flatMap(m => {
-    if (!m.time) return [];   // no daily schedule (e.g. injectable every 6 months)
+    if (!m.time) return [];
     if (/\band\b/i.test(m.time)) {
       const times = m.time.split(/\s+and\s+/i).map(t => t.trim()).filter(Boolean);
       return times.map(t => ({
@@ -48,14 +48,18 @@ function buildMedEntries(profile: UserProfile): MedicationEntry[] {
   });
 }
 
-// ─── Initial DayLog factory ───────────────────────────────────────────────────
+// ─── Supplement-def type ──────────────────────────────────────────────────────
 
-function makeEmptyLog(profile: UserProfile, supplements: { name: string; dose: string; scheduled_time: string }[]): DayLog {
+type SuppDef = { name: string; dose: string; scheduled_time: string };
+
+// ─── DayLog factory — accepts explicit date so it works for any day ───────────
+
+function makeEmptyLog(profile: UserProfile, supplements: SuppDef[], date: string): DayLog {
+  const dayDate = new Date(date + "T12:00:00");
   const now = new Date();
-  const date = format(now, "yyyy-MM-dd");
   return {
     date,
-    day: format(now, "EEEE"),
+    day: format(dayDate, "EEEE"),
     food: { breakfast: [], lunch: [], dinner: [], snacks: [] },
     water_ml: 0,
     sleep: { hours: 0, quality: "", bedtime: "", wake_time: "", notes: "" },
@@ -81,19 +85,26 @@ function makeEmptyLog(profile: UserProfile, supplements: { name: string; dose: s
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const [section, setSection] = useState<SectionId>("dashboard");
-  const [dayLog, setDayLog] = useState<DayLog | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [foodItems, setFoodItems] = useState<FoodItemsData | null>(null);
-  const [activitiesData, setActivitiesData] = useState<ActivitiesData | null>(null);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [booting, setBooting] = useState(true);
-  const [bootError, setBootError] = useState("");
-  const [bloodWork, setBloodWork] = useState<import("@/types").BloodWorkData | undefined>(undefined);
-  const [alwaysAvoid, setAlwaysAvoid] = useState<string[]>([]);
+  const todayStr = format(new Date(), "yyyy-MM-dd");
 
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const logRef = useRef<DayLog | null>(null);
+  const [section, setSection]                 = useState<SectionId>("dashboard");
+  const [dayLog, setDayLog]                   = useState<DayLog | null>(null);
+  const [profile, setProfile]                 = useState<UserProfile | null>(null);
+  const [foodItems, setFoodItems]             = useState<FoodItemsData | null>(null);
+  const [activitiesData, setActivitiesData]   = useState<ActivitiesData | null>(null);
+  const [saveStatus, setSaveStatus]           = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [booting, setBooting]                 = useState(true);
+  const [bootError, setBootError]             = useState("");
+  const [bloodWork, setBloodWork]             = useState<import("@/types").BloodWorkData | undefined>(undefined);
+  const [alwaysAvoid, setAlwaysAvoid]         = useState<string[]>([]);
+  const [selectedDate, setSelectedDate]       = useState<string>(todayStr);
+  const [dateLoading, setDateLoading]         = useState(false);
+
+  // Refs that let async functions always see the latest values without stale closures
+  const saveTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const logRef      = useRef<DayLog | null>(null);
+  const profileRef  = useRef<UserProfile | null>(null);
+  const suppDefsRef = useRef<SuppDef[]>([]);
 
   // ── Save to server (debounced) ────────────────────────────────────────────
   const persistLog = useCallback(async (log: DayLog) => {
@@ -126,6 +137,75 @@ export default function Home() {
     });
   }, [debouncedSave]);
 
+  // ── Session loader — works for today OR any past date ─────────────────────
+  async function loadSessionForDate(date: string): Promise<DayLog> {
+    const p = profileRef.current;
+    const defs = suppDefsRef.current;
+    if (!p) throw new Error("Profile not loaded");
+
+    const fresh = makeEmptyLog(p, defs, date);
+    const sessRes = await fetch(`/api/sessions/${date}`);
+
+    if (!sessRes.ok) {
+      // No file for this date — return blank log; don't save yet (user may just be browsing)
+      return fresh;
+    }
+
+    const raw = await sessRes.json() as { log?: Partial<DayLog> };
+    const saved = raw.log ?? {};
+
+    const mergedMeds = buildMedEntries(p).map(freshEntry => {
+      const existing = (saved.medications ?? []).find(m => m.name === freshEntry.name);
+      return existing ?? freshEntry;
+    });
+    const mergedSupps = defs.map(sd => {
+      const existing = (saved.supplements ?? []).find(s => s.name === sd.name);
+      return existing ?? { ...sd, taken: false, taken_at: "" };
+    });
+
+    const savedAnalysis =
+      saved.analysis &&
+      typeof (saved.analysis as DayAnalysis).overall_score === "number" &&
+      (saved.analysis as DayAnalysis).nutrition != null
+        ? (saved.analysis as DayAnalysis)
+        : undefined;
+
+    return {
+      ...fresh,
+      ...saved,
+      date,
+      food: saved.food ?? fresh.food,
+      water_ml: saved.water_ml ?? 0,
+      sleep: saved.sleep ?? fresh.sleep,
+      activity: saved.activity
+        ? { ...saved.activity, breathing: saved.activity.breathing ?? { box_4444: 0, long_exhale_478: 0 } }
+        : fresh.activity,
+      medications: mergedMeds,
+      supplements: mergedSupps,
+      analysis: savedAnalysis,
+    };
+  }
+
+  // ── Switch to a different date ────────────────────────────────────────────
+  async function handleDateChange(date: string) {
+    if (date === selectedDate) return;
+    if (date > todayStr) return; // no future dates
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    setSaveStatus("idle");
+    setSelectedDate(date);
+    setDateLoading(true);
+    setDayLog(null);
+    try {
+      const log = await loadSessionForDate(date);
+      setDayLog(log);
+      logRef.current = log;
+    } catch (e) {
+      console.error("Failed to load session for", date, e);
+    } finally {
+      setDateLoading(false);
+    }
+  }
+
   // ── Boot ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     async function boot() {
@@ -138,6 +218,7 @@ export default function Home() {
           fetch(`/api/sessions/${today}`),
           fetch("/api/bloodwork"),
         ]);
+
         if (bwRes.ok) {
           const bwJson = await bwRes.json() as { data: import("@/types").BloodWorkData };
           setBloodWork(bwJson.data);
@@ -146,6 +227,7 @@ export default function Home() {
         if (!profRes.ok) throw new Error("Failed to load profile.json");
         const { profile: p } = await profRes.json() as { profile: UserProfile };
         setProfile(p);
+        profileRef.current = p;
 
         if (!foodRes.ok) throw new Error("Failed to load food_items.json");
         const { data: fi } = await foodRes.json() as { data: FoodItemsData };
@@ -155,24 +237,21 @@ export default function Home() {
         const { data: ad } = await actRes.json() as { data: ActivitiesData };
         setActivitiesData(ad);
 
-        // Build supplement entries from food_rules via profile-loader already done server-side
-        // We pass them from food_rules.json — use the api route
         const rulesRes = await fetch("/api/food-rules");
         const { rules } = rulesRes.ok
           ? await rulesRes.json() as { rules: { supplements_to_track: { name: string; dose?: string; target: string }[]; always_avoid?: string[] } }
           : { rules: { supplements_to_track: [], always_avoid: [] } };
-        const suppDefs = rules.supplements_to_track.map(s => ({
+        const suppDefs: SuppDef[] = rules.supplements_to_track.map(s => ({
           name: s.name,
           dose: s.dose ?? "",
           scheduled_time: s.target,
         }));
+        suppDefsRef.current = suppDefs;
         if (rules.always_avoid?.length) setAlwaysAvoid(rules.always_avoid);
 
-        const fresh = makeEmptyLog(p, suppDefs);
+        const fresh = makeEmptyLog(p, suppDefs, today);
 
         if (sessRes.ok) {
-          // The saved file may be in the old chatbot format (no medications/food/activity).
-          // Defensively merge: use fresh defaults for any missing field.
           const raw = await sessRes.json() as { log?: Partial<DayLog> };
           const saved = raw.log ?? {};
 
@@ -185,7 +264,6 @@ export default function Home() {
             return existing ?? { ...sd, taken: false, taken_at: "" };
           });
 
-          // Only carry forward analysis that's in the NEW format (has overall_score + nutrition)
           const savedAnalysis =
             saved.analysis &&
             typeof (saved.analysis as DayAnalysis).overall_score === "number" &&
@@ -194,9 +272,9 @@ export default function Home() {
               : undefined;
 
           const merged: DayLog = {
-            ...fresh,                               // safe defaults for every field
-            ...saved,                               // overlay what was saved
-            date: today,                            // always use today's date
+            ...fresh,
+            ...saved,
+            date: today,
             food: saved.food ?? fresh.food,
             water_ml: saved.water_ml ?? 0,
             sleep: saved.sleep ?? fresh.sleep,
@@ -205,10 +283,10 @@ export default function Home() {
               : fresh.activity,
             medications: mergedMeds,
             supplements: mergedSupps,
-            analysis: savedAnalysis,                // strip old chatbot-era analysis
+            analysis: savedAnalysis,
           };
 
-          // If the file was in the old format, overwrite it with the new structure
+          // Overwrite if old format
           if (!saved.food || !saved.activity || !savedAnalysis !== !saved.analysis) {
             await fetch(`/api/sessions/${today}`, {
               method: "PUT",
@@ -220,7 +298,7 @@ export default function Home() {
           setDayLog(merged);
           logRef.current = merged;
         } else {
-          // Fresh day — save immediately so the file exists
+          // Fresh day — create the file immediately
           setDayLog(fresh);
           logRef.current = fresh;
           await fetch(`/api/sessions/${today}`, {
@@ -236,6 +314,7 @@ export default function Home() {
       }
     }
     boot();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Section-specific update handlers ─────────────────────────────────────
@@ -251,7 +330,6 @@ export default function Home() {
   function onWaterSleepUpdate(water_ml: number, sleep: SleepLog) { updateLog({ water_ml, sleep }); }
   function onAnalysisComplete(analysis: DayAnalysis) { updateLog({ analysis }); }
 
-  /** Save a custom food item to food_items.json and refresh the local foodItems state */
   async function onSaveToList(meal: string, category: string, name: string) {
     try {
       const res = await fetch("/api/food-items", {
@@ -261,11 +339,9 @@ export default function Home() {
       });
       if (res.ok) {
         const { data } = await res.json() as { data: FoodItemsData };
-        setFoodItems(data);   // immediately reflected in chips without refresh
+        setFoodItems(data);
       }
-    } catch {
-      // non-critical — item is already logged in the session
-    }
+    } catch { /* non-critical */ }
   }
 
   // ── Boot screen ───────────────────────────────────────────────────────────
@@ -301,7 +377,9 @@ export default function Home() {
     );
   }
 
-  if (!dayLog || !profile || !foodItems || !activitiesData) return null;
+  if (!profile || !foodItems || !activitiesData) return null;
+
+  const isToday = selectedDate === todayStr;
 
   // ── Main render ───────────────────────────────────────────────────────────
   return (
@@ -312,30 +390,67 @@ export default function Home() {
         dayLog={dayLog}
         profile={profile}
         saveStatus={saveStatus}
+        selectedDate={selectedDate}
+        onDateChange={handleDateChange}
       />
 
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
-        {section === "dashboard" && (
-          <Dashboard dayLog={dayLog} profile={profile} onNavigate={s => setSection(s as SectionId)} />
+      <main className="flex-1 overflow-y-auto flex flex-col">
+
+        {/* ── Past-date editing banner ─────────────────────────────────── */}
+        {!isToday && (
+          <div className="shrink-0 flex items-center gap-2.5 px-5 py-2.5 text-xs font-medium"
+            style={{ background: "rgba(245,158,11,0.08)", borderBottom: "1px solid rgba(245,158,11,0.18)", color: "#f59e0b" }}>
+            <span className="text-base">📅</span>
+            <span>
+              Editing: <strong>{format(new Date(selectedDate + "T12:00:00"), "EEEE, dd MMMM yyyy")}</strong>
+            </span>
+            <span className="ml-auto hidden sm:inline" style={{ color: "#92400e", opacity: 0.8 }}>
+              All changes save to this date
+            </span>
+            <button
+              onClick={() => handleDateChange(todayStr)}
+              className="ml-2 px-2.5 py-1 rounded-lg transition-all"
+              style={{ background: "rgba(245,158,11,0.15)", color: "#fbbf24", border: "1px solid rgba(245,158,11,0.3)" }}>
+              ↩ Today
+            </button>
+          </div>
         )}
-        {section === "food" && (
-          <FoodLog dayLog={dayLog} foodItems={foodItems} onUpdate={onFoodUpdate} onMealTimeUpdate={onMealTimeUpdate} onSaveToList={onSaveToList} />
-        )}
-        {section === "activity" && (
-          <ActivityLogSection dayLog={dayLog} activitiesData={activitiesData} onUpdate={onActivityUpdate} />
-        )}
-        {section === "medications" && (
-          <MedicationLog dayLog={dayLog} onUpdate={onMedUpdate} />
-        )}
-        {section === "bloodwork" && (
-          <BloodWork />
-        )}
-        {section === "water-sleep" && (
-          <WaterSleep dayLog={dayLog} profile={profile} onUpdate={onWaterSleepUpdate} />
-        )}
-        {section === "reports" && (
-          <Reports dayLog={dayLog} profile={profile} onAnalysisComplete={onAnalysisComplete} bloodWork={bloodWork} alwaysAvoid={alwaysAvoid} />
+
+        {/* ── Date-switching spinner ───────────────────────────────────── */}
+        {dateLoading ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3">
+            <div className="text-4xl">📅</div>
+            <div className="flex gap-1.5">
+              <span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" />
+            </div>
+            <div className="text-sm" style={{ color: "#475569" }}>
+              Loading {format(new Date(selectedDate + "T12:00:00"), "dd MMMM yyyy")}…
+            </div>
+          </div>
+        ) : !dayLog ? null : (
+          <>
+            {section === "dashboard" && (
+              <Dashboard dayLog={dayLog} profile={profile} onNavigate={s => setSection(s as SectionId)} />
+            )}
+            {section === "food" && (
+              <FoodLog dayLog={dayLog} foodItems={foodItems} onUpdate={onFoodUpdate} onMealTimeUpdate={onMealTimeUpdate} onSaveToList={onSaveToList} />
+            )}
+            {section === "activity" && (
+              <ActivityLogSection dayLog={dayLog} activitiesData={activitiesData} onUpdate={onActivityUpdate} />
+            )}
+            {section === "medications" && (
+              <MedicationLog dayLog={dayLog} onUpdate={onMedUpdate} />
+            )}
+            {section === "bloodwork" && (
+              <BloodWork />
+            )}
+            {section === "water-sleep" && (
+              <WaterSleep dayLog={dayLog} profile={profile} onUpdate={onWaterSleepUpdate} />
+            )}
+            {section === "reports" && (
+              <Reports dayLog={dayLog} profile={profile} onAnalysisComplete={onAnalysisComplete} bloodWork={bloodWork} alwaysAvoid={alwaysAvoid} />
+            )}
+          </>
         )}
       </main>
     </div>

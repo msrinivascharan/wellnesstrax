@@ -52,7 +52,7 @@ function computeCompletion(log: DayLog | null, profile: UserProfile | null) {
   if (!log || !profile) return { food: 0, water: 0, meds: 0, activity: 0, sleep: 0 };
 
   const totalFood = Object.values(log.food).flat().length;
-  const foodPct = Math.min(100, (totalFood / 6) * 100); // 6 items = 100%
+  const foodPct = Math.min(100, (totalFood / 6) * 100);
 
   const waterTarget = profile.daily_targets.water_ml || 3000;
   const waterPct = Math.min(100, (log.water_ml / waterTarget) * 100);
@@ -76,7 +76,7 @@ function sectionCompletion(id: SectionId, c: ReturnType<typeof computeCompletion
     case "water-sleep": return Math.round((c.water + c.sleep) / 2);
     case "medications": return c.meds;
     case "activity":    return c.activity;
-    default:            return -1; // no ring for dashboard/reports
+    default:            return -1;
   }
 }
 
@@ -88,14 +88,32 @@ interface SidebarProps {
   dayLog: DayLog | null;
   profile: UserProfile | null;
   saveStatus: "saved" | "saving" | "error" | "idle";
+  selectedDate: string;
+  onDateChange: (date: string) => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function Sidebar({ active, onNavigate, dayLog, profile, saveStatus }: SidebarProps) {
+export default function Sidebar({ active, onNavigate, dayLog, profile, saveStatus, selectedDate, onDateChange }: SidebarProps) {
   const completion = computeCompletion(dayLog, profile);
-  const today = new Date();
-  const isSunday = today.getDay() === 0;
+  const todayStr   = format(new Date(), "yyyy-MM-dd");
+  const isToday    = selectedDate === todayStr;
+  const viewDate   = new Date(selectedDate + "T12:00:00");
+  const isSunday   = viewDate.getDay() === 0;
+
+  function goPrev() {
+    const d = new Date(selectedDate + "T12:00:00");
+    d.setDate(d.getDate() - 1);
+    onDateChange(format(d, "yyyy-MM-dd"));
+  }
+
+  function goNext() {
+    if (isToday) return;
+    const d = new Date(selectedDate + "T12:00:00");
+    d.setDate(d.getDate() + 1);
+    const next = format(d, "yyyy-MM-dd");
+    if (next <= todayStr) onDateChange(next);
+  }
 
   return (
     <aside
@@ -118,14 +136,64 @@ export default function Sidebar({ active, onNavigate, dayLog, profile, saveStatu
         </div>
       </div>
 
-      {/* Date */}
-      <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
-        <div className="text-xs font-semibold text-white">{format(today, "EEEE, dd MMM yyyy")}</div>
-        {isSunday && (
-          <div className="text-xs mt-0.5" style={{ color: "#f59e0b" }}>☀️ Rest day — flexible choices</div>
+      {/* ── Date navigation ─────────────────────────────────────────────────── */}
+      <div className="px-3 py-2.5 border-b space-y-1.5" style={{ borderColor: "var(--border)" }}>
+
+        {/* ‹ Date › row */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={goPrev}
+            title="Previous day"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-lg font-bold shrink-0 transition-colors"
+            style={{ background: "rgba(255,255,255,0.04)", color: "#64748b" }}>
+            ‹
+          </button>
+
+          {/* Clickable date label — opens native date picker */}
+          <label className="flex-1 relative cursor-pointer select-none">
+            <input
+              type="date"
+              max={todayStr}
+              value={selectedDate}
+              onChange={e => { if (e.target.value) onDateChange(e.target.value); }}
+              style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", cursor: "pointer" }}
+            />
+            <div className="text-xs font-semibold text-center text-white py-0.5">
+              {format(viewDate, "EEE, dd MMM yyyy")}
+            </div>
+            <div className="text-center" style={{ fontSize: 9, color: "#334155" }}>tap to pick date</div>
+          </label>
+
+          <button
+            onClick={goNext}
+            disabled={isToday}
+            title={isToday ? "Already on today" : "Next day"}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-lg font-bold shrink-0 transition-colors"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              color: isToday ? "#1e3050" : "#64748b",
+              cursor: isToday ? "not-allowed" : "pointer",
+            }}>
+            ›
+          </button>
+        </div>
+
+        {/* Back to Today — only when viewing a past date */}
+        {!isToday && (
+          <button
+            onClick={() => onDateChange(todayStr)}
+            className="w-full text-xs py-1.5 rounded-lg font-medium transition-all"
+            style={{ background: "rgba(20,184,166,0.1)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.25)" }}>
+            ↩ Back to Today
+          </button>
         )}
+
+        {isSunday && isToday && (
+          <div className="text-xs" style={{ color: "#f59e0b" }}>☀️ Rest day — flexible choices</div>
+        )}
+
         {profile && (
-          <div className="text-xs mt-1" style={{ color: "#475569" }}>
+          <div className="text-xs" style={{ color: "#475569" }}>
             {profile.display_name} · {profile.weight_kg}kg · BMI {profile.bmi}
           </div>
         )}
@@ -159,7 +227,6 @@ export default function Sidebar({ active, onNavigate, dayLog, profile, saveStatu
 
       {/* Save status + profile footer */}
       <div className="px-4 py-3 border-t space-y-2" style={{ borderColor: "var(--border)" }}>
-        {/* Save status */}
         <div className="flex items-center gap-1.5 text-xs">
           {saveStatus === "saving" && (
             <>
@@ -174,7 +241,6 @@ export default function Sidebar({ active, onNavigate, dayLog, profile, saveStatu
             <span style={{ color: "#ef4444" }}>⚠ Save failed — check connection</span>
           )}
         </div>
-        {/* Profile */}
         {profile && (
           <div className="text-xs" style={{ color: "#334155" }}>
             <span className="block">← data/profile.json</span>
