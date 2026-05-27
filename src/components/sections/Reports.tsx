@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import type { DayAnalysis, DayLog, FoodEntry, MealType, UserProfile, BloodWorkData } from "@/types";
+import type { DayAnalysis, DayLog, FoodEntry, FoodPreferences, MealType, UserProfile, BloodWorkData } from "@/types";
 import { resolveCategory, mapToBalancedPlate, checkAlwaysAvoidRules } from "@/lib/food-utils";
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
   onAnalysisComplete: (analysis: DayAnalysis) => void;
   bloodWork?: BloodWorkData;
   alwaysAvoid?: string[];
+  foodPrefs?: FoodPreferences;
 }
 
 const LOADING_MSGS = [
@@ -113,15 +114,27 @@ function InsightCard({ title, icon, children }: { title: string; icon: string; c
 // ─── Meal-wise balanced plate helpers ────────────────────────────────────────
 
 /** Aggregate food entries into balanced-plate buckets for the donut chart. */
-function getBalancedPlateData(entries: FoodEntry[]): Array<{ cat: string; count: number; color: string }> {
-  const map = new Map<string, number>();
+function getBalancedPlateData(entries: FoodEntry[]): Array<{ cat: string; count: number; color: string; items: string[] }> {
+  const map = new Map<string, string[]>();
   for (const e of entries) {
     const bp = mapToBalancedPlate(resolveCategory(e));
-    map.set(bp, (map.get(bp) ?? 0) + 1);
+    const arr = map.get(bp) ?? [];
+    arr.push(e.name);
+    map.set(bp, arr);
   }
   return [...map.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([cat, count]) => ({ cat, count, color: BP_COLORS[cat] ?? "#64748b" }));
+    .sort((a, b) => b[1].length - a[1].length)
+    .map(([cat, items]) => ({ cat, count: items.length, color: BP_COLORS[cat] ?? "#64748b", items }));
+}
+
+/** Check a food name against a simple avoid list (case-insensitive substring). */
+function checkSimpleAvoid(foodName: string, avoidList: string[]): string | null {
+  const lc = foodName.toLowerCase();
+  for (const item of avoidList) {
+    const it = item.toLowerCase().trim();
+    if (it.length >= 2 && lc.includes(it)) return item;
+  }
+  return null;
 }
 
 /** Score a meal against the 5 balanced plate categories (max 100 pts). */
@@ -198,11 +211,12 @@ function DonutChart({ data, size = 100 }: {
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
-export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork, alwaysAvoid }: Props) {
+export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork, alwaysAvoid, foodPrefs }: Props) {
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState("");
   const [error, setError] = useState("");
   const [backingUp, setBackingUp] = useState(false);
+  const [hoveredCell, setHoveredCell] = useState<{ meal: MealType; cat: string } | null>(null);
 
   // ── History navigation ────────────────────────────────────────────────────
   const todayStr = format(new Date(), "yyyy-MM-dd");
@@ -492,11 +506,19 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
               const catData   = getBalancedPlateData(entries);
               const isEmpty   = entries.length === 0;
               const { score, missing } = mealBalanceScore(entries);
-              const avoidFlags = alwaysAvoid && entries.length > 0
+              // Flags from complex food_rules (alwaysAvoid)
+              const rulesFlags = alwaysAvoid && entries.length > 0
                 ? entries
-                    .map(e => ({ name: e.name, rule: checkAlwaysAvoidRules(e.name, alwaysAvoid) }))
+                    .map(e => ({ name: e.name, rule: checkAlwaysAvoidRules(e.name, alwaysAvoid), source: "rules" as const }))
                     .filter(f => f.rule !== null)
                 : [];
+              // Flags from user's simple avoid list (foodPrefs.avoid)
+              const simpleFlags = foodPrefs?.avoid?.length && entries.length > 0
+                ? entries
+                    .map(e => ({ name: e.name, rule: checkSimpleAvoid(e.name, foodPrefs.avoid), source: "prefs" as const }))
+                    .filter(f => f.rule !== null && !rulesFlags.some(r => r.name === f.name))
+                : [];
+              const avoidFlags = [...rulesFlags, ...simpleFlags];
 
               const scoreColor = isEmpty    ? "#334155"
                 : score >= 80 ? "#22c55e"
@@ -533,7 +555,13 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
                       {catData.length === 0 ? (
                         <p className="text-xs" style={{ color: "#334155" }}>Nothing logged yet</p>
                       ) : catData.slice(0, 5).map(d => (
-                        <div key={d.cat} className="flex items-center gap-1.5 min-w-0">
+                        <div key={d.cat}
+                          className="flex items-center gap-1.5 min-w-0 cursor-pointer rounded px-1 -mx-1 transition-colors"
+                          style={hoveredCell?.meal === meal && hoveredCell.cat === d.cat
+                            ? { background: `${d.color}14` }
+                            : undefined}
+                          onMouseEnter={() => setHoveredCell({ meal, cat: d.cat })}
+                          onMouseLeave={() => setHoveredCell(null)}>
                           <span className="w-1.5 h-1.5 rounded-full shrink-0 inline-block"
                             style={{ background: d.color }} />
                           <span className="text-xs truncate" style={{ color: "#94a3b8" }}>{d.cat}</span>
@@ -547,6 +575,34 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
                       )}
                     </div>
                   </div>
+
+                  {/* Hover: item breakdown for the hovered category */}
+                  {hoveredCell?.meal === meal && (() => {
+                    const hd = catData.find(d => d.cat === hoveredCell.cat);
+                    if (!hd) return null;
+                    return (
+                      <div className="px-2 py-2 rounded-lg text-xs space-y-1.5 fade-in-up"
+                        style={{ background: `${hd.color}10`, border: `1px solid ${hd.color}28` }}>
+                        <div className="font-semibold" style={{ color: hd.color }}>
+                          {hd.cat} — {hd.count} item{hd.count !== 1 ? "s" : ""}
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {hd.items.map(name => {
+                            const isAvoid = avoidFlags.some(f => f.name === name);
+                            return (
+                              <span key={name}
+                                className="px-1.5 py-0.5 rounded text-xs"
+                                style={isAvoid
+                                  ? { background: "rgba(239,68,68,0.15)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)" }
+                                  : { background: "rgba(255,255,255,0.05)", color: "#94a3b8" }}>
+                                {isAvoid && "⚠ "}{name}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Balance score bar */}
                   {!isEmpty && (
@@ -586,7 +642,7 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
                     </div>
                   )}
 
-                  {/* Always-avoid violations */}
+                  {/* Avoid violations (rules + simple list) */}
                   {avoidFlags.length > 0 && (
                     <div className="space-y-1">
                       <div className="text-xs font-semibold" style={{ color: "#ef4444" }}>⚠ Avoid list:</div>
@@ -594,7 +650,9 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
                         <div key={f.name} className="p-1.5 rounded-lg space-y-0.5"
                           style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
                           <div className="text-xs font-semibold" style={{ color: "#f87171" }}>✕ {f.name}</div>
-                          <div className="text-xs" style={{ color: "#94a3b8" }}>{f.rule}</div>
+                          <div className="text-xs" style={{ color: "#94a3b8" }}>
+                            {f.source === "prefs" ? "In your Must Avoid list" : f.rule}
+                          </div>
                         </div>
                       ))}
                     </div>

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import type { DayLog, FoodEntry, FoodItemsData, MealType } from "@/types";
+import type { DayLog, FoodEntry, FoodItemsData, FoodPreferences, MealType } from "@/types";
 import { autoCategory, resolveCategory } from "@/lib/food-utils";
 
 interface Props {
@@ -14,6 +14,10 @@ interface Props {
   onRemoveFromList: (meal: string, category: string, name: string) => Promise<void>;
   /** Called when an item should be moved to a different category */
   onMoveItem: (meal: string, oldCat: string, newCat: string, name: string) => Promise<void>;
+  /** Current avoid / encourage preference lists */
+  foodPrefs: FoodPreferences;
+  /** Called when either preference list changes */
+  onUpdatePrefs: (prefs: FoodPreferences) => Promise<void>;
 }
 
 // ─── Unit helpers ─────────────────────────────────────────────────────────────
@@ -92,7 +96,7 @@ interface SavePrompt {
   saving: boolean;
 }
 
-export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate, onSaveToList, onRemoveFromList, onMoveItem }: Props) {
+export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate, onSaveToList, onRemoveFromList, onMoveItem, foodPrefs, onUpdatePrefs }: Props) {
   const [activeMeal, setActiveMeal] = useState<MealType>("breakfast");
   const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
   const [customText, setCustomText] = useState("");
@@ -102,6 +106,8 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
   const [editingList, setEditingList] = useState(false);
   const [recatItem, setRecatItem] = useState<{ cat: string; name: string } | null>(null);
   const [newCatName, setNewCatName] = useState("");
+  const [avoidInput, setAvoidInput] = useState("");
+  const [encourageInput, setEncourageInput] = useState("");
 
   const meal = activeMeal;
   const entries = dayLog.food[meal] ?? [];
@@ -193,6 +199,22 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
     await onMoveItem(meal, recatItem.cat, newCat.trim(), recatItem.name);
     setRecatItem(null);
     setNewCatName("");
+  }
+
+  async function addAvoid() {
+    const name = avoidInput.trim();
+    if (!name) return;
+    if (foodPrefs.avoid.some(a => a.toLowerCase() === name.toLowerCase())) { setAvoidInput(""); return; }
+    await onUpdatePrefs({ ...foodPrefs, avoid: [...foodPrefs.avoid, name] });
+    setAvoidInput("");
+  }
+
+  async function addEncourage() {
+    const name = encourageInput.trim();
+    if (!name) return;
+    if (foodPrefs.encourage.some(a => a.toLowerCase() === name.toLowerCase())) { setEncourageInput(""); return; }
+    await onUpdatePrefs({ ...foodPrefs, encourage: [...foodPrefs.encourage, name] });
+    setEncourageInput("");
   }
 
   // Update quantity or unit of already-logged entry
@@ -536,6 +558,98 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
             style={{ background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.3)" }}>
             + Add
           </button>
+        </div>
+      </div>
+
+      {/* ── Must Avoid + Good to Eat ──────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-4">
+
+        {/* Must Avoid */}
+        <div className="card p-4 space-y-3" style={{ borderColor: "rgba(239,68,68,0.2)" }}>
+          <div className="flex items-center gap-2">
+            <span className="text-base">🚫</span>
+            <div>
+              <div className="text-sm font-semibold text-white">Must Avoid</div>
+              <div className="text-xs" style={{ color: "#475569" }}>Never eat — any time</div>
+            </div>
+          </div>
+          {foodPrefs.avoid.length === 0 ? (
+            <p className="text-xs" style={{ color: "#334155" }}>No items yet. Add below.</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {foodPrefs.avoid.map(item => (
+                <div key={item} className="flex items-center gap-1 pl-2.5 pr-1.5 py-0.5 rounded-full text-xs"
+                  style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171" }}>
+                  <span>{item}</span>
+                  <button
+                    onClick={() => onUpdatePrefs({ ...foodPrefs, avoid: foodPrefs.avoid.filter(a => a !== item) })}
+                    className="ml-0.5 w-4 h-4 flex items-center justify-center rounded-full transition-all"
+                    style={{ color: "#ef4444", background: "rgba(239,68,68,0.15)" }}>
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              className="nb-input-sm flex-1"
+              placeholder='e.g. "Fried chips"'
+              value={avoidInput}
+              onChange={e => setAvoidInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && addAvoid()}
+            />
+            <button onClick={addAvoid}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0"
+              style={{ background: "rgba(239,68,68,0.12)", color: "#f87171", border: "1px solid rgba(239,68,68,0.25)" }}>
+              + Add
+            </button>
+          </div>
+        </div>
+
+        {/* Good to Eat */}
+        <div className="card p-4 space-y-3" style={{ borderColor: "rgba(34,197,94,0.2)" }}>
+          <div className="flex items-center gap-2">
+            <span className="text-base">✅</span>
+            <div>
+              <div className="text-sm font-semibold text-white">Good to Eat</div>
+              <div className="text-xs" style={{ color: "#475569" }}>Always welcome</div>
+            </div>
+          </div>
+          {foodPrefs.encourage.length === 0 ? (
+            <p className="text-xs" style={{ color: "#334155" }}>No items yet. Add below.</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {foodPrefs.encourage.map(item => (
+                <div key={item} className="flex items-center gap-1 pl-2.5 pr-1.5 py-0.5 rounded-full text-xs"
+                  style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)", color: "#86efac" }}>
+                  <span>{item}</span>
+                  <button
+                    onClick={() => onUpdatePrefs({ ...foodPrefs, encourage: foodPrefs.encourage.filter(a => a !== item) })}
+                    className="ml-0.5 w-4 h-4 flex items-center justify-center rounded-full transition-all"
+                    style={{ color: "#22c55e", background: "rgba(34,197,94,0.15)" }}>
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              className="nb-input-sm flex-1"
+              placeholder='e.g. "Broccoli"'
+              value={encourageInput}
+              onChange={e => setEncourageInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && addEncourage()}
+            />
+            <button onClick={addEncourage}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0"
+              style={{ background: "rgba(34,197,94,0.12)", color: "#86efac", border: "1px solid rgba(34,197,94,0.25)" }}>
+              + Add
+            </button>
+          </div>
         </div>
       </div>
 

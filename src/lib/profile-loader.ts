@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import type { UserProfile, FoodRules, FoodItemsData, ActivitiesData } from "@/types";
+import type { UserProfile, FoodRules, FoodItemsData, ActivitiesData, FoodPreferences } from "@/types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 
@@ -119,4 +119,27 @@ export async function moveFoodItem(
 export async function loadActivities(): Promise<ActivitiesData> {
   const raw = await fs.readFile(path.join(DATA_DIR, "activities.json"), "utf-8");
   return JSON.parse(raw) as ActivitiesData;
+}
+
+export async function loadFoodPreferences(): Promise<FoodPreferences> {
+  try {
+    const raw = await fs.readFile(path.join(DATA_DIR, "food_preferences.json"), "utf-8");
+    const parsed = JSON.parse(raw) as Partial<FoodPreferences>;
+    return {
+      avoid:    Array.isArray(parsed.avoid)    ? parsed.avoid    : [],
+      encourage: Array.isArray(parsed.encourage) ? parsed.encourage : [],
+    };
+  } catch {
+    return { avoid: [], encourage: [] };
+  }
+}
+
+export async function saveFoodPreferences(prefs: FoodPreferences): Promise<void> {
+  const filePath = path.join(DATA_DIR, "food_preferences.json");
+  const content = {
+    _comment: "User-editable food preference lists. avoid = never eat; encourage = always welcome.",
+    avoid: prefs.avoid,
+    encourage: prefs.encourage,
+  };
+  await fs.writeFile(filePath, JSON.stringify(content, null, 2), "utf-8");
 }
