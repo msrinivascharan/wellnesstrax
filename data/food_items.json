@@ -10,15 +10,13 @@
         "Pitaya"
       ],
       "Protein": [
-        "Eggs",
-        "Chicken",
-        "Fish",
         "Boiled egg whites"
       ],
       "Beverages & Drinks": [
         "Black coffee",
         "Milk coffee without sugar",
-        "Milk Tea with Sugar"
+        "Milk Tea with Sugar",
+        "Protein Milkshake"
       ],
       "Nuts & Seeds": [
         "Groundnuts",
@@ -27,18 +25,16 @@
       ],
       "Dietary Fiber": [
         "Psyllium husk"
+      ],
+      "Grains & Carbs": [
+        "Idli"
       ]
     },
     "lunch": {
       "Vegetables": [
         "Drumsticks",
         "Cucumber",
-        "Cooked mixed vegitables",
         "Cooked mixed vegetables"
-      ],
-      "One-Pot Dish": [
-        "Mixed vegetables, Peas, Red beans, Chickpea cooked along with Sesame seed powder and Olive oil, slat, turmeric, cumin, coriander seed powder .",
-        "Raw banana cooked in Olive oil, slat, turmeric, cumin, coriander seed powder"
       ],
       "Beverages & Drinks": [
         "Curd, Banana, Blueberries based lassi, no sugar",
@@ -47,12 +43,12 @@
       "Beans & Legumes": [
         "Red bean",
         "Green pea",
-        "Moong"
+        "Moong",
+        "Cooked Yellow Moong dal",
+        "Cooked  split Pigeon Peas"
       ],
       "Protein": [
-        "Eggs",
-        "Chicken",
-        "Fish"
+        "Cooked Chicken"
       ],
       "Dietary Fiber": [
         "Psyllium husk"
@@ -60,11 +56,19 @@
       "Spices": [
         "Garam masala"
       ],
-      "Legumes & Beans": [
-        "Cooked Yellow Moong dal"
+      "Grains & Carbs": [
+        "Cooked White Rice",
+        "Corn chips"
       ],
-      "Other": [
-        "Olive oil"
+      "Fruits": [
+        "Plum cake"
+      ],
+      "Dairy": [
+        "Ice Cream"
+      ],
+      "Fats": [
+        "Olive oil",
+        "Groundnut oil"
       ]
     },
     "dinner": {
@@ -72,7 +76,10 @@
         "Drumsticks",
         "Cucumber",
         "Carrot",
-        "Mixed vegitables"
+        "Mixed vegitables",
+        "Cooked vegitables",
+        "Spinach",
+        "Moringa leaves powder"
       ],
       "Beans & Legumes": [
         "Red bean",
@@ -80,23 +87,32 @@
         "Moong"
       ],
       "Protein": [
-        "Eggs",
-        "Chicken",
-        "Fish",
-        "Chicken curry"
+        "Chicken curry",
+        "Omelette"
       ],
       "Spices": [
         "Garam masala"
       ],
       "Grains & Carbs": [
         "Cooked white rice",
-        "Oats"
-      ],
-      "Custom": [
-        "Spinach"
+        "Oats",
+        "Whole Mung bean dosa",
+        "Cooked Barley",
+        "Corn chips"
       ],
       "Beverages & Drinks": [
-        "Green tea"
+        "Green tea",
+        "Sprite"
+      ],
+      "Fruits": [
+        "Green Apple",
+        "Ripen Mango"
+      ],
+      "Dairy": [
+        "Curd"
+      ],
+      "Nuts & Seeds": [
+        "Unsalted roasted Peanuts"
       ]
     },
     "snacks": {
@@ -125,6 +141,9 @@
       ],
       "Grains & Carbs": [
         "Broken Wheat"
+      ],
+      "Dairy": [
+        "Ice cream"
       ]
     }
   }

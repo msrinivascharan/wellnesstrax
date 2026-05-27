@@ -12,8 +12,10 @@
 .env.local
 .env.*.local
 
-# personal health data — backup separately
+# personal health data — backup separately, do not commit
 /data/sessions/
+/data/bloodwork.json
+/data/injectable_meds.json
 
 # debug
 npm-debug.log*

@@ -1,5 +1,11 @@
 {
   "_comment": "User-editable food preference lists. avoid = never eat; encourage = always welcome.",
-  "avoid": ["Carbonated beverages"],
-  "encourage": ["Olive oil"]
+  "avoid": [
+    "Carbonated beverages",
+    "Red meat"
+  ],
+  "encourage": [
+    "Olive oil",
+    "Black cofee"
+  ]
 }

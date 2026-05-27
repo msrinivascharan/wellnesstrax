@@ -16,7 +16,7 @@ WellnessTrax is a **local-first, form-based daily health tracker** built around 
 
 Every day, you log your meals, medications, supplements, gym activity, water intake, and sleep through a clean sidebar interface. At the end of the day, a single click runs a full AI analysis that screens every food item against your medications, scores your adherence, and produces a prioritised action plan for tomorrow.
 
-Your health data never leaves your machine.
+Your health data never leaves your machine (except the anonymised log text sent to Groq for AI analysis).
 
 ---
 
@@ -25,30 +25,47 @@ Your health data never leaves your machine.
 | # | Section | What you do here |
 |---|---------|-----------------|
 | 1 | **Dashboard** | Today's at-a-glance snapshot: missed meds alert (time-aware), quick water log, today's score if analysed |
-| 2 | **Food Log** | Log breakfast, lunch, dinner, and snacks with meal time. Pick pre-defined items or type anything custom. Balanced plate categorisation (Complex Carbs, Proteins, Micronutrients, Dietary Fiber, Essential Lipids) |
-| 3 | **Activity** | Log gym session (in/out time + duration), exercises with sets/reps/weights, post-prandial walks, soleus pumps, and breathing exercises |
-| 4 | **Medications** | Mark each scheduled medication and supplement as taken with timestamp. Periodic injectable tracking (e.g. Inclisiran) with next-due status |
+| 2 | **Food Log** | Log breakfast/lunch/dinner/snacks with meal time. Quick-pick pre-defined chips organised by category. Custom items auto-categorised. Must Avoid / Good to Eat reference lists. Full chip editor (delete, recategorise) |
+| 3 | **Activity** | Log gym session with in/out time and auto-calculated duration, exercises with sets/reps/weights, post-prandial walks, soleus pumps, and breathing exercises |
+| 4 | **Medications** | Mark each scheduled medication and supplement as taken with timestamp. Periodic injectable tracking (e.g. Inclisiran) with next-due status badge |
 | 5 | **Blood Work** | Log and track lipid profile and thyroid panel over time with trend indicators and reference ranges |
-| 6 | **Water & Sleep** | Hydration tracker (ml) and sleep log with hours, quality rating, bedtime, and wake time |
-| 7 | **Reports** | Run AI analysis, view meal-wise balanced plate donut charts, always-avoid food flagging, blood work trends, and previous day history via calendar |
+| 6 | **Water & Sleep** | Hydration tracker (ml) and sleep log with hours, quality rating, bedtime/wake time, and daytime nap with start/end times |
+| 7 | **Reports** | Run AI analysis, view meal-wise balanced plate donut charts with hover item breakdown, avoid-list flagging, blood work trends, and previous day history via calendar |
 
 ---
 
 ## Key Features
 
-- **Drug-food interaction screening** — every logged food item is checked against the user's full medication list
-- **Balanced plate analysis** — each meal scored against 5 canonical plate categories (Complex Carbohydrates, Lean/Plant Proteins, Dietary Fiber, Micronutrients, Essential Lipids)
-- **Always-avoid flagging** — food items matching the configured avoid list are highlighted per meal in Reports
-- **Time-aware medication alerts** — missed medication warnings only appear after the scheduled dose time has passed
-- **Injectable medication tracker** — periodic shots (e.g. Inclisiran) tracked with date given, auto-calculated next due, and status badge
-- **Blood work trends** — lipid and thyroid panels tracked over time with traffic-light indicators
-- **Gym session timing** — log gym in/out time with auto-calculated session duration
-- **Meal time logging** — record the actual time of each meal (breakfast, lunch, dinner, snacks)
-- **Auto-categorisation** — food items automatically assigned to the correct food group (handles plurals, compound names, Indian foods)
+### Food Logging
+- **Pre-defined chip lists** — quick-pick items organised by meal and category
+- **Edit list mode** — delete chips and move them to a different category without leaving the app
+- **Must Avoid list** — personal items to never eat; flagged automatically in Reports
+- **Good to Eat list** — items always worth including; both lists editable in real time
+- **Auto-categorisation** — custom items automatically assigned to the correct food group (handles plurals, compound names, Indian foods, oils vs vegetables)
+- **Meal time logging** — record the actual clock time of each meal (breakfast, lunch, dinner, snacks)
+- **Balanced plate categorisation** — all items mapped to 5 canonical categories (Complex Carbohydrates, Lean/Plant Proteins, Dietary Fiber, Micronutrients, Essential Lipids)
+
+### Analysis & Reports
+- **Hover item breakdown** — hover any category on the meal-wise donut legend to see exactly which foods contributed to it
+- **Dual avoid-list flagging** — food items checked against both `food_rules.json` (complex rules) and the user-editable Must Avoid list
+- **Drug-food interaction screening** — every logged food item checked against the user's full medication list
+- **Always-avoid flagging** — food items matching configured avoid rules highlighted per meal
+- **AI health score** — overall daily score with macro estimates, adherence scoring, and personalised recommendations
+- **Session history calendar** — browse and analyse any past day's data in Reports
+
+### Activity & Wellness
+- **Gym session timing** — log gym in/out time; duration auto-calculated and shown as a pill
+- **Daytime nap tracking** — log nap start/end times; duration auto-calculated (mirrors night-sleep UX)
 - **Breathing exercise tracker** — log Box (4-4-4-4) and Long Exhale (4-7-8) breathing rounds with progress bars
-- **Session history calendar** — browse any past day's data in Reports
-- **Auto-save** — debounced 900ms auto-save on every change, no manual save button
-- **Data backup** — one-click download of all config files + last 30 sessions as a single JSON archive
+
+### Medications
+- **Time-aware medication alerts** — missed warnings only appear after the scheduled dose time has passed
+- **Injectable medication tracker** — periodic shots tracked with date, dose, auto-calculated next-due, and colour-coded status badge
+
+### App
+- **Past date editing** — navigate to any previous day from the sidebar to log missed data
+- **Auto-save** — debounced 900 ms auto-save on every change, no manual save button
+- **Data backup** — one-click download of all config + last 30 sessions as a single JSON archive
 - **Fully local** — no database, no cloud sync, no account required
 - **Pluggable profile** — swap `data/profile.json` to adapt for any user without touching code
 
@@ -65,7 +82,6 @@ Your health data never leaves your machine.
 | AI Client | OpenAI SDK (pointed at Groq's OpenAI-compatible endpoint) |
 | Storage | Local JSON files (`data/sessions/`) |
 | Date utilities | date-fns |
-| UI helpers | clsx |
 
 ---
 
@@ -117,54 +133,56 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ```
 wellnesstrax/
-├── data/                        # All config and session data (JSON)
+├── data/                        # Config and session data (JSON)
 │   ├── profile.json             # User profile: age, weight, medications, targets
-│   ├── food_rules.json          # Always-avoid and always-encourage food rules
-│   ├── food_items.json          # Pre-defined food item lists per meal (edit freely)
+│   ├── food_rules.json          # Avoid/encourage rules + supplements + expert panel
+│   ├── food_items.json          # Pre-defined food chip lists per meal (edit freely)
+│   ├── food_preferences.json    # Must Avoid / Good to Eat personal lists (edit in-app)
 │   ├── activities.json          # Exercise definitions: gym + daily activities
-│   ├── bloodwork.json           # Blood work history (lipid + thyroid panels)
-│   ├── injectable_meds.json     # Periodic injectable medication history
+│   ├── bloodwork.json           # Blood work history (gitignored — add your own locally)
+│   ├── injectable_meds.json     # Injectable medication history (gitignored — add locally)
 │   └── sessions/                # Daily logs — gitignored, stays on your machine
 │       └── YYYY-MM-DD.json
 │
 ├── src/
 │   ├── app/
-│   │   ├── page.tsx             # Root page: loads profile, builds empty log, mounts layout
+│   │   ├── page.tsx             # Root page: loads all data, mounts layout, wires handlers
 │   │   └── api/
-│   │       ├── analyze/         # POST — runs Groq AI analysis on today's log
-│   │       ├── sessions/        # GET list / POST new session
+│   │       ├── analyze/         # POST — runs Groq AI analysis on the day's log
+│   │       ├── sessions/        # GET list of available session dates
 │   │       ├── sessions/[date]/ # GET, PUT, DELETE a specific day's session
-│   │       ├── backup/          # GET — returns all data as downloadable JSON archive
+│   │       ├── backup/          # GET — downloads all data as a JSON archive
 │   │       ├── bloodwork/       # GET, PUT — blood work history
 │   │       ├── injectable-meds/ # GET, PUT — injectable medication history
 │   │       ├── profile/         # GET profile.json
 │   │       ├── food-rules/      # GET food_rules.json
-│   │       ├── food-items/      # GET + PUT food_items.json
+│   │       ├── food-items/      # GET list · PUT add item · DELETE remove · PATCH move to new category
+│   │       ├── food-preferences/# GET + PUT — Must Avoid / Good to Eat lists
 │   │       └── activities/      # GET activities.json
 │   │
 │   ├── components/
-│   │   ├── Sidebar.tsx          # Navigation sidebar with completion rings
+│   │   ├── Sidebar.tsx          # Navigation sidebar with completion rings + date navigation
 │   │   └── sections/
-│   │       ├── Dashboard.tsx    # Overview: missed meds, quick stats
-│   │       ├── FoodLog.tsx      # Meal logging with balanced plate chips + meal time
-│   │       ├── ActivityLog.tsx  # Gym + walks + soleus pump + breathing
-│   │       ├── MedicationLog.tsx# Med + supplement check-off + injectable tracker
-│   │       ├── BloodWork.tsx    # Lipid and thyroid panel tracking
-│   │       ├── WaterSleep.tsx   # Hydration + sleep logging
-│   │       └── Reports.tsx      # Charts + AI analysis + history calendar
+│   │       ├── Dashboard.tsx    # Overview: missed meds, quick stats, score summary
+│   │       ├── FoodLog.tsx      # Meal logging: chips, custom input, edit list, pref lists
+│   │       ├── ActivityLog.tsx  # Gym (in/out/duration) + walks + soleus + breathing
+│   │       ├── MedicationLog.tsx# Med/supplement check-off + injectable tracker
+│   │       ├── BloodWork.tsx    # Lipid and thyroid panel entry + history
+│   │       ├── WaterSleep.tsx   # Hydration tracker + sleep + daytime nap
+│   │       └── Reports.tsx      # Balanced plate charts + AI analysis + history calendar
 │   │
 │   ├── lib/
 │   │   ├── food-utils.ts        # autoCategory(), resolveCategory(), mapToBalancedPlate(),
-│   │   │                        # checkAlwaysAvoidRules() — shared food helpers
+│   │   │                        # checkAlwaysAvoidRules() — shared categorisation helpers
 │   │   ├── prompt-builder.ts    # Builds the full AI analysis prompt from today's log
-│   │   ├── profile-loader.ts    # Reads profile.json and food_rules.json
+│   │   ├── profile-loader.ts    # Reads/writes all data/*.json config files
 │   │   └── session-store.ts     # Read/write/list daily session JSON files
 │   │
 │   └── types/
 │       └── index.ts             # All TypeScript interfaces (DayLog, DayAnalysis, etc.)
 │
 ├── .env.example                 # Safe to commit — contains only placeholder key
-├── .gitignore                   # Excludes .env.local, data/sessions/, node_modules
+├── .gitignore                   # Excludes .env.local, sessions/, bloodwork.json, injectable_meds.json
 └── package.json
 ```
 
@@ -174,21 +192,21 @@ wellnesstrax/
 
 ### `data/profile.json`
 
-Contains the user's medical and nutritional profile. Key fields:
+Contains the user's medical and nutritional profile. This is the main file to edit when adapting the app for a different person. Key fields:
 
 ```json
 {
-  "name": "...",
-  "age": 45,
-  "weight_kg": 85,
-  "bmi": 29,
-  "cardiac_status": "...",
+  "name": "Mr. X",
+  "age": 40,
+  "weight_kg": 80,
+  "bmi": 27,
+  "cardiac_status": "Brief description of health status and AI priority constraints",
   "medications": [
     {
       "name": "Medication Name",
       "dose": "90mg",
       "time": "9AM and 9PM",
-      "condition": "Condition description",
+      "condition": "Post-meal",
       "interactions": ["food1", "food2"]
     }
   ],
@@ -201,7 +219,7 @@ Contains the user's medical and nutritional profile. Key fields:
 }
 ```
 
-Medications with `"time": "9AM and 9PM"` are automatically split into two separate daily entries.
+Medications with `"time": "9AM and 9PM"` are automatically split into two daily entries. Medications without a `time` field (e.g. injectables) are skipped from the daily check-off list.
 
 ### `data/food_rules.json`
 
@@ -209,39 +227,75 @@ Doctor/dietitian approved rules loaded into every AI analysis:
 
 - `always_avoid` — hard no's (specific interactions, harmful ingredients)
 - `always_encourage` — foods to favour
-- `supplements_to_track` — prescribed supplements with timing
-- `expert_panel` — reference nutritionist personas for the AI's framing context
+- `supplements_to_track` — prescribed supplements with timing and targets
+- `expert_panel` — reference nutritionist personas used to frame AI context
+
+Items in `always_avoid` are checked against every logged meal in Reports and flagged with a warning badge.
 
 ### `data/food_items.json`
 
-Pre-defined food item lists shown as quick-pick chips in Food Log. Organised by meal → category → item name. Edit this file freely to add, remove, or reorganise items — the app loads it fresh on every page load.
+Pre-defined food item lists shown as quick-pick chips in the Food Log. Organised by `meal → category → [items]`. Edit freely — the app reloads on save. Items can also be added, deleted, and recategorised directly from the app's Edit list mode.
 
 ```json
 {
   "meals": {
     "breakfast": {
-      "Fruits": ["Blueberries", "Guava", "Avocado"],
-      "Nuts & Seeds": ["Groundnuts", "Walnuts"],
+      "Fruits":        ["Blueberries", "Guava", "Avocado"],
+      "Nuts & Seeds":  ["Groundnuts", "Walnuts"],
       "Dietary Fiber": ["Psyllium husk"]
-    }
+    },
+    "lunch": { ... },
+    "dinner": { ... },
+    "snacks": { ... }
   }
 }
 ```
 
+### `data/food_preferences.json`
+
+User-editable personal food preference lists managed from within the Food Log section. No restart needed — changes save immediately via the API.
+
+```json
+{
+  "avoid":    ["Carbonated beverages", "Fried foods"],
+  "encourage": ["Olive oil", "Blueberries"]
+}
+```
+
+- `avoid` items are cross-checked against every meal in Reports and highlighted in red, including inside the hover item breakdown.
+- `encourage` items appear as green "Good to Eat" chips — a visual reminder.
+
 ### `data/activities.json`
 
-Defines available gym exercises and daily activities (walks, soleus pumps). Each exercise includes default sets, reps, weights, or durations used to pre-populate the activity log.
+Defines available gym exercises and daily activities (post-prandial walks, soleus pumps). Each gym exercise includes default sets, reps, weights, or durations used to pre-populate the activity log. Add, remove, or rename exercises here; changes take effect immediately.
+
+### `data/bloodwork.json` *(gitignored — add locally)*
+
+Blood work history. Kept out of version control since it contains real medical data. The repo ships an empty template. Add your own lipid panel and thyroid results; the Reports section will display them with traffic-light indicators and trend history.
+
+### `data/injectable_meds.json` *(gitignored — add locally)*
+
+Injectable medication history. Add dose records here; the Medications section shows the latest dose date, calculates next-due automatically, and displays a colour-coded status badge.
 
 ---
 
 ## Data & Privacy
 
-- **Sessions** are saved to `data/sessions/YYYY-MM-DD.json` — excluded from git via `.gitignore`
-- **API keys** live only in `.env.local` — never committed
-- **No external data transmission** except the AI analysis call (today's log text is sent to Groq)
-- The profile in this repo uses anonymised placeholder data. Replace with real data locally — it will never be committed if you keep it in `data/profile.json` and are careful with git
+| File | Committed? | Contains |
+|------|-----------|---------|
+| `data/profile.json` | ✓ Yes | Anonymised example profile |
+| `data/food_rules.json` | ✓ Yes | Example food/drug rules |
+| `data/food_items.json` | ✓ Yes | Example food chip lists |
+| `data/food_preferences.json` | ✓ Yes | Example avoid/encourage lists |
+| `data/activities.json` | ✓ Yes | Exercise definitions |
+| `data/bloodwork.json` | ✗ Gitignored | Real medical lab data |
+| `data/injectable_meds.json` | ✗ Gitignored | Real injection history |
+| `data/sessions/` | ✗ Gitignored | Real daily logs |
+| `.env.local` | ✗ Gitignored | API key |
 
-> **Recommendation**: Back up `data/sessions/` periodically to an encrypted cloud folder or use the in-app **Backup** button which downloads a full archive.
+**No external data transmission** except the AI analysis call — today's text log is sent to Groq when you click Generate. Nothing else leaves your machine.
+
+> **Backup recommendation**: Use the in-app **📦 Backup** button in Reports to download a full archive. Keep `data/bloodwork.json`, `data/injectable_meds.json`, and `data/sessions/` backed up separately (encrypted cloud folder, external drive, etc.).
 
 ---
 
@@ -260,7 +314,7 @@ Defines available gym exercises and daily activities (walks, soleus pumps). Each
 - Health safety assessment based on profile conditions
 - Inflammation balance (pro vs anti-inflammatory food choices)
 - Hydration and sleep quality assessment
-- Foods to permanently avoid (always 2–5 items, even on clean-log days)
+- Foods to permanently avoid (from today's log and known interactions)
 - Personalised additions for tomorrow
 - Top wins, areas to improve, tomorrow's action focus
 
@@ -273,14 +327,15 @@ model: "llama-3.3-70b-versatile",  // or "llama-3.1-8b-instant" for faster/cheap
 
 ## Adapting for a Different User
 
-WellnessTrax is designed to be profile-driven. The code has no hardcoded user details.
+WellnessTrax is entirely profile-driven — no hardcoded user details exist in the code.
 
-1. Edit `data/profile.json` with the new person's name, age, weight, BMI, medications, and daily targets
+1. Edit `data/profile.json` with the person's name, age, weight, BMI, medications, and daily targets
 2. Edit `data/food_rules.json` with their specific food rules and supplement list
-3. Edit `data/food_items.json` to add their preferred foods
-4. Restart the dev server — all changes take effect immediately
+3. Edit `data/food_items.json` to add their preferred foods per meal
+4. Edit `data/food_preferences.json` or use the in-app Must Avoid / Good to Eat lists
+5. Restart the dev server — all changes take effect immediately
 
-The AI prompt is rebuilt from these files on every analysis call, so the analysis will instantly reflect the new profile.
+The AI prompt is rebuilt from these files on every analysis call, so the model will instantly reflect the updated profile.
 
 ---
 
