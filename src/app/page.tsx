@@ -488,7 +488,7 @@ export default function Home() {
               <ActivityLogSection dayLog={dayLog} activitiesData={activitiesData} onUpdate={onActivityUpdate} />
             )}
             {section === "medications" && (
-              <MedicationLog dayLog={dayLog} onUpdate={onMedUpdate} />
+              <MedicationLog dayLog={dayLog} profile={profile} onUpdate={onMedUpdate} />
             )}
             {section === "bloodwork" && (
               <BloodWork />

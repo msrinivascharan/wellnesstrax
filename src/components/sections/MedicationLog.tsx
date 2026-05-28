@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
-import type { DayLog, MedicationEntry, SupplementEntry } from "@/types";
+import type { DayLog, MedicationEntry, SupplementEntry, UserProfile } from "@/types";
 
 interface Props {
   dayLog: DayLog;
+  profile: UserProfile;
   onUpdate: (meds: MedicationEntry[], supplements: SupplementEntry[]) => void;
 }
 
@@ -49,7 +50,9 @@ function formatDate(d: string): string {
   return new Date(d + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
-export default function MedicationLog({ dayLog, onUpdate }: Props) {
+export default function MedicationLog({ dayLog, profile, onUpdate }: Props) {
+  // Injectable medication: the one without a scheduled time (e.g. every 6 months)
+  const injectableMed = profile.medications.find(m => !m.time);
   const { medications, supplements } = dayLog;
   const totalMeds = medications.length + supplements.length;
   const taken = medications.filter(m => m.taken).length + supplements.filter(s => s.taken).length;
@@ -78,7 +81,7 @@ export default function MedicationLog({ dayLog, onUpdate }: Props) {
     setSaving(true);
     const newRec: InjectionRecord = {
       id: `inj_${Date.now()}`,
-      medication: "Inclisiran (Leqvio)",
+      medication: injectableMed?.name ?? "Injectable Medication",
       dose: formDose,
       date_given: formDate,
       notes: formNotes,
@@ -288,7 +291,7 @@ export default function MedicationLog({ dayLog, onUpdate }: Props) {
         {/* Header */}
         <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: "var(--border)" }}>
           <div>
-            <div className="section-header">Inclisiran (Leqvio) — Injectable</div>
+            <div className="section-header">{injectableMed?.name ?? "Injectable Medication"} — Periodic</div>
             <div className="text-xs mt-0.5" style={{ color: "#475569" }}>
               Every 6 months · LDL-lowering PCSK9 inhibitor
             </div>
@@ -407,27 +410,38 @@ export default function MedicationLog({ dayLog, onUpdate }: Props) {
               <div className="text-2xl">💉</div>
               <div className="text-sm font-medium" style={{ color: "#64748b" }}>No injections recorded yet</div>
               <div className="text-xs" style={{ color: "#334155" }}>
-                Hit &ldquo;+ Record dose&rdquo; above to log your first Inclisiran injection.
+                Hit &ldquo;+ Record dose&rdquo; above to log your first {injectableMed?.name ?? "injectable medication"} dose.
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Drug interaction reminder ─────────────────────────────────────────── */}
-      <div className="card p-4 space-y-2"
-        style={{ border: "1px solid rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.04)" }}>
-        <div className="flex items-center gap-2">
-          <span>🚨</span>
-          <span className="text-xs font-semibold text-red-400">Critical interaction reminder</span>
+      {/* ── Drug interaction reminder — built dynamically from profile.medications ── */}
+      {profile.medications.some(m => m.interactions.length > 0) && (
+        <div className="card p-4 space-y-2"
+          style={{ border: "1px solid rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.04)" }}>
+          <div className="flex items-center gap-2">
+            <span>🚨</span>
+            <span className="text-xs font-semibold text-red-400">Critical interaction reminder</span>
+          </div>
+          <div className="space-y-1 text-xs" style={{ color: "#94a3b8" }}>
+            {profile.medications
+              .filter(m => m.interactions.length > 0)
+              .map(med => {
+                const topInteraction = med.interactions[0];
+                const isCritical = /strictly|critical|never|no\s+grapefruit/i.test(topInteraction);
+                const nameColor = isCritical ? "#fca5a5" : "#fdba74";
+                return (
+                  <p key={med.name}>
+                    • <strong style={{ color: nameColor }}>{med.name}:</strong>{" "}
+                    {topInteraction}
+                  </p>
+                );
+              })}
+          </div>
         </div>
-        <div className="space-y-1 text-xs" style={{ color: "#94a3b8" }}>
-          <p>• <strong className="text-red-300">Ticagrelor + Pitavastatin:</strong> STRICTLY NO grapefruit or grapefruit juice — ever</p>
-          <p>• <strong className="text-red-300">Thyroxin:</strong> Taken at 5AM on strict empty stomach — no food for 30 min after</p>
-          <p>• <strong className="text-orange-300">Metoprolol:</strong> Monitor sodium — keep under 400mg per serving</p>
-          <p>• <strong className="text-purple-300">Inclisiran:</strong> No dose adjustments needed — administered by healthcare provider only</p>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

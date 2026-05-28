@@ -11,6 +11,12 @@ export function buildAnalysisPrompt(
     )
     .join("\n");
 
+  // Dynamic med list for instructions (e.g. "Drug A, Drug B") — no hardcoding
+  const dailyMedNames = profile.medications
+    .filter(m => m.time)
+    .map(m => m.name)
+    .join(", ");
+
   const avoidRules = rules.always_avoid.map(r => `  ✗ ${r}`).join("\n");
   const encourageRules = rules.always_encourage.map(r => `  ✓ ${r}`).join("\n");
 
@@ -91,10 +97,11 @@ ${sleepSummary}
 
 CRITICAL INSTRUCTIONS FOR foods_to_avoid_forever:
 - ALWAYS return 2–5 items. NEVER return an empty array.
-- Think beyond today's log: include common foods this cardiac patient must permanently
-  avoid given their medications and coronary stents — e.g. grapefruit / grapefruit juice
-  (life-threatening interaction with Ticagrelor and Pitavastatin), trans fats, processed
-  meats, high-sodium packaged foods, refined sugars, high saturated fat meals.
+- Think beyond today's log: include common foods this patient must permanently avoid
+  given their medications (${dailyMedNames}) and health conditions listed above.
+  Consult the FOOD RULES — ALWAYS AVOID section for specific interactions.
+  Common concerns: trans fats, processed meats, high-sodium packaged foods,
+  refined sugars, high saturated fat meals.
 - If today's log contained something problematic, call it out by name with a direct reason.
 - Be specific — name the actual food, not a vague food group.
 
@@ -125,7 +132,7 @@ Return ONLY this JSON structure (all fields required):
   "foods_to_avoid_forever": [
     {
       "food": "<food name — from today's log OR any commonly consumed food this cardiac patient must permanently avoid>",
-      "reason": "<precise reason tied to THIS patient: coronary stents, Ticagrelor+Pitavastatin interactions, BMI 29, anti-inflammatory needs, or lipid management>"
+      "reason": "<precise reason tied to THIS patient: their cardiac status, medication interactions, BMI ${profile.bmi}, anti-inflammatory needs, or lipid management>"
     }
   ],
   "add_from_tomorrow": [

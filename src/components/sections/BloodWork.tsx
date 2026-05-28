@@ -414,12 +414,12 @@ export default function BloodWork() {
                   const allGood = (Object.keys(THYROID_RANGES) as Array<keyof typeof THYROID_RANGES>).every(k => THYROID_RANGES[k].status(entry[k] as number) === "good");
                   if (allGood) return (
                     <div className="text-xs p-2 rounded-lg" style={{ background: "rgba(34,197,94,0.08)", color: "#86efac" }}>
-                      ✓ Thyroid well-controlled on Thyroxin 75mcg
+                      ✓ Thyroid markers all within target range
                     </div>
                   );
                   if (tshS === "risk") return (
                     <div className="text-xs p-2 rounded-lg" style={{ background: "rgba(239,68,68,0.06)", color: "#fca5a5" }}>
-                      ⚠ TSH out of target range — Thyroxin dose may need adjustment. Consult endocrinologist.
+                      ⚠ TSH out of target range — thyroid medication dose may need adjustment. Consult your doctor.
                     </div>
                   );
                   return (
@@ -442,7 +442,7 @@ export default function BloodWork() {
         </div>
         <div className="text-xs space-y-0.5" style={{ color: "#475569" }}>
           <p>LDL &lt;70 mg/dL is the goal for post-stent patients (more aggressive than general population &lt;100).</p>
-          <p>TSH 0.5–2.5 μIU/mL is typical target while on Thyroxin replacement therapy.</p>
+          <p>TSH 0.5–2.5 μIU/mL is the typical target while on thyroid replacement therapy.</p>
           <p><span className="inline-block w-2 h-2 rounded-full mr-1 bg-green-500" />Within target &nbsp;
              <span className="inline-block w-2 h-2 rounded-full mr-1 bg-yellow-500" />Borderline &nbsp;
              <span className="inline-block w-2 h-2 rounded-full mr-1 bg-red-500" />At risk</p>
