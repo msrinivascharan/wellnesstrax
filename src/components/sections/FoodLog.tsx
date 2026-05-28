@@ -67,14 +67,6 @@ const MEAL_META: Record<MealType, { label: string; icon: string; color: string; 
 
 const MEALS: MealType[] = ["breakfast", "lunch", "dinner", "snacks"];
 
-const CAT_COLORS = [
-  { border: "#1d4ed8", bg: "rgba(29,78,216,0.1)",  text: "#93c5fd" },
-  { border: "#15803d", bg: "rgba(21,128,61,0.1)",   text: "#86efac" },
-  { border: "#9333ea", bg: "rgba(147,51,234,0.1)",  text: "#d8b4fe" },
-  { border: "#b45309", bg: "rgba(180,83,9,0.1)",    text: "#fcd34d" },
-  { border: "#0e7490", bg: "rgba(14,116,144,0.1)",  text: "#67e8f9" },
-];
-function catColor(idx: number) { return CAT_COLORS[idx % CAT_COLORS.length]; }
 function genId() { return crypto.randomUUID(); }
 
 // ─── PrefListCard sub-component ──────────────────────────────────────────────
@@ -301,25 +293,11 @@ interface PendingItem {
   custom: boolean;
 }
 
-interface SavePrompt {
-  name: string;
-  /** which meal the item was added to */
-  meal: MealType;
-  /** category selected for saving */
-  category: string;
-  saving: boolean;
-}
-
-export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate, onSaveToList, onRemoveFromList, onMoveItem, foodPrefs, onUpdatePrefs }: Props) {
+export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate, onSaveToList: _onSaveToList, onRemoveFromList: _onRemoveFromList, onMoveItem: _onMoveItem, foodPrefs, onUpdatePrefs }: Props) {
   const [activeMeal, setActiveMeal] = useState<MealType>("breakfast");
   const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
-  const [customText, setCustomText] = useState("");
-  const [customQty, setCustomQty] = useState("");
-  const [customUnit, setCustomUnit] = useState<string>("g");
-  const [savePrompt, setSavePrompt] = useState<SavePrompt | null>(null);
-  const [editingList, setEditingList] = useState(false);
-  const [recatItem, setRecatItem] = useState<{ cat: string; name: string } | null>(null);
-  const [newCatName, setNewCatName] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   // ── Preference list UI state ──────────────────────────────────────────────
   const [avoidCatFilter, setAvoidCatFilter]       = useState("");
   const [encourageCatFilter, setEncourageCatFilter] = useState("");
@@ -334,23 +312,38 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
 
   const meal = activeMeal;
   const entries = dayLog.food[meal] ?? [];
-  const categories = foodItems.meals[meal] ?? {};
-  const allCategories = Object.keys(categories);
+
+  // ── Search pool: encourage list + food_items.json (all meals), deduplicated ──
+  const searchPool: Array<{ name: string; category: string }> = (() => {
+    const seen = new Set<string>();
+    const pool: Array<{ name: string; category: string }> = [];
+    // Primary: Good to Eat list (with full category info)
+    for (const item of foodPrefs.encourage) {
+      const lc = item.name.toLowerCase();
+      if (!seen.has(lc)) { seen.add(lc); pool.push({ name: item.name, category: item.category }); }
+    }
+    // Secondary: food_items.json (all meals, all categories)
+    for (const cats of Object.values(foodItems.meals)) {
+      for (const [cat, items] of Object.entries(cats)) {
+        for (const item of items) {
+          const lc = item.toLowerCase();
+          if (!seen.has(lc)) { seen.add(lc); pool.push({ name: item, category: cat }); }
+        }
+      }
+    }
+    return pool;
+  })();
+
+  const suggestions = searchQuery.trim().length >= 1
+    ? searchPool
+        .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase().trim()))
+        .slice(0, 12)
+    : [];
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   function isSelected(name: string) {
     return entries.some(e => e.name.toLowerCase() === name.toLowerCase());
-  }
-
-  // Open quantity+unit dialog for a pre-defined chip
-  function handleChipClick(name: string, category: string) {
-    if (isSelected(name)) {
-      // Remove existing entry
-      onUpdate({ ...dayLog.food, [meal]: entries.filter(e => e.name.toLowerCase() !== name.toLowerCase()) });
-      return;
-    }
-    setPendingItem({ name, category, qty: "", unit: guessUnit(name), custom: false });
   }
 
   function confirmPending() {
@@ -376,52 +369,6 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
     };
     onUpdate({ ...dayLog.food, [meal]: [...entries, entry] });
     setPendingItem(null);
-  }
-
-  // Add a custom food item
-  function addCustom() {
-    const name = customText.trim();
-    const qty = parseFloat(customQty);
-    if (!name || isNaN(qty) || qty <= 0) return;
-
-    const detectedCat = autoCategory(name);
-
-    const entry: FoodEntry = {
-      id: genId(),
-      name,
-      category: detectedCat,
-      quantity_g: qty,
-      unit: customUnit,
-      custom: true,
-      logged_at: new Date().toISOString(),
-    };
-    onUpdate({ ...dayLog.food, [meal]: [...entries, entry] });
-
-    // Offer to save to the pre-defined list — pre-select the auto-detected category
-    setSavePrompt({
-      name,
-      meal,
-      category: detectedCat,
-      saving: false,
-    });
-
-    setCustomText("");
-    setCustomQty("");
-    setCustomUnit("g");
-  }
-
-  async function confirmSaveToList() {
-    if (!savePrompt) return;
-    setSavePrompt({ ...savePrompt, saving: true });
-    await onSaveToList(savePrompt.meal, savePrompt.category, savePrompt.name);
-    setSavePrompt(null);
-  }
-
-  async function handleRecat(newCat: string) {
-    if (!recatItem || !newCat.trim()) return;
-    await onMoveItem(meal, recatItem.cat, newCat.trim(), recatItem.name);
-    setRecatItem(null);
-    setNewCatName("");
   }
 
   // ── Preference list helpers ───────────────────────────────────────────────
@@ -501,7 +448,7 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
       <div>
         <h2 className="text-xl font-bold text-white">Food Log</h2>
         <p className="text-xs mt-0.5" style={{ color: "#64748b" }}>
-          {totalItems} item{totalItems !== 1 ? "s" : ""} logged today · Custom items can be saved to your list permanently
+          {totalItems} item{totalItems !== 1 ? "s" : ""} logged today across all meals
         </p>
       </div>
 
@@ -512,22 +459,20 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
           const count = dayLog.food[m]?.length ?? 0;
           const mealTime = dayLog.meal_times?.[m];
           return (
-            <button key={m} onClick={() => { setActiveMeal(m); setPendingItem(null); setSavePrompt(null); setEditingList(false); setRecatItem(null); setNewCatName(""); }}
+            <button key={m} onClick={() => { setActiveMeal(m); setPendingItem(null); setSearchQuery(""); setShowSuggestions(false); }}
               className="flex-1 flex flex-col items-center justify-center gap-0.5 px-2 py-2 rounded-lg text-sm font-medium transition-all"
               style={activeMeal === m
                 ? { background: "rgba(255,255,255,0.07)", color: meta.color, boxShadow: `0 0 0 1px ${meta.color}30` }
                 : { color: "#475569" }}>
-              <div className="flex items-center gap-1.5">
-                <span>{meta.icon}</span>
-                <span className="hidden sm:inline">{meta.label}</span>
-                {count > 0 && (
-                  <span className="text-xs px-1.5 py-0.5 rounded-full font-bold"
-                    style={{ background: `${meta.color}22`, color: meta.color }}>{count}</span>
-                )}
-              </div>
+              <span className="text-base leading-none">{meta.icon}</span>
+              <span className="text-xs leading-tight">{meta.label}</span>
+              {count > 0 && (
+                <span className="text-xs opacity-60 leading-none">{count}</span>
+              )}
               {mealTime && (
-                <span className="text-xs font-normal tabular-nums" style={{ color: activeMeal === m ? meta.color : "#334155", opacity: 0.85 }}>
-                  🕐 {mealTime}
+                <span className="text-xs font-normal tabular-nums leading-none"
+                  style={{ color: activeMeal === m ? meta.color : "#334155", opacity: 0.8 }}>
+                  {mealTime}
                 </span>
               )}
             </button>
@@ -564,136 +509,7 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
         </div>
       </div>
 
-      {/* Pre-populated chips */}
-      <div className="card p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="section-header">{editingList ? "Edit list — tap ✕ to remove" : "Pre-defined items — tap to add"}</div>
-          {Object.keys(categories).length > 0 && (
-            <button
-              onClick={() => setEditingList(e => !e)}
-              className="text-xs px-2.5 py-1 rounded-lg transition-all"
-              style={editingList
-                ? { background: "rgba(239,68,68,0.12)", color: "#f87171", border: "1px solid rgba(239,68,68,0.25)" }
-                : { background: "var(--bg-input)", color: "#64748b", border: "1px solid var(--border)" }}>
-              {editingList ? "✓ Done" : "✏ Edit list"}
-            </button>
-          )}
-        </div>
-        {Object.keys(categories).length === 0 ? (
-          <p className="text-xs" style={{ color: "#475569" }}>No pre-defined items for this meal. Add via the custom input below.</p>
-        ) : (
-          <>
-            {Object.entries(categories).map(([cat, items], ci) => {
-              const cc = catColor(ci);
-              return (
-                <div key={cat}>
-                  <div className="text-xs font-semibold mb-2" style={{ color: cc.text }}>{cat}</div>
-                  <div className="flex flex-wrap gap-2">
-                    {items.map(item => {
-                      const selected = isSelected(item);
-                      if (editingList) {
-                        const isRecat = recatItem?.name === item && recatItem?.cat === cat;
-                        return (
-                          <div key={item} className="flex items-center gap-1">
-                            <span
-                              className="food-chip cursor-default select-none"
-                              style={selected ? { borderColor: cc.border, background: cc.bg, color: cc.text } : undefined}>
-                              {selected && <span>✓</span>}
-                              {item}
-                            </span>
-                            {/* Recategorize — available for ALL items, even ones logged today */}
-                            <button
-                              onClick={() => { setRecatItem(isRecat ? null : { cat, name: item }); setNewCatName(""); }}
-                              className="h-5 px-1.5 rounded text-xs font-bold transition-all shrink-0"
-                              style={isRecat
-                                ? { background: "rgba(20,184,166,0.2)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.4)" }
-                                : { background: "rgba(255,255,255,0.04)", color: "#64748b", border: "1px solid var(--border)" }}
-                              title={`Change category for "${item}"`}>
-                              ↷
-                            </button>
-                            {/* Remove — locked for items already in today's log */}
-                            {!selected && (
-                              <button
-                                onClick={() => { onRemoveFromList(meal, cat, item); if (isRecat) setRecatItem(null); }}
-                                className="w-5 h-5 rounded-full flex items-center justify-center text-xs transition-all shrink-0"
-                                style={{ background: "rgba(239,68,68,0.15)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)" }}
-                                title={`Remove "${item}" from list`}>
-                                ✕
-                              </button>
-                            )}
-                          </div>
-                        );
-                      }
-                      return (
-                        <button key={item} onClick={() => handleChipClick(item, cat)}
-                          className="food-chip"
-                          style={selected ? { borderColor: cc.border, background: cc.bg, color: cc.text } : undefined}>
-                          {selected && <span>✓</span>}
-                          {item}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* ── Inline recat picker ── */}
-            {recatItem && editingList && (
-              <div className="mt-1 p-3 rounded-xl space-y-2.5 fade-in-up"
-                style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.2)" }}>
-                <div className="text-xs font-semibold text-white">
-                  Move <span style={{ color: "#14b8a6" }}>&ldquo;{recatItem.name}&rdquo;</span> to category:
-                </div>
-                {/* Existing categories (exclude current) */}
-                {Object.keys(categories).filter(c => c !== recatItem.cat).length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {Object.keys(categories)
-                      .filter(c => c !== recatItem.cat)
-                      .map(c => (
-                        <button key={c} onClick={() => handleRecat(c)}
-                          className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                          style={{ background: "var(--bg-input)", color: "#94a3b8", border: "1px solid var(--border)" }}>
-                          {c}
-                        </button>
-                      ))}
-                  </div>
-                )}
-                {/* New category input */}
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="text"
-                    className="nb-input-sm"
-                    style={{ maxWidth: 190 }}
-                    placeholder="New category name…"
-                    value={newCatName}
-                    onChange={e => setNewCatName(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && handleRecat(newCatName)}
-                    autoFocus
-                  />
-                  <button
-                    onClick={() => handleRecat(newCatName)}
-                    disabled={!newCatName.trim()}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                    style={newCatName.trim()
-                      ? { background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.3)" }
-                      : { background: "transparent", color: "#334155", border: "1px solid var(--border)", opacity: 0.5 }}>
-                    Move ✓
-                  </button>
-                  <button
-                    onClick={() => { setRecatItem(null); setNewCatName(""); }}
-                    className="text-xs px-2 py-1.5 transition-colors"
-                    style={{ color: "#475569" }}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Pending quantity + unit input (for pre-defined chips) */}
+      {/* Pending quantity + unit input */}
       {pendingItem && (
         <div className="card p-4 space-y-3 fade-in-up"
           style={{ borderColor: "rgba(20,184,166,0.3)", border: "1px solid rgba(20,184,166,0.3)" }}>
@@ -786,45 +602,67 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
         </div>
       )}
 
-      {/* Custom food input */}
+      {/* Add food item to [Meal] plate */}
       <div className="card p-4 space-y-3">
-        <div className="section-header">Add custom item</div>
-        <input
-          className="nb-input"
-          placeholder='Food name — e.g. "Boiled egg whites" or "Milk coffee without sugar"'
-          value={customText}
-          onChange={e => {
-            setCustomText(e.target.value);
-            setCustomUnit(guessUnit(e.target.value));
-          }}
-          onKeyDown={e => e.key === "Enter" && addCustom()}
-        />
-
-        {/* Unit picker */}
-        <div>
-          <div className="section-header mb-1.5">Unit</div>
-          <UnitPicker value={customUnit} onChange={setCustomUnit} />
+        <div className="section-header">
+          Add food item to {MEAL_META[meal].label} plate
         </div>
-
-        {/* Quantity + Add button */}
-        <div className="flex gap-2 items-center">
+        <div className="relative">
           <input
-            className="nb-input"
-            style={{ maxWidth: 120 }}
-            type="number"
-            min="0.1"
-            step="0.1"
-            placeholder={customUnit === "ml" ? "e.g. 200" : customUnit === "pieces" ? "e.g. 3" : "e.g. 100"}
-            value={customQty}
-            onChange={e => setCustomQty(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && addCustom()}
+            className="nb-input w-full"
+            placeholder="Type to search from your food lists…"
+            value={searchQuery}
+            onChange={e => { setSearchQuery(e.target.value); setShowSuggestions(true); }}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+            onKeyDown={e => e.key === "Escape" && (setShowSuggestions(false))}
           />
-          <span className="text-sm font-medium" style={{ color: "#64748b" }}>{customUnit}</span>
-          <button onClick={addCustom}
-            className="px-4 py-2 rounded-lg text-sm font-medium shrink-0 transition-colors"
-            style={{ background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.3)" }}>
-            + Add
-          </button>
+          {showSuggestions && searchQuery.trim() && (
+            <div
+              className="absolute top-full left-0 right-0 z-50 mt-1 rounded-xl shadow-xl overflow-hidden"
+              style={{ background: "var(--bg-card)", border: "1px solid var(--border)", maxHeight: 256, overflowY: "auto" }}>
+              {suggestions.length === 0 ? (
+                <div className="px-4 py-3 text-sm" style={{ color: "#475569" }}>
+                  Not in your lists — add it to <strong className="text-white">Good to Eat</strong> first
+                </div>
+              ) : (
+                suggestions.map(s => {
+                  const already = isSelected(s.name);
+                  return (
+                    <button
+                      key={s.name}
+                      className="w-full flex items-center justify-between px-4 py-2.5 text-left transition-colors hover:bg-white/5"
+                      style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+                      onMouseDown={() => {
+                        if (!already) {
+                          setPendingItem({ name: s.name, category: s.category, qty: "", unit: guessUnit(s.name), custom: false });
+                          setSearchQuery("");
+                          setShowSuggestions(false);
+                        }
+                      }}>
+                      <span className={`text-sm ${already ? "opacity-50 line-through" : "text-white"}`}>
+                        {s.name}
+                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {already && (
+                          <span className="text-xs font-medium" style={{ color: "#14b8a6" }}>✓ added</span>
+                        )}
+                        {s.category && (
+                          <span className="text-xs px-1.5 py-0.5 rounded"
+                            style={{ background: "var(--bg-input)", color: "#64748b" }}>
+                            {s.category}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
+        <div className="text-xs" style={{ color: "#334155" }}>
+          {searchPool.length} items in your Good to Eat &amp; pre-defined lists — select one to set quantity
         </div>
       </div>
 
@@ -876,63 +714,6 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
         addPlaceholder='e.g. "Broccoli"'
       />
 
-      {/* Save-to-list prompt */}
-      {savePrompt && (
-        <div className="card p-4 space-y-3 fade-in-up"
-          style={{ borderColor: "rgba(250,204,21,0.3)", border: "1px solid rgba(250,204,21,0.3)", background: "rgba(250,204,21,0.04)" }}>
-          <div className="flex items-start gap-2">
-            <span>💾</span>
-            <div>
-              <div className="text-sm font-semibold text-white">
-                Save &ldquo;{savePrompt.name}&rdquo; to your food list?
-              </div>
-              <div className="text-xs mt-0.5" style={{ color: "#94a3b8" }}>
-                It will appear as a chip in future sessions. You can remove it later using the ✏ Edit list button.
-              </div>
-            </div>
-          </div>
-
-          {/* Category picker — includes auto-detected cat even if new */}
-          <div>
-            <div className="section-header mb-2">
-              Category to save under
-              {!allCategories.includes(savePrompt.category) && savePrompt.category !== "Custom" && (
-                <span className="ml-2 text-xs font-normal" style={{ color: "#14b8a6" }}>
-                  (auto-detected: {savePrompt.category})
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {[...new Set([...allCategories, savePrompt.category, "Custom"])].map(cat => (
-                <button key={cat} onClick={() => setSavePrompt({ ...savePrompt, category: cat })}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                  style={savePrompt.category === cat
-                    ? { background: "rgba(250,204,21,0.15)", color: "#fde047", border: "1px solid rgba(250,204,21,0.35)" }
-                    : { background: "var(--bg-input)", color: "#64748b", border: "1px solid var(--border)" }}>
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={confirmSaveToList}
-              disabled={savePrompt.saving}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              style={{ background: "rgba(250,204,21,0.15)", color: "#fde047", border: "1px solid rgba(250,204,21,0.3)" }}>
-              {savePrompt.saving ? (
-                <><span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" /> Saving…</>
-              ) : "✓ Save to list"}
-            </button>
-            <button onClick={() => setSavePrompt(null)}
-              className="px-3 py-2 rounded-lg text-sm transition-colors"
-              style={{ color: "#475569" }}>
-              Not now
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
