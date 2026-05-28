@@ -16,6 +16,8 @@
 /data/sessions/
 /data/bloodwork.json
 /data/injectable_meds.json
+/data/profile.json
+/data/food_rules.json
 
 # debug
 npm-debug.log*
