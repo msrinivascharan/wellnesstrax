@@ -127,12 +127,18 @@ function getBalancedPlateData(entries: FoodEntry[]): Array<{ cat: string; count:
     .map(([cat, items]) => ({ cat, count: items.length, color: BP_COLORS[cat] ?? "#64748b", items }));
 }
 
-/** Check a food name against the rich avoid list (enabled items only, case-insensitive substring). */
+/** Check a food name against the rich avoid list (enabled items only, case-insensitive substring).
+ *  Tries the full avoid-item name first, then the base name with parenthetical qualifiers stripped.
+ *  e.g. "White Rice" logged → matches avoid item "White Rice (Regular Use)" via the stripped base. */
 function checkSimpleAvoid(foodName: string, avoidList: FoodPreferenceItem[]): string | null {
-  const lc = foodName.toLowerCase();
+  const lc = foodName.toLowerCase().trim();
   for (const item of avoidList.filter(a => a.enabled)) {
-    const it = item.name.toLowerCase().trim();
-    if (it.length >= 2 && lc.includes(it)) return item.name;
+    const full = item.name.toLowerCase().trim();
+    // 1. Full name match (e.g. "Ice Cream" matches "Ice Cream")
+    if (full.length >= 2 && lc.includes(full)) return item.name;
+    // 2. Base name match — strip parenthetical qualifiers like "(Regular Use)", "(Excess)", "(All Forms)"
+    const base = full.replace(/\s*\([^)]*\)/g, "").trim();
+    if (base.length >= 3 && base !== full && lc.includes(base)) return item.name;
   }
   return null;
 }
