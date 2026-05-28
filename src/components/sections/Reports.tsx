@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import type { DayAnalysis, DayLog, FoodEntry, FoodPreferences, MealType, UserProfile, BloodWorkData } from "@/types";
+import type { DayAnalysis, DayLog, FoodEntry, FoodPreferenceItem, FoodPreferences, MealType, UserProfile, BloodWorkData } from "@/types";
 import { resolveCategory, mapToBalancedPlate, checkAlwaysAvoidRules } from "@/lib/food-utils";
 
 interface Props {
@@ -127,12 +127,12 @@ function getBalancedPlateData(entries: FoodEntry[]): Array<{ cat: string; count:
     .map(([cat, items]) => ({ cat, count: items.length, color: BP_COLORS[cat] ?? "#64748b", items }));
 }
 
-/** Check a food name against a simple avoid list (case-insensitive substring). */
-function checkSimpleAvoid(foodName: string, avoidList: string[]): string | null {
+/** Check a food name against the rich avoid list (enabled items only, case-insensitive substring). */
+function checkSimpleAvoid(foodName: string, avoidList: FoodPreferenceItem[]): string | null {
   const lc = foodName.toLowerCase();
-  for (const item of avoidList) {
-    const it = item.toLowerCase().trim();
-    if (it.length >= 2 && lc.includes(it)) return item;
+  for (const item of avoidList.filter(a => a.enabled)) {
+    const it = item.name.toLowerCase().trim();
+    if (it.length >= 2 && lc.includes(it)) return item.name;
   }
   return null;
 }

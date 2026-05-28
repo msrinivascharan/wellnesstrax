@@ -230,9 +230,18 @@ export interface DayAnalysis {
 
 // ─── Food preference lists (food_preferences.json) ───────────────────────────
 
+export interface FoodPreferenceItem {
+  name: string;
+  category: string;
+  subcategory: string;
+  frequency: string;
+  notes: string;
+  enabled: boolean;
+}
+
 export interface FoodPreferences {
-  avoid: string[];     // items to never eat
-  encourage: string[]; // items that are always good to eat
+  avoid: FoodPreferenceItem[];
+  encourage: FoodPreferenceItem[];
 }
 
 // ─── Data files (food_items.json + activities.json) ───────────────────────────

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { loadFoodPreferences, saveFoodPreferences } from "@/lib/profile-loader";
-import type { FoodPreferences } from "@/types";
+import type { FoodPreferences, FoodPreferenceItem } from "@/types";
 
 export async function GET() {
   try {
@@ -12,16 +12,25 @@ export async function GET() {
   }
 }
 
-/** Replace food preferences. Body: { avoid: string[], encourage: string[] } */
+/** Replace food preferences. Body: { avoid: FoodPreferenceItem[], encourage: FoodPreferenceItem[] } */
 export async function PUT(req: Request) {
   try {
     const body = await req.json() as Partial<FoodPreferences>;
     if (!Array.isArray(body.avoid) || !Array.isArray(body.encourage)) {
       return NextResponse.json({ error: "avoid and encourage must be arrays" }, { status: 400 });
     }
+    // Accept either rich objects or legacy strings (migration-safe)
+    function normalise(arr: unknown[]): FoodPreferenceItem[] {
+      return arr.map(item => {
+        if (typeof item === "string") {
+          return { name: item, category: "Custom", subcategory: "", frequency: "", notes: "", enabled: true };
+        }
+        return item as FoodPreferenceItem;
+      }).filter(i => i.name && i.name.trim());
+    }
     const prefs: FoodPreferences = {
-      avoid:    body.avoid.map(s => String(s).trim()).filter(Boolean),
-      encourage: body.encourage.map(s => String(s).trim()).filter(Boolean),
+      avoid:    normalise(body.avoid),
+      encourage: normalise(body.encourage),
     };
     await saveFoodPreferences(prefs);
     return NextResponse.json({ ok: true, data: prefs });
