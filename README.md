@@ -133,7 +133,7 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ```
 wellnesstrax/
-├── data/                        # Config and session data (JSON)
+├── data/                        # All personal health data — gitignored, local only
 │   ├── profile.json             # User profile: age, weight, medications, targets
 │   ├── food_rules.json          # Avoid/encourage rules + supplements + expert panel
 │   ├── food_items.json          # Pre-defined food chip lists per meal (edit freely)
@@ -181,8 +181,9 @@ wellnesstrax/
 │   └── types/
 │       └── index.ts             # All TypeScript interfaces (DayLog, DayAnalysis, etc.)
 │
+├── LICENSE                      # PolyForm Noncommercial License 1.0.0
 ├── .env.example                 # Safe to commit — contains only placeholder key
-├── .gitignore                   # Excludes .env.local, sessions/, bloodwork.json, injectable_meds.json
+├── .gitignore                   # Excludes .env.local and the entire data/ folder
 └── package.json
 ```
 
@@ -283,14 +284,15 @@ Injectable medication history. Add dose records here; the Medications section sh
 
 | File | Committed? | Contains |
 |------|-----------|---------|
-| `data/profile.json` | ✓ Yes | Anonymised example profile |
-| `data/food_rules.json` | ✓ Yes | Example food/drug rules |
-| `data/food_items.json` | ✓ Yes | Example food chip lists |
-| `data/food_preferences.json` | ✓ Yes | Example avoid/encourage lists |
-| `data/activities.json` | ✓ Yes | Exercise definitions |
-| `data/bloodwork.json` | ✗ Gitignored | Real medical lab data |
-| `data/injectable_meds.json` | ✗ Gitignored | Real injection history |
-| `data/sessions/` | ✗ Gitignored | Real daily logs |
+| `data/` *(entire folder)* | ✗ Gitignored | All personal health data — stays on your machine only |
+| `data/profile.json` | ✗ Gitignored | Your medical profile, medications, targets |
+| `data/food_rules.json` | ✗ Gitignored | Your food/drug interaction rules |
+| `data/food_items.json` | ✗ Gitignored | Your food chip lists |
+| `data/food_preferences.json` | ✗ Gitignored | Your Must Avoid / Good to Eat lists |
+| `data/activities.json` | ✗ Gitignored | Your exercise definitions |
+| `data/bloodwork.json` | ✗ Gitignored | Your lab results |
+| `data/injectable_meds.json` | ✗ Gitignored | Your injection history |
+| `data/sessions/` | ✗ Gitignored | Your daily logs |
 | `.env.local` | ✗ Gitignored | API key |
 
 **No external data transmission** except the AI analysis call — today's text log is sent to Groq when you click Generate. Nothing else leaves your machine.
