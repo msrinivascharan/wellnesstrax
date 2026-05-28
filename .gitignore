@@ -12,12 +12,8 @@
 .env.local
 .env.*.local
 
-# personal health data — backup separately, do not commit
-/data/sessions/
-/data/bloodwork.json
-/data/injectable_meds.json
-/data/profile.json
-/data/food_rules.json
+# data folder — all files are personal/local, backup separately, do not commit
+/data/
 
 # debug
 npm-debug.log*
