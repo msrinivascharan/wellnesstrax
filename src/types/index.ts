@@ -289,9 +289,9 @@ export interface LipidProfile {
 export interface ThyroidProfile {
   id: string;
   test_date: string;            // "YYYY-MM-DD"
-  t3_ng_ml: number;             // ng/mL  (normal 0.8–2.0)
-  t4_ug_dl: number;             // μg/dL  (normal 5.1–14.1)
-  tsh_uiu_ml: number;           // μIU/mL (on Thyroxin target 0.5–2.5)
+  t3_ng_ml: number | null;      // ng/mL  (normal 0.8–2.0) — null if not tested in this panel
+  t4_ug_dl: number | null;      // μg/dL  (normal 5.1–14.1) — null if not tested in this panel
+  tsh_uiu_ml: number;           // μIU/mL — always required
 }
 
 export interface BloodWorkData {

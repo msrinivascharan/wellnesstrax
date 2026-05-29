@@ -52,7 +52,8 @@ const THYROID_RANGES: Record<keyof Omit<ThyroidProfile, "id" | "test_date">, { l
   },
 };
 
-function StatusDot({ s }: { s: Status }) {
+function StatusDot({ s }: { s: Status | "none" }) {
+  if (s === "none") return <span className="w-2 h-2 rounded-full shrink-0 inline-block" style={{ background: "#334155" }} />;
   const color = s === "good" ? "#22c55e" : s === "warn" ? "#f59e0b" : "#ef4444";
   return <span className="w-2 h-2 rounded-full shrink-0 inline-block" style={{ background: color }} />;
 }
@@ -78,8 +79,11 @@ function emptyLipid(): Omit<LipidProfile, "id"> {
   return { test_date: "", total_cholesterol: 0, hdl: 0, ldl: 0, vldl: 0, triglycerides: 0, chol_hdl_ratio: 0, non_hdl: 0 };
 }
 
+// T3 and T4 are optional — not every panel tests them
+const THYROID_OPTIONAL = new Set<keyof Omit<ThyroidProfile, "id" | "test_date">>(["t3_ng_ml", "t4_ug_dl"]);
+
 function emptyThyroid(): Omit<ThyroidProfile, "id"> {
-  return { test_date: "", t3_ng_ml: 0, t4_ug_dl: 0, tsh_uiu_ml: 0 };
+  return { test_date: "", t3_ng_ml: null, t4_ug_dl: null, tsh_uiu_ml: 0 };
 }
 
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
@@ -243,18 +247,28 @@ export default function BloodWork() {
                 value={thyroidForm.test_date}
                 onChange={e => setThyroidForm(f => ({ ...f, test_date: e.target.value }))} />
             </div>
-            {(Object.keys(THYROID_RANGES) as Array<keyof typeof THYROID_RANGES>).map(k => (
-              <div key={k}>
-                <label className="block text-xs mb-1" style={{ color: "#64748b" }}>
-                  {THYROID_RANGES[k].label} ({THYROID_RANGES[k].unit})
-                </label>
-                <input type="number" min="0" step="0.01" className="nb-input w-full"
-                  placeholder="0"
-                  value={thyroidForm[k] || ""}
-                  onChange={e => setThyroidForm(f => ({ ...f, [k]: parseFloat(e.target.value) || 0 }))} />
-                <div className="text-xs mt-0.5" style={{ color: "#334155" }}>{THYROID_RANGES[k].good}</div>
-              </div>
-            ))}
+            {(Object.keys(THYROID_RANGES) as Array<keyof typeof THYROID_RANGES>).map(k => {
+              const optional = THYROID_OPTIONAL.has(k);
+              return (
+                <div key={k}>
+                  <label className="block text-xs mb-1" style={{ color: "#64748b" }}>
+                    {THYROID_RANGES[k].label} ({THYROID_RANGES[k].unit})
+                    {optional && <span className="ml-1" style={{ color: "#334155" }}>— optional</span>}
+                  </label>
+                  <input type="number" min="0" step="0.01" className="nb-input w-full"
+                    placeholder={optional ? "Leave blank if not tested" : "e.g. 1.5"}
+                    value={thyroidForm[k] ?? ""}
+                    onChange={e => {
+                      const raw = e.target.value;
+                      setThyroidForm(f => ({
+                        ...f,
+                        [k]: raw === "" ? (optional ? null : 0) : parseFloat(raw),
+                      }));
+                    }} />
+                  <div className="text-xs mt-0.5" style={{ color: "#334155" }}>{THYROID_RANGES[k].good}</div>
+                </div>
+              );
+            })}
           </div>
           <div className="flex gap-2 pt-1">
             <button onClick={saveThyroid} disabled={!thyroidForm.test_date}
@@ -388,33 +402,48 @@ export default function BloodWork() {
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   {(Object.keys(THYROID_RANGES) as Array<keyof typeof THYROID_RANGES>).map(k => {
-                    const val = entry[k] as number;
-                    const s   = THYROID_RANGES[k].status(val);
-                    const trend = prev ? trendArrow(val, prev[k] as number, false) : null;
-                    const tColor = prev ? trendColor(val, prev[k] as number, k === "tsh_uiu_ml" ? false : true) : "#475569";
-                    const statusColor = s === "good" ? "#22c55e" : s === "warn" ? "#f59e0b" : "#ef4444";
+                    const rawVal = entry[k];
+                    const notTested = rawVal === null || rawVal === undefined;
+                    const val = rawVal ?? 0;
+                    const s        = notTested ? ("none" as const) : THYROID_RANGES[k].status(val);
+                    const prevRaw  = prev ? prev[k] : undefined;
+                    const trend    = (!notTested && prev && prevRaw !== null && prevRaw !== undefined)
+                      ? trendArrow(val, prevRaw, k !== "tsh_uiu_ml")
+                      : null;
+                    const tColor   = (!notTested && prev && prevRaw !== null && prevRaw !== undefined)
+                      ? trendColor(val, prevRaw, k !== "tsh_uiu_ml")
+                      : "#475569";
+                    const statusColor = notTested ? "#1e293b"
+                      : s === "good" ? "#22c55e" : s === "warn" ? "#f59e0b" : "#ef4444";
                     return (
                       <div key={k} className="p-2.5 rounded-xl text-center"
-                        style={{ background: `${statusColor}08`, border: `1px solid ${statusColor}20` }}>
+                        style={{ background: `${statusColor}08`, border: `1px solid ${notTested ? "rgba(255,255,255,0.06)" : `${statusColor}20`}` }}>
                         <StatusDot s={s} />
                         <div className="text-xs mt-1" style={{ color: "#94a3b8" }}>{THYROID_RANGES[k].label}</div>
-                        <div className="text-base font-bold mt-0.5" style={{ color: statusColor }}>
-                          {val}
+                        <div className="text-base font-bold mt-0.5" style={{ color: notTested ? "#334155" : statusColor }}>
+                          {notTested ? "—" : val}
                           {trend && <span className="text-xs ml-0.5" style={{ color: tColor }}>{trend}</span>}
                         </div>
-                        <div className="text-xs" style={{ color: "#475569" }}>{THYROID_RANGES[k].unit}</div>
-                        <div className="text-xs mt-0.5" style={{ color: "#334155" }}>{THYROID_RANGES[k].good}</div>
+                        <div className="text-xs" style={{ color: "#475569" }}>
+                          {notTested ? "not tested" : THYROID_RANGES[k].unit}
+                        </div>
+                        {!notTested && (
+                          <div className="text-xs mt-0.5" style={{ color: "#334155" }}>{THYROID_RANGES[k].good}</div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
-                {/* TSH interpretation */}
+                {/* TSH interpretation — aware of TSH-only panels */}
                 {(() => {
-                  const tshS = THYROID_RANGES.tsh_uiu_ml.status(entry.tsh_uiu_ml);
-                  const allGood = (Object.keys(THYROID_RANGES) as Array<keyof typeof THYROID_RANGES>).every(k => THYROID_RANGES[k].status(entry[k] as number) === "good");
+                  const tshS    = THYROID_RANGES.tsh_uiu_ml.status(entry.tsh_uiu_ml);
+                  const tshOnly = entry.t3_ng_ml === null && entry.t4_ug_dl === null;
+                  const testedKeys = (Object.keys(THYROID_RANGES) as Array<keyof typeof THYROID_RANGES>)
+                    .filter(k => entry[k] !== null && entry[k] !== undefined);
+                  const allGood = testedKeys.every(k => THYROID_RANGES[k].status(entry[k] as number) === "good");
                   if (allGood) return (
                     <div className="text-xs p-2 rounded-lg" style={{ background: "rgba(34,197,94,0.08)", color: "#86efac" }}>
-                      ✓ Thyroid markers all within target range
+                      ✓ {tshOnly ? "TSH within target range — T3/T4 not tested in this panel" : "Thyroid markers all within target range"}
                     </div>
                   );
                   if (tshS === "risk") return (
@@ -424,7 +453,7 @@ export default function BloodWork() {
                   );
                   return (
                     <div className="text-xs p-2 rounded-lg" style={{ background: "rgba(251,146,60,0.06)", color: "#fdba74" }}>
-                      ↗ Some markers borderline — monitor at next panel
+                      ↗ {tshOnly ? "TSH borderline" : "Some markers borderline"} — monitor at next panel
                     </div>
                   );
                 })()}
