@@ -193,11 +193,6 @@ export interface MedicationAdherence {
   notes: string;
 }
 
-export interface AddTomorrowItem {
-  item: string;      // specific food or habit to add
-  benefit: string;   // precise health benefit for this cardiac patient
-}
-
 export interface DayAnalysis {
   overall_score: number;    // 0-100
   nutrition: NutritionInsight;
@@ -207,7 +202,6 @@ export interface DayAnalysis {
   sleep_note: string;
   cardiac_safety_note: string;
   inflammation_note: string;
-  add_from_tomorrow: AddTomorrowItem[];          // new items to start incorporating
   top_wins: string[];
   areas_to_improve: string[];
   /** Per-meal next-day food suggestions from the Good to Eat list, not eaten this week */

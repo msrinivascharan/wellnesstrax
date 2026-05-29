@@ -124,12 +124,6 @@ Return ONLY this JSON structure (all fields required):
   "sleep_note": "<sleep quality assessment and any recommendation>",
   "cardiac_safety_note": "<MOST IMPORTANT — cardiac safety assessment. Patient has coronary stents. Flag any risks.>",
   "inflammation_note": "<anti vs pro-inflammatory balance of today's food choices>",
-  "add_from_tomorrow": [
-    {
-      "item": "<specific, realistic food or habit to introduce — name the actual food, not a vague category>",
-      "benefit": "<precise benefit for THIS cardiac patient — relate to anti-inflammation, lipid management, blood pressure, stent health, or filling a gap visible in today's log>"
-    }
-  ],
   "top_wins": ["<win 1>", "<win 2>", "<win 3>"],
   "areas_to_improve": ["<area 1>", "<area 2>"],
   "next_day_meal_suggestions": {
