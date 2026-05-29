@@ -17,6 +17,17 @@ const QUALITY_META: Record<SleepQuality, { label: string; color: string; icon: s
   poor:      { label: "Poor",      color: "#ef4444", icon: "↓" },
 };
 
+// Post-lunch sleepiness (postprandial somnolence) — 4-level scale
+const PLS_LEVELS = ["none", "mild", "noticeable", "uncontrollable"] as const;
+type PlsLevel = typeof PLS_LEVELS[number];
+
+const PLS_META: Record<PlsLevel, { label: string; color: string; icon: string }> = {
+  none:            { label: "None",           color: "#22c55e", icon: "😀" },
+  mild:            { label: "Mild",           color: "#86efac", icon: "🙂" },
+  noticeable:      { label: "Noticeable",     color: "#f59e0b", icon: "😪" },
+  uncontrollable:  { label: "Uncontrollable", color: "#ef4444", icon: "😴" },
+};
+
 const QUICK_ADD = [250, 500, 750, 1000];
 
 function calcHours(bedtime: string, wakeTime: string): number {
@@ -298,6 +309,48 @@ export default function WaterSleep({ dayLog, profile, onUpdate }: Props) {
             <div className="text-xs pt-1" style={{ color: "#a78bfa", borderTop: "1px solid rgba(167,139,250,0.12)" }}>
               Total sleep today: <strong>{(sleep.hours + (sleep.nap_hours ?? 0)).toFixed(1)}h</strong>
               <span className="ml-1" style={{ color: "#64748b" }}>({sleep.hours}h night + {sleep.nap_hours}h nap)</span>
+            </div>
+          )}
+        </div>
+
+        {/* Post-lunch sleepiness */}
+        <div className="p-4 rounded-xl space-y-3"
+          style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.15)" }}>
+          <div className="flex items-center gap-2">
+            <span className="text-base">🍽️</span>
+            <div>
+              <div className="text-xs font-semibold text-white">Post-lunch sleepiness</div>
+              <div className="text-xs" style={{ color: "#475569" }}>How drowsy did you feel after lunch?</div>
+            </div>
+            {sleep.post_lunch_sleepiness && (
+              <button
+                onClick={() => updateSleep({ post_lunch_sleepiness: "" })}
+                className="ml-auto text-xs transition-colors"
+                style={{ color: "#475569" }}
+                title="Clear">
+                ✕ Clear
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {PLS_LEVELS.map(lvl => {
+              const m = PLS_META[lvl];
+              const active = sleep.post_lunch_sleepiness === lvl;
+              return (
+                <button key={lvl} onClick={() => updateSleep({ post_lunch_sleepiness: lvl })}
+                  className="flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-medium transition-all"
+                  style={active
+                    ? { background: `${m.color}18`, color: m.color, border: `1px solid ${m.color}45` }
+                    : { background: "rgba(255,255,255,0.03)", color: "#475569", border: "1px solid var(--border)" }}>
+                  <span className="text-base">{m.icon}</span>
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+          {sleep.post_lunch_sleepiness === "uncontrollable" && (
+            <div className="text-xs" style={{ color: "#fca5a5" }}>
+              Frequent uncontrollable post-lunch drowsiness can relate to meal size, refined carbs, or blood sugar swings — worth noting the pattern for your doctor.
             </div>
           )}
         </div>

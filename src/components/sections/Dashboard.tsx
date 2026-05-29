@@ -83,7 +83,11 @@ export default function Dashboard({ dayLog, profile, onNavigate }: Props) {
 
   const sleepH = dayLog.sleep.hours;
   const sleepPct = sleepH >= 7 ? 100 : sleepH > 0 ? Math.round((sleepH / 7) * 100) : 0;
-  const foodPct = Math.min(100, Math.round((totalFood / 6) * 100));
+  // Food ring = how many of the 3 main meals (breakfast, lunch, dinner) have items logged.
+  // Snacks are a bonus and don't count toward the ring.
+  const mainMealsLogged = (["breakfast", "lunch", "dinner"] as const)
+    .filter(m => (dayLog.food[m]?.length ?? 0) > 0).length;
+  const foodPct = Math.round((mainMealsLogged / 3) * 100);
 
   // Critical alerts from medications
   const missedCritical = dayLog.medications.filter(
@@ -118,7 +122,7 @@ export default function Dashboard({ dayLog, profile, onNavigate }: Props) {
         <div className="section-header mb-4">Today&apos;s completion</div>
         <div className="grid grid-cols-5 gap-4">
           <button onClick={() => onNavigate("food")} className="hover:opacity-80 transition-opacity">
-            <Ring pct={foodPct} color={ringColor(foodPct)} label="Food" sub={`${totalFood} items`} icon="🍽️" />
+            <Ring pct={foodPct} color={ringColor(foodPct)} label="Food" sub={`${mainMealsLogged}/3 meals`} icon="🍽️" />
           </button>
           <button onClick={() => onNavigate("water-sleep")} className="hover:opacity-80 transition-opacity">
             <Ring pct={waterPct} color={ringColor(waterPct)} label="Water" sub={`${dayLog.water_ml}ml`} icon="💧" />
