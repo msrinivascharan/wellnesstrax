@@ -114,10 +114,7 @@ Return ONLY this JSON structure (all fields required):
     "estimated_fiber_g": <integer>,
     "assessment": "<one-sentence overall nutrition assessment>",
     "highlights": ["<positive observation 1>", "<positive observation 2>"],
-    "concerns": ["<concern 1>", "<concern 2>"],
-    "drug_food_alerts": [
-      { "drug": "<drug>", "food": "<food>", "severity": "CRITICAL|HIGH|MEDIUM|LOW", "action": "<what to do>" }
-    ]
+    "concerns": ["<concern 1>", "<concern 2>"]
   },
   "activity_note": "<concise assessment of today's gym, walks, and soleus pump exercises>",
   "medication_adherence": {

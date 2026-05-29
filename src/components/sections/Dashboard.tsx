@@ -89,8 +89,6 @@ export default function Dashboard({ dayLog, profile, onNavigate }: Props) {
   const missedCritical = dayLog.medications.filter(
     m => !m.taken && m.scheduled_time && isMissedByNow(m.scheduled_time)
   );
-  const drugAlerts = dayLog.analysis?.nutrition?.drug_food_alerts?.filter(a => a.severity === "CRITICAL") ?? [];
-
   function ringColor(p: number) {
     return p >= 75 ? "#22c55e" : p >= 40 ? "#f59e0b" : "#ef4444";
   }
@@ -146,7 +144,7 @@ export default function Dashboard({ dayLog, profile, onNavigate }: Props) {
       </div>
 
       {/* Alerts */}
-      {(missedCritical.length > 0 || drugAlerts.length > 0) && (
+      {missedCritical.length > 0 && (
         <div className="space-y-2">
           <div className="section-header">Alerts</div>
           {missedCritical.map(m => (
@@ -155,15 +153,6 @@ export default function Dashboard({ dayLog, profile, onNavigate }: Props) {
               <div>
                 <span className="text-sm text-red-300 font-medium">{m.name} not taken</span>
                 <span className="text-xs text-red-400/70 ml-2">scheduled {m.scheduled_time}</span>
-              </div>
-            </div>
-          ))}
-          {drugAlerts.map((a, i) => (
-            <div key={i} className="flex items-start gap-3 p-3 rounded-xl border border-red-900 bg-red-950/30">
-              <span className="text-red-400 shrink-0 mt-0.5">🚨</span>
-              <div>
-                <span className="text-sm text-red-300 font-medium">{a.drug} + {a.food}</span>
-                <span className="text-xs text-red-400/70 ml-2">{a.action}</span>
               </div>
             </div>
           ))}

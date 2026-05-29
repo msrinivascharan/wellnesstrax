@@ -15,7 +15,6 @@ interface Props {
 
 const LOADING_MSGS = [
   "Scanning your food log...",
-  "Checking drug-food interactions...",
   "Estimating macros and micronutrients...",
   "Assessing cardiac safety...",
   "Reviewing medication adherence...",
@@ -92,11 +91,6 @@ function ScoreArc({ score, label }: { score: number; label: string }) {
       <div className="text-xs text-center font-medium" style={{ color: "#94a3b8" }}>{label}</div>
     </div>
   );
-}
-
-function AlertBadge({ severity }: { severity: string }) {
-  const map: Record<string, string> = { CRITICAL: "badge-critical", HIGH: "badge-high", MEDIUM: "badge-medium", LOW: "badge-low" };
-  return <span className={map[severity] ?? "badge-low"}>{severity}</span>;
 }
 
 function InsightCard({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
@@ -850,23 +844,6 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
               </div>
             )}
           </InsightCard>
-
-          {/* Drug-food alerts */}
-          {analysis.nutrition.drug_food_alerts.length > 0 && (
-            <InsightCard title="Drug-food interaction alerts" icon="🚨">
-              <div className="space-y-2">
-                {analysis.nutrition.drug_food_alerts.map((a, i) => (
-                  <div key={i} className="p-2.5 rounded-xl" style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)" }}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <AlertBadge severity={a.severity} />
-                      <span className="text-xs font-medium text-white">{a.drug} + {a.food}</span>
-                    </div>
-                    <p className="text-xs" style={{ color: "#fca5a5" }}>{a.action}</p>
-                  </div>
-                ))}
-              </div>
-            </InsightCard>
-          )}
 
           {/* 3-column row: Activity, Water, Sleep */}
           <div className="grid grid-cols-3 gap-4">

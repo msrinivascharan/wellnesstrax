@@ -178,13 +178,6 @@ export interface DayLog {
 
 // ─── Analysis output ──────────────────────────────────────────────────────────
 
-export interface DrugFoodAlert {
-  drug: string;
-  food: string;
-  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
-  action: string;
-}
-
 export interface NutritionInsight {
   estimated_calories: number;
   estimated_protein_g: number;
@@ -192,7 +185,6 @@ export interface NutritionInsight {
   assessment: string;
   highlights: string[];
   concerns: string[];
-  drug_food_alerts: DrugFoodAlert[];
 }
 
 export interface MedicationAdherence {
