@@ -3,19 +3,17 @@ import type { UserProfile, FoodRules, DayLog } from "@/types";
 export function buildAnalysisPrompt(
   profile: UserProfile,
   rules: FoodRules,
-  log: DayLog
+  log: DayLog,
+  /** Enabled items from the Good to Eat list — used for next-day meal suggestions */
+  goodToEatNames: string[] = [],
+  /** Unique foods eaten each meal over the past 7 days — AI avoids repeating these */
+  weekFoodsByMeal: Record<string, string[]> = {}
 ): string {
   const meds = profile.medications
     .map(m =>
       `  • ${m.name} ${m.dose}${m.time ? ` at ${m.time}` : ""}${m.condition ? ` (${m.condition})` : ""}\n    Interactions: ${m.interactions.join("; ")}`
     )
     .join("\n");
-
-  // Dynamic med list for instructions (e.g. "Drug A, Drug B") — no hardcoding
-  const dailyMedNames = profile.medications
-    .filter(m => m.time)
-    .map(m => m.name)
-    .join(", ");
 
   const avoidRules = rules.always_avoid.map(r => `  ✗ ${r}`).join("\n");
   const encourageRules = rules.always_encourage.map(r => `  ✓ ${r}`).join("\n");
@@ -94,6 +92,16 @@ ${soleusSummary}
 Water: ${log.water_ml}ml / ${profile.daily_targets.water_ml}ml target
 Sleep:
 ${sleepSummary}
+${goodToEatNames.length > 0 ? `
+NEXT DAY MEAL SUGGESTIONS CONTEXT:
+Good to Eat list (suggest ONLY from these ${goodToEatNames.length} items):
+  ${goodToEatNames.join(", ")}
+
+Foods already eaten this week — avoid repeating these:
+  Breakfast this week: ${(weekFoodsByMeal.breakfast ?? []).join(", ") || "none logged"}
+  Lunch this week: ${(weekFoodsByMeal.lunch ?? []).join(", ") || "none logged"}
+  Dinner this week: ${(weekFoodsByMeal.dinner ?? []).join(", ") || "none logged"}
+  Snacks this week: ${(weekFoodsByMeal.snacks ?? []).join(", ") || "none logged"}` : ""}
 
 Return ONLY this JSON structure (all fields required):
 {
@@ -124,7 +132,12 @@ Return ONLY this JSON structure (all fields required):
   ],
   "top_wins": ["<win 1>", "<win 2>", "<win 3>"],
   "areas_to_improve": ["<area 1>", "<area 2>"],
-  "tomorrow_focus": ["<specific action 1>", "<specific action 2>", "<specific action 3>"],
+  "next_day_meal_suggestions": {
+    "breakfast": ["<3-4 items from Good to Eat list, not eaten this week, cardiac-appropriate for breakfast>"],
+    "lunch":     ["<3-4 items from Good to Eat list, not eaten this week, cardiac-appropriate for lunch>"],
+    "dinner":    ["<3-4 items from Good to Eat list, not eaten this week, cardiac-appropriate for dinner>"],
+    "snacks":    ["<3-4 items from Good to Eat list, not eaten this week, cardiac-appropriate for snacks>"]
+  },
   "analyzed_at": "${new Date().toISOString()}"
 }`;
 }

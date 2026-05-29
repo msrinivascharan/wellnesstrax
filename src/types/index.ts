@@ -210,7 +210,13 @@ export interface DayAnalysis {
   add_from_tomorrow: AddTomorrowItem[];          // new items to start incorporating
   top_wins: string[];
   areas_to_improve: string[];
-  tomorrow_focus: string[];
+  /** Per-meal next-day food suggestions from the Good to Eat list, not eaten this week */
+  next_day_meal_suggestions?: {
+    breakfast: string[];
+    lunch:     string[];
+    dinner:    string[];
+    snacks:    string[];
+  };
   analyzed_at: string;
 }
 

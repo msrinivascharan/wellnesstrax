@@ -657,6 +657,28 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
                       ))}
                     </div>
                   )}
+
+                  {/* Next-day suggestions — only after analysis */}
+                  {(() => {
+                    const suggestions = analysis?.next_day_meal_suggestions?.[meal];
+                    if (!suggestions || suggestions.length === 0) return null;
+                    return (
+                      <div className="pt-1 border-t space-y-1.5"
+                        style={{ borderColor: "rgba(20,184,166,0.12)" }}>
+                        <div className="text-xs font-medium" style={{ color: "#14b8a6" }}>
+                          🌱 Try tomorrow
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {suggestions.map(item => (
+                            <span key={item} className="text-xs px-2 py-0.5 rounded-full"
+                              style={{ background: "rgba(20,184,166,0.08)", color: "#2dd4bf", border: "1px solid rgba(20,184,166,0.18)" }}>
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })}
@@ -904,18 +926,6 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
               </div>
             </InsightCard>
           )}
-
-          {/* Tomorrow's focus */}
-          <InsightCard title="Tomorrow's focus" icon="🎯">
-            <div className="space-y-2">
-              {analysis.tomorrow_focus.map((t, i) => (
-                <div key={i} className="flex items-start gap-2.5 p-2 rounded-xl" style={{ background: "rgba(20,184,166,0.06)", border: "1px solid rgba(20,184,166,0.15)" }}>
-                  <span className="text-teal-400 font-bold text-xs mt-0.5 shrink-0">{i + 1}.</span>
-                  <span className="text-xs" style={{ color: "#94a3b8" }}>{t}</span>
-                </div>
-              ))}
-            </div>
-          </InsightCard>
 
           {/* ── Blood work snapshot (if data exists) ── */}
           {bloodWork && (bloodWork.lipid_profile.length > 0 || bloodWork.thyroid_profile.length > 0) && (

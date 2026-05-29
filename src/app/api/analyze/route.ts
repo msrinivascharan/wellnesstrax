@@ -1,9 +1,33 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { loadProfile, loadFoodRules } from "@/lib/profile-loader";
+import { loadProfile, loadFoodRules, loadFoodPreferences } from "@/lib/profile-loader";
 import { buildAnalysisPrompt } from "@/lib/prompt-builder";
-import { saveSession } from "@/lib/session-store";
+import { saveSession, getSession } from "@/lib/session-store";
 import type { DayLog, DayAnalysis } from "@/types";
+
+/** Collect unique food names per meal from the 7 days before `logDate`. */
+async function loadWeekFoods(logDate: string): Promise<Record<string, string[]>> {
+  const base = new Date(logDate + "T12:00:00");
+  const byMeal: Record<string, Set<string>> = {
+    breakfast: new Set(), lunch: new Set(), dinner: new Set(), snacks: new Set(),
+  };
+  await Promise.all(
+    Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(base);
+      d.setDate(base.getDate() - (i + 1));
+      return d.toISOString().split("T")[0];
+    }).map(async date => {
+      const session = await getSession(date) as { food?: Record<string, Array<{ name: string }>> } | null;
+      if (!session?.food) return;
+      for (const meal of Object.keys(byMeal)) {
+        for (const item of session.food[meal] ?? []) {
+          if (item.name) byMeal[meal].add(item.name);
+        }
+      }
+    })
+  );
+  return Object.fromEntries(Object.entries(byMeal).map(([k, v]) => [k, [...v]]));
+}
 
 function getGroqClient() {
   const key = process.env.GROQ_API_KEY;
@@ -20,8 +44,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid log data" }, { status: 400 });
     }
 
-    const [profile, rules] = await Promise.all([loadProfile(), loadFoodRules()]);
-    const prompt = buildAnalysisPrompt(profile, rules, log);
+    const [profile, rules, foodPrefs, weekFoodsByMeal] = await Promise.all([
+      loadProfile(),
+      loadFoodRules(),
+      loadFoodPreferences(),
+      loadWeekFoods(log.date),
+    ]);
+
+    const goodToEatNames = foodPrefs.encourage
+      .filter(i => i.enabled)
+      .map(i => i.name);
+
+    const prompt = buildAnalysisPrompt(profile, rules, log, goodToEatNames, weekFoodsByMeal);
 
     const groq = getGroqClient();
     const completion = await groq.chat.completions.create({
