@@ -193,11 +193,6 @@ export interface MedicationAdherence {
   notes: string;
 }
 
-export interface AvoidForeverItem {
-  food: string;      // specific item name from today's log
-  reason: string;    // why it is harmful for this cardiac patient
-}
-
 export interface AddTomorrowItem {
   item: string;      // specific food or habit to add
   benefit: string;   // precise health benefit for this cardiac patient
@@ -212,7 +207,6 @@ export interface DayAnalysis {
   sleep_note: string;
   cardiac_safety_note: string;
   inflammation_note: string;
-  foods_to_avoid_forever: AvoidForeverItem[];   // items from today never to eat again
   add_from_tomorrow: AddTomorrowItem[];          // new items to start incorporating
   top_wins: string[];
   areas_to_improve: string[];

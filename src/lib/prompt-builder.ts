@@ -95,16 +95,6 @@ Water: ${log.water_ml}ml / ${profile.daily_targets.water_ml}ml target
 Sleep:
 ${sleepSummary}
 
-CRITICAL INSTRUCTIONS FOR foods_to_avoid_forever:
-- ALWAYS return 2–5 items. NEVER return an empty array.
-- Think beyond today's log: include common foods this patient must permanently avoid
-  given their medications (${dailyMedNames}) and health conditions listed above.
-  Consult the FOOD RULES — ALWAYS AVOID section for specific interactions.
-  Common concerns: trans fats, processed meats, high-sodium packaged foods,
-  refined sugars, high saturated fat meals.
-- If today's log contained something problematic, call it out by name with a direct reason.
-- Be specific — name the actual food, not a vague food group.
-
 Return ONLY this JSON structure (all fields required):
 {
   "overall_score": <0-100 integer based on food quality, med adherence, activity, water, sleep>,
@@ -126,12 +116,6 @@ Return ONLY this JSON structure (all fields required):
   "sleep_note": "<sleep quality assessment and any recommendation>",
   "cardiac_safety_note": "<MOST IMPORTANT — cardiac safety assessment. Patient has coronary stents. Flag any risks.>",
   "inflammation_note": "<anti vs pro-inflammatory balance of today's food choices>",
-  "foods_to_avoid_forever": [
-    {
-      "food": "<food name — from today's log OR any commonly consumed food this cardiac patient must permanently avoid>",
-      "reason": "<precise reason tied to THIS patient: their cardiac status, medication interactions, BMI ${profile.bmi}, anti-inflammatory needs, or lipid management>"
-    }
-  ],
   "add_from_tomorrow": [
     {
       "item": "<specific, realistic food or habit to introduce — name the actual food, not a vague category>",
