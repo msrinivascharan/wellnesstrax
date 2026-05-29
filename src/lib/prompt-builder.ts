@@ -138,11 +138,18 @@ Return ONLY this JSON structure (all fields required):
     "snacks":    ["<3-4 items from Good to Eat list, not eaten this week, cardiac-appropriate for snacks>"]
   },${activityHistorySummary ? `
   "activity_trend_analysis": {
-    "summary": "<2-3 sentences on how activity is trending over the period — gym, walks, soleus, breathing>",
+    "summary": "<2-3 sentences on how activity is trending over the period — gym, walks, soleus>",
     "whats_good": ["<specific positive trend 1>", "<positive trend 2>"],
     "improvements": ["<specific actionable improvement 1>", "<improvement 2>"],
     "gym_insight": "<analyse gym time-spend: average session length, consistency, and how this cardiac patient can gain the most cardiovascular benefit from that time>",
     "consistency_note": "<observation on consistency/streaks and what to aim for next>"
+  },
+  "breathing_trend_analysis": {
+    "summary": "<2-3 sentences on how the breathing practice (Box 4-4-4-4 + 4-7-8) is trending over the period>",
+    "whats_good": ["<specific positive trend 1>", "<positive trend 2>"],
+    "improvements": ["<specific actionable improvement 1>", "<improvement 2>"],
+    "benefit_note": "<how this breathing practice helps THIS cardiac patient — vagal tone, heart-rate variability, blood pressure, stress/cortisol, sleep>",
+    "consistency_note": "<observation on breathing-practice consistency/streaks and what to aim for next>"
   },` : ""}
   "analyzed_at": "${new Date().toISOString()}"
 }`;

@@ -195,12 +195,21 @@ export interface MedicationAdherence {
   notes: string;
 }
 
-/** LLM-generated activity trend analysis (gym, walks, soleus, breathing over time) */
+/** LLM-generated activity trend analysis (gym, walks, soleus over time) */
 export interface ActivityTrendAnalysis {
   summary: string;          // how activity is going overall across the period
   whats_good: string[];     // what is going well
   improvements: string[];   // what needs improvement
   gym_insight: string;      // gym time-spend analysis + how to gain the most from it
+  consistency_note: string; // consistency / streak observation
+}
+
+/** LLM-generated breathing-practice trend analysis (box 4-4-4-4 + 4-7-8 over time) */
+export interface BreathingTrendAnalysis {
+  summary: string;          // how the breathing practice is going across the period
+  whats_good: string[];     // what is going well
+  improvements: string[];   // what needs improvement
+  benefit_note: string;     // cardiac / nervous-system benefit of the practice for this patient
   consistency_note: string; // consistency / streak observation
 }
 
@@ -224,6 +233,8 @@ export interface DayAnalysis {
   };
   /** Trend-based activity analysis over the past weeks (optional, set on Re-analyse) */
   activity_trend_analysis?: ActivityTrendAnalysis;
+  /** Trend-based breathing-practice analysis (optional, set on Re-analyse) */
+  breathing_trend_analysis?: BreathingTrendAnalysis;
   analyzed_at: string;
 }
 
@@ -240,7 +251,9 @@ export interface DailyActivityPoint {
   walkMin: number;
   soleus: number;           // count of soleus pump sessions
   soleusMin: number;
-  breathingRounds: number;  // box + long-exhale rounds
+  boxRounds: number;        // 4-4-4-4 box-breathing rounds
+  longExhaleRounds: number; // 4-7-8 long-exhale rounds
+  breathingRounds: number;  // box + long-exhale rounds (total)
   activeMin: number;        // gymMin + walkMin + soleusMin
 }
 

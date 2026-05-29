@@ -28,12 +28,13 @@ function rollup(date: string, activity: ActivityLog | undefined): DailyActivityP
   const walkMin = sumMin(activity?.post_prandial_walks);
   const soleus = activity?.soleus_pumps?.length ?? 0;
   const soleusMin = sumMin(activity?.soleus_pumps);
-  const breathingRounds =
-    (activity?.breathing?.box_4444 ?? 0) + (activity?.breathing?.long_exhale_478 ?? 0);
+  const boxRounds = activity?.breathing?.box_4444 ?? 0;
+  const longExhaleRounds = activity?.breathing?.long_exhale_478 ?? 0;
 
   return {
     date, weekday, gymDone, gymMin, exerciseCount,
-    walks, walkMin, soleus, soleusMin, breathingRounds,
+    walks, walkMin, soleus, soleusMin,
+    boxRounds, longExhaleRounds, breathingRounds: boxRounds + longExhaleRounds,
     activeMin: gymMin + walkMin + soleusMin,
   };
 }
@@ -70,9 +71,16 @@ export function summariseActivityHistory(points: DailyActivityPoint[]): string {
   const daysWithWalk = points.filter(p => p.walks > 0).length;
   const daysWithAnything = points.filter(p => p.activeMin > 0 || p.gymDone).length;
 
+  // Breathing practice rollup
+  const breathDays = points.filter(p => p.breathingRounds > 0).length;
+  const totalBox = points.reduce((s, p) => s + p.boxRounds, 0);
+  const totalLongExhale = points.reduce((s, p) => s + p.longExhaleRounds, 0);
+  const avgBox = breathDays ? (totalBox / n).toFixed(1) : "0";
+  const avgLongExhale = breathDays ? (totalLongExhale / n).toFixed(1) : "0";
+
   // Per-day compact line (last 14 for context)
   const recent = points.slice(-14).map(p =>
-    `${p.date}(${p.weekday}): gym ${p.gymDone ? `${p.gymMin || "?"}m` : "no"}, walks ${p.walks}, soleus ${p.soleus}, breathing ${p.breathingRounds}`
+    `${p.date}(${p.weekday}): gym ${p.gymDone ? `${p.gymMin || "?"}m` : "no"}, walks ${p.walks}, soleus ${p.soleus}, box ${p.boxRounds}, 4-7-8 ${p.longExhaleRounds}`
   ).join("\n  ");
 
   return `Days tracked: ${n}
@@ -82,6 +90,12 @@ Days with a post-meal walk: ${daysWithWalk}/${n}
 Total post-meal walks: ${totalWalks} · Total soleus sessions: ${totalSoleus}
 Average total active minutes/day: ${avgActiveMin}
 Active days (any movement): ${daysWithAnything}/${n}
+
+BREATHING PRACTICE (targets: Box 4-4-4-4 ~5-6 rounds/day, 4-7-8 long-exhale ~2 rounds/day):
+Days practiced: ${breathDays}/${n} (${Math.round((breathDays / n) * 100)}%)
+Total Box 4-4-4-4 rounds: ${totalBox} · Total 4-7-8 rounds: ${totalLongExhale}
+Average per day — Box: ${avgBox}, 4-7-8: ${avgLongExhale}
+
 Recent daily detail (last ${Math.min(14, n)} days):
   ${recent}`;
 }
