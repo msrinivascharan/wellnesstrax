@@ -195,6 +195,15 @@ export interface MedicationAdherence {
   notes: string;
 }
 
+/** LLM-generated activity trend analysis (gym, walks, soleus, breathing over time) */
+export interface ActivityTrendAnalysis {
+  summary: string;          // how activity is going overall across the period
+  whats_good: string[];     // what is going well
+  improvements: string[];   // what needs improvement
+  gym_insight: string;      // gym time-spend analysis + how to gain the most from it
+  consistency_note: string; // consistency / streak observation
+}
+
 export interface DayAnalysis {
   overall_score: number;    // 0-100
   nutrition: NutritionInsight;
@@ -213,7 +222,26 @@ export interface DayAnalysis {
     dinner:    string[];
     snacks:    string[];
   };
+  /** Trend-based activity analysis over the past weeks (optional, set on Re-analyse) */
+  activity_trend_analysis?: ActivityTrendAnalysis;
   analyzed_at: string;
+}
+
+// ─── Activity trends (computed from session history) ─────────────────────────
+
+/** One day's activity rollup, used for trend charts and LLM context. */
+export interface DailyActivityPoint {
+  date: string;             // "YYYY-MM-DD"
+  weekday: string;          // "Mon"
+  gymDone: boolean;
+  gymMin: number;           // computed from started_at/ended_at (0 if unknown)
+  exerciseCount: number;
+  walks: number;            // count of post-prandial walks
+  walkMin: number;
+  soleus: number;           // count of soleus pump sessions
+  soleusMin: number;
+  breathingRounds: number;  // box + long-exhale rounds
+  activeMin: number;        // gymMin + walkMin + soleusMin
 }
 
 // ─── Food preference lists (food_preferences.json) ───────────────────────────

@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { loadProfile, loadFoodRules, loadFoodPreferences } from "@/lib/profile-loader";
 import { buildAnalysisPrompt } from "@/lib/prompt-builder";
 import { saveSession, getSession } from "@/lib/session-store";
+import { loadActivityHistory, summariseActivityHistory } from "@/lib/activity-trends";
 import type { DayLog, DayAnalysis } from "@/types";
 
 /** Collect unique food names per meal from the 7 days before `logDate`. */
@@ -44,18 +45,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid log data" }, { status: 400 });
     }
 
-    const [profile, rules, foodPrefs, weekFoodsByMeal] = await Promise.all([
+    const [profile, rules, foodPrefs, weekFoodsByMeal, activityHistory] = await Promise.all([
       loadProfile(),
       loadFoodRules(),
       loadFoodPreferences(),
       loadWeekFoods(log.date),
+      loadActivityHistory(90),
     ]);
 
     const goodToEatNames = foodPrefs.encourage
       .filter(i => i.enabled)
       .map(i => i.name);
 
-    const prompt = buildAnalysisPrompt(profile, rules, log, goodToEatNames, weekFoodsByMeal);
+    // Only ask the AI for trend analysis once there's enough history to be meaningful
+    const activityHistorySummary =
+      activityHistory.length >= 2 ? summariseActivityHistory(activityHistory) : "";
+
+    const prompt = buildAnalysisPrompt(
+      profile, rules, log, goodToEatNames, weekFoodsByMeal, activityHistorySummary
+    );
 
     const groq = getGroqClient();
     const completion = await groq.chat.completions.create({

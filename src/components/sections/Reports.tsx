@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import type { DayAnalysis, DayLog, FoodEntry, FoodPreferenceItem, FoodPreferences, MealType, UserProfile, BloodWorkData } from "@/types";
 import { resolveCategory, mapToBalancedPlate, checkAlwaysAvoidRules } from "@/lib/food-utils";
+import ActivityTrends from "@/components/sections/ActivityTrends";
 
 interface Props {
   dayLog: DayLog;
@@ -783,6 +784,11 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
+          ACTIVITY TRENDS & INSIGHTS — charts always; AI text after Re-analyse
+         ══════════════════════════════════════════════════════════════════════ */}
+      <ActivityTrends trendAnalysis={analysis?.activity_trend_analysis} todayNote={analysis?.activity_note} />
+
+      {/* ══════════════════════════════════════════════════════════════════════
           AI ANALYSIS RESULTS — only when analysis exists
          ══════════════════════════════════════════════════════════════════════ */}
       {analysis && !loading && (
@@ -867,11 +873,8 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
             )}
           </InsightCard>
 
-          {/* 3-column row: Activity, Water, Sleep */}
-          <div className="grid grid-cols-3 gap-4">
-            <InsightCard title="Activity" icon="🏃">
-              <p className="text-xs" style={{ color: "#94a3b8" }}>{analysis.activity_note}</p>
-            </InsightCard>
+          {/* 2-column row: Water, Sleep (Activity now has its own trends section above) */}
+          <div className="grid grid-cols-2 gap-4">
             <InsightCard title="Hydration" icon="💧">
               <p className="text-xs" style={{ color: "#94a3b8" }}>{analysis.water_note}</p>
             </InsightCard>

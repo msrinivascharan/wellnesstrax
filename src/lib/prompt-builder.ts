@@ -7,7 +7,9 @@ export function buildAnalysisPrompt(
   /** Enabled items from the Good to Eat list — used for next-day meal suggestions */
   goodToEatNames: string[] = [],
   /** Unique foods eaten each meal over the past 7 days — AI avoids repeating these */
-  weekFoodsByMeal: Record<string, string[]> = {}
+  weekFoodsByMeal: Record<string, string[]> = {},
+  /** Compact summary of activity history for trend analysis (empty = skip) */
+  activityHistorySummary: string = ""
 ): string {
   const meds = profile.medications
     .map(m =>
@@ -102,6 +104,9 @@ Foods already eaten this week — avoid repeating these:
   Lunch this week: ${(weekFoodsByMeal.lunch ?? []).join(", ") || "none logged"}
   Dinner this week: ${(weekFoodsByMeal.dinner ?? []).join(", ") || "none logged"}
   Snacks this week: ${(weekFoodsByMeal.snacks ?? []).join(", ") || "none logged"}` : ""}
+${activityHistorySummary ? `
+ACTIVITY HISTORY (for activity_trend_analysis — analyse trends, not just today):
+${activityHistorySummary}` : ""}
 
 Return ONLY this JSON structure (all fields required):
 {
@@ -131,7 +136,14 @@ Return ONLY this JSON structure (all fields required):
     "lunch":     ["<3-4 items from Good to Eat list, not eaten this week, cardiac-appropriate for lunch>"],
     "dinner":    ["<3-4 items from Good to Eat list, not eaten this week, cardiac-appropriate for dinner>"],
     "snacks":    ["<3-4 items from Good to Eat list, not eaten this week, cardiac-appropriate for snacks>"]
-  },
+  },${activityHistorySummary ? `
+  "activity_trend_analysis": {
+    "summary": "<2-3 sentences on how activity is trending over the period — gym, walks, soleus, breathing>",
+    "whats_good": ["<specific positive trend 1>", "<positive trend 2>"],
+    "improvements": ["<specific actionable improvement 1>", "<improvement 2>"],
+    "gym_insight": "<analyse gym time-spend: average session length, consistency, and how this cardiac patient can gain the most cardiovascular benefit from that time>",
+    "consistency_note": "<observation on consistency/streaks and what to aim for next>"
+  },` : ""}
   "analyzed_at": "${new Date().toISOString()}"
 }`;
 }
