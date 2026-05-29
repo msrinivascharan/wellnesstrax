@@ -15,13 +15,13 @@ import BloodWork from "@/components/sections/BloodWork";
 import WaterSleep from "@/components/sections/WaterSleep";
 import Reports from "@/components/sections/Reports";
 
-// ─── Medication entry builder (handles multi-time meds like Ticagrelor) ──────
+// ─── Medication entry builder (handles multi-time meds) ──────
 
 /**
  * Converts profile.medications into MedicationEntry[].
- * - Medications without a `time` field (e.g. Inclisiran injectable) are skipped.
+ * - Medications without a `time` field (e.g. periodic injectables) are skipped.
  * - Medications with "and" in time (e.g. "9AM and 9PM") are split into two
- *   entries: "Ticagrelor (9AM)" and "Ticagrelor (9PM)".
+ *   entries: "<Med> (9AM)" and "<Med> (9PM)".
  */
 function buildMedEntries(profile: UserProfile): MedicationEntry[] {
   return profile.medications.flatMap(m => {

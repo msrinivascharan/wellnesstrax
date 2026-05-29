@@ -47,7 +47,7 @@ const THYROID_RANGES: Record<keyof Omit<ThyroidProfile, "id" | "test_date">, { l
     status: v => v >= 5.1 && v <= 14.1 ? "good" : v >= 3.0 && v <= 16.0 ? "warn" : "risk",
   },
   tsh_uiu_ml: {
-    label: "TSH (on Thyroxin)", unit: "μIU/mL", good: "0.5 – 2.5",
+    label: "TSH", unit: "μIU/mL", good: "0.5 – 2.5",
     status: v => v >= 0.5 && v <= 2.5 ? "good" : v >= 0.3 && v <= 4.0 ? "warn" : "risk",
   },
 };

@@ -62,7 +62,7 @@ export default function MedicationLog({ dayLog, profile, onUpdate }: Props) {
   const [injLoading, setInjLoading]       = useState(true);
   const [showAddForm, setShowAddForm]     = useState(false);
   const [formDate, setFormDate]           = useState(() => new Date().toISOString().split("T")[0]);
-  const [formDose, setFormDose]           = useState("284mg");
+  const [formDose, setFormDose]           = useState("");
   const [formNotes, setFormNotes]         = useState("");
   const [saving, setSaving]               = useState(false);
 
@@ -286,7 +286,7 @@ export default function MedicationLog({ dayLog, profile, onUpdate }: Props) {
         </div>
       )}
 
-      {/* ── Inclisiran (Injectable) ────────────────────────────────────────────── */}
+      {/* ── Injectable medication ────────────────────────────────────────────── */}
       <div className="card overflow-hidden">
         {/* Header */}
         <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: "var(--border)" }}>
@@ -321,7 +321,7 @@ export default function MedicationLog({ dayLog, profile, onUpdate }: Props) {
                 <input type="text" className="nb-input w-full"
                   value={formDose}
                   onChange={e => setFormDose(e.target.value)}
-                  placeholder="e.g. 284mg" />
+                  placeholder="Dose, e.g. 50mg" />
               </div>
             </div>
             <div className="space-y-1">
