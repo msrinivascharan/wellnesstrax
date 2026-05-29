@@ -157,8 +157,8 @@ export interface SleepLog {
   nap_hours?: number;   // daytime / afternoon nap duration (default 0)
   nap_start?: string;   // "HH:MM" — nap start time
   nap_end?: string;     // "HH:MM" — nap end time (auto-calculates nap_hours)
-  /** Post-lunch drowsiness intensity (postprandial somnolence) */
-  post_lunch_sleepiness?: "" | "none" | "mild" | "noticeable" | "uncontrollable";
+  /** Post-lunch drowsiness intensity (postprandial somnolence / post-lunch dip) */
+  post_lunch_sleepiness?: "" | "none" | "controllable" | "uncontrollable";
 }
 
 // ─── Day Log (main daily record) ─────────────────────────────────────────────
