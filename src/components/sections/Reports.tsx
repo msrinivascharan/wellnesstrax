@@ -684,27 +684,7 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
           </div>
         </div>
 
-        {/* Row 2: Hydration quick view */}
-        <div className="card p-4 space-y-3">
-          <div className="flex items-center gap-2 mb-1">
-            <span>💧</span>
-            <span className="text-sm font-semibold text-white">Hydration</span>
-          </div>
-          <BarRow
-            label="Water intake"
-            value={logForChart.water_ml}
-            max={profile.daily_targets.water_ml}
-            color="#60a5fa"
-            valueSuffix="ml"
-          />
-          <div className="text-xs" style={{ color: "#475569" }}>
-            {logForChart.water_ml >= profile.daily_targets.water_ml
-              ? "✓ Daily target reached!"
-              : `${profile.daily_targets.water_ml - logForChart.water_ml}ml remaining to hit target`}
-          </div>
-        </div>
-
-        {/* Row 3: Macro bars — only when analysis exists */}
+        {/* Macro bars — only when analysis exists */}
         {analysis && (
           <div className="card p-4 space-y-3 fade-in-up">
             <div className="flex items-center gap-2 mb-1">
@@ -751,8 +731,6 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
          ══════════════════════════════════════════════════════════════════════ */}
       {analysis && !loading && (
         <div className="space-y-5 fade-in-up">
-          <div className="section-header">AI analysis results</div>
-
           {/* Overall score */}
           <div className="card p-5">
             <div className="flex items-center gap-6">
@@ -852,11 +830,6 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
                 )}
               </div>
             </div>
-          </InsightCard>
-
-          {/* Inflammation */}
-          <InsightCard title="Inflammation balance" icon="🔥">
-            <p className="text-xs" style={{ color: "#94a3b8" }}>{analysis.inflammation_note}</p>
           </InsightCard>
 
           {/* ── Blood work snapshot (if data exists) ── */}
