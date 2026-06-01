@@ -115,6 +115,17 @@ export interface PrandialActivity {
   logged_at: string;
 }
 
+/** A sport/game session (e.g. badminton) */
+export interface SportSession {
+  duration_min: number;
+  intensity: "light" | "moderate" | "intense";
+  games?: number;   // number of games played
+  wins?: number;    // games won
+  losses?: number;  // games lost
+  notes?: string;
+  logged_at: string;
+}
+
 export interface BreathingLog {
   box_4444: number;        // rounds done today (target 5–6)
   long_exhale_478: number; // rounds done today (target 2)
@@ -125,6 +136,7 @@ export interface ActivityLog {
   post_prandial_walks: PrandialActivity[];
   soleus_pumps: PrandialActivity[];
   breathing: BreathingLog;
+  badminton?: SportSession[];   // optional — badminton/sport sessions for the day
 }
 
 // ─── Medication & supplement tracking ────────────────────────────────────────
@@ -213,6 +225,30 @@ export interface BreathingTrendAnalysis {
   consistency_note: string; // consistency / streak observation
 }
 
+/** Generic per-section activity insight (cardio, strength, indoor, badminton) */
+export interface SectionInsight {
+  summary: string;
+  whats_good: string[];
+  improvements: string[];
+}
+
+/** Overall activity insight tying all sections together */
+export interface OverallActivityInsight {
+  summary: string;          // how activity is going overall
+  body_feel: string;        // how the body benefits / feels good from these activities
+  gap_impact: string;       // impact of missing activity (a day, several in a row, long gaps)
+  consistency_note: string; // streaks, current gap, what to aim for
+}
+
+/** All sectioned activity analyses, generated together on Re-analyse */
+export interface ActivitySectionAnalysis {
+  overall:   OverallActivityInsight;
+  cardio:    SectionInsight;
+  strength:  SectionInsight;
+  indoor:    SectionInsight;   // post-prandial walks + soleus pumps
+  badminton: SectionInsight;
+}
+
 export interface DayAnalysis {
   overall_score: number;    // 0-100
   nutrition: NutritionInsight;
@@ -231,8 +267,10 @@ export interface DayAnalysis {
     dinner:    string[];
     snacks:    string[];
   };
-  /** Trend-based activity analysis over the past weeks (optional, set on Re-analyse) */
+  /** Trend-based activity analysis over the past weeks (optional, legacy single-block) */
   activity_trend_analysis?: ActivityTrendAnalysis;
+  /** Sectioned activity analyses — cardio, strength, indoor, badminton + overall */
+  activity_section_analysis?: ActivitySectionAnalysis;
   /** Trend-based breathing-practice analysis (optional, set on Re-analyse) */
   breathing_trend_analysis?: BreathingTrendAnalysis;
   analyzed_at: string;
@@ -247,14 +285,20 @@ export interface DailyActivityPoint {
   gymDone: boolean;
   gymMin: number;           // computed from started_at/ended_at (0 if unknown)
   exerciseCount: number;
+  cardioMin: number;        // sum of cardio-exercise duration_min in the gym
+  strengthSets: number;     // total sets across strength exercises
+  strengthVolume: number;   // sum of reps × weight_kg across all strength sets
   walks: number;            // count of post-prandial walks
   walkMin: number;
   soleus: number;           // count of soleus pump sessions
   soleusMin: number;
+  badmintonMin: number;     // total badminton minutes
+  badmintonGames: number;   // total badminton games
+  muscles: Record<string, number>; // muscle id → sets worked that day
   boxRounds: number;        // 4-4-4-4 box-breathing rounds
   longExhaleRounds: number; // 4-7-8 long-exhale rounds
   breathingRounds: number;  // box + long-exhale rounds (total)
-  activeMin: number;        // gymMin + walkMin + soleusMin
+  activeMin: number;        // gymMin + walkMin + soleusMin + badmintonMin
 }
 
 // ─── Food preference lists (food_preferences.json) ───────────────────────────

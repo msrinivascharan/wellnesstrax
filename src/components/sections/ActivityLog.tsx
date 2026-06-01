@@ -1,6 +1,11 @@
 "use client";
 import { useState } from "react";
-import type { ActivityLog, ActivitiesData, DayLog, ExerciseEntry, ExerciseSet, MealType, PrandialActivity, BreathingLog } from "@/types";
+import type { ActivityLog, ActivitiesData, DayLog, ExerciseEntry, ExerciseSet, MealType, PrandialActivity, BreathingLog, SportSession } from "@/types";
+
+const BADMINTON_INTENSITY: SportSession["intensity"][] = ["light", "moderate", "intense"];
+const INTENSITY_COLOR: Record<SportSession["intensity"], string> = {
+  light: "#86efac", moderate: "#fbbf24", intense: "#f87171",
+};
 
 interface Props {
   dayLog: DayLog;
@@ -201,6 +206,22 @@ export default function ActivityLog({ dayLog, activitiesData, onUpdate }: Props)
     onUpdate({ ...activity, breathing: { ...activity.breathing, [key]: Math.max(0, val) } });
   }
 
+  // ── Badminton handlers ──────────────────────────────────────────────────────
+  const badminton = activity.badminton ?? [];
+  function addBadminton() {
+    const session: SportSession = {
+      duration_min: 30, intensity: "moderate", games: 0, wins: 0, losses: 0,
+      logged_at: new Date().toISOString(),
+    };
+    onUpdate({ ...activity, badminton: [...badminton, session] });
+  }
+  function updateBadminton(idx: number, patch: Partial<SportSession>) {
+    onUpdate({ ...activity, badminton: badminton.map((b, i) => i === idx ? { ...b, ...patch } : b) });
+  }
+  function removeBadminton(idx: number) {
+    onUpdate({ ...activity, badminton: badminton.filter((_, i) => i !== idx) });
+  }
+
   const addedNames = new Set(activity.gym.exercises.map(e => e.name));
   const gymDuration = calcGymDuration(activity.gym.started_at, activity.gym.ended_at);
 
@@ -209,7 +230,7 @@ export default function ActivityLog({ dayLog, activitiesData, onUpdate }: Props)
       <div>
         <h2 className="text-xl font-bold text-white">Activity Log</h2>
         <p className="text-xs mt-0.5" style={{ color: "#64748b" }}>
-          Track gym, walks, soleus pump, and breathing exercises
+          Track gym, walks, soleus pump, badminton, and breathing exercises
         </p>
       </div>
 
@@ -384,6 +405,80 @@ export default function ActivityLog({ dayLog, activitiesData, onUpdate }: Props)
             </div>
           );
         })}
+      </div>
+
+      {/* ── Badminton ── */}
+      <div className="card p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🏸</span>
+            <div>
+              <div className="text-sm font-semibold text-white">Badminton</div>
+              <div className="text-xs" style={{ color: "#475569" }}>Great cardio — log each session with games played</div>
+            </div>
+          </div>
+          <button onClick={addBadminton}
+            className="text-xs px-3 py-1.5 rounded-lg transition-colors shrink-0"
+            style={{ background: "rgba(20,184,166,0.1)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.3)" }}>
+            + Add session
+          </button>
+        </div>
+
+        {badminton.length === 0 ? (
+          <p className="text-xs py-1" style={{ color: "#334155" }}>No badminton logged today.</p>
+        ) : badminton.map((b, i) => (
+          <div key={i} className="p-3 rounded-xl space-y-3"
+            style={{ background: "rgba(255,255,255,0.025)", border: "1px solid var(--border)" }}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-white">Session {i + 1}</span>
+                {(b.games ?? 0) > 0 && (b.wins ?? 0) + (b.losses ?? 0) > 0 && (
+                  <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(20,184,166,0.1)", color: "#14b8a6" }}>
+                    {b.wins ?? 0}W–{b.losses ?? 0}L
+                  </span>
+                )}
+              </div>
+              <button onClick={() => removeBadminton(i)} className="text-xs" style={{ color: "#475569" }} title="Remove">✕</button>
+            </div>
+
+            {/* Duration + games + wins + losses */}
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { label: "Minutes", key: "duration_min" as const, val: b.duration_min, max: 240 },
+                { label: "Games", key: "games" as const, val: b.games ?? 0, max: 50 },
+                { label: "Wins", key: "wins" as const, val: b.wins ?? 0, max: 50 },
+                { label: "Losses", key: "losses" as const, val: b.losses ?? 0, max: 50 },
+              ].map(f => (
+                <div key={f.key}>
+                  <label className="block text-xs mb-1" style={{ color: "#64748b" }}>{f.label}</label>
+                  <input type="number" min="0" max={f.max} className="nb-input-sm w-full text-center"
+                    value={f.val}
+                    onChange={e => updateBadminton(i, { [f.key]: parseInt(e.target.value) || 0 })} />
+                </div>
+              ))}
+            </div>
+
+            {/* Intensity */}
+            <div>
+              <label className="block text-xs mb-1" style={{ color: "#64748b" }}>Intensity</label>
+              <div className="flex gap-1.5">
+                {BADMINTON_INTENSITY.map(lvl => {
+                  const active = b.intensity === lvl;
+                  const color = INTENSITY_COLOR[lvl];
+                  return (
+                    <button key={lvl} onClick={() => updateBadminton(i, { intensity: lvl })}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-medium capitalize transition-all"
+                      style={active
+                        ? { background: `${color}1f`, color, border: `1px solid ${color}55` }
+                        : { background: "rgba(255,255,255,0.03)", color: "#475569", border: "1px solid var(--border)" }}>
+                      {lvl}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* ── Breathing exercises ── */}

@@ -1,5 +1,6 @@
 import type { DailyActivityPoint, ActivityLog, PrandialActivity } from "@/types";
 import { listSessions, getSession } from "@/lib/session-store";
+import { getMusclesForExercise, MUSCLE_LABELS, type MuscleId } from "@/lib/muscle-map";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -23,19 +24,51 @@ function rollup(date: string, activity: ActivityLog | undefined): DailyActivityP
   const gym = activity?.gym;
   const gymDone = !!gym?.did_gym;
   const gymMin = gymDone ? minutesBetween(gym?.started_at, gym?.ended_at) : 0;
-  const exerciseCount = gym?.exercises?.length ?? 0;
+  const exercises = gym?.exercises ?? [];
+  const exerciseCount = exercises.length;
+
+  // Cardio / strength split + muscle work
+  let cardioMin = 0;
+  let strengthSets = 0;
+  let strengthVolume = 0;
+  const muscles: Record<string, number> = {};
+  const addMuscle = (m: MuscleId, n: number) => { muscles[m] = (muscles[m] ?? 0) + n; };
+
+  for (const ex of exercises) {
+    if (ex.type === "cardio") {
+      cardioMin += ex.duration_min ?? 0;
+    } else if (ex.type === "core") {
+      const sets = ex.core_sets ?? 0;
+      strengthSets += sets;
+      getMusclesForExercise(ex.name).forEach(m => addMuscle(m, sets));
+    } else {
+      const sets = ex.sets ?? [];
+      strengthSets += sets.length;
+      strengthVolume += sets.reduce((s, set) => s + (set.reps || 0) * (set.weight_kg || 0), 0);
+      getMusclesForExercise(ex.name).forEach(m => addMuscle(m, sets.length));
+    }
+  }
+
   const walks = activity?.post_prandial_walks?.length ?? 0;
   const walkMin = sumMin(activity?.post_prandial_walks);
   const soleus = activity?.soleus_pumps?.length ?? 0;
   const soleusMin = sumMin(activity?.soleus_pumps);
+  if (soleus > 0) addMuscle("calves", soleus); // soleus pumps work the calves
+
+  const badminton = activity?.badminton ?? [];
+  const badmintonMin = badminton.reduce((s, b) => s + (b.duration_min || 0), 0);
+  const badmintonGames = badminton.reduce((s, b) => s + (b.games || 0), 0);
+
   const boxRounds = activity?.breathing?.box_4444 ?? 0;
   const longExhaleRounds = activity?.breathing?.long_exhale_478 ?? 0;
 
   return {
     date, weekday, gymDone, gymMin, exerciseCount,
+    cardioMin, strengthSets, strengthVolume,
     walks, walkMin, soleus, soleusMin,
+    badmintonMin, badmintonGames, muscles,
     boxRounds, longExhaleRounds, breathingRounds: boxRounds + longExhaleRounds,
-    activeMin: gymMin + walkMin + soleusMin,
+    activeMin: gymMin + walkMin + soleusMin + badmintonMin,
   };
 }
 
@@ -57,44 +90,81 @@ export async function loadActivityHistory(days = 90): Promise<DailyActivityPoint
     .sort((a, b) => a.date.localeCompare(b.date)); // oldest-first for charts
 }
 
+function dayDiff(a: string, b: string): number {
+  return Math.round((new Date(b + "T12:00:00").getTime() - new Date(a + "T12:00:00").getTime()) / 86400000);
+}
+
+/** Streak / gap analysis over the active (movement) days. */
+function consistency(points: DailyActivityPoint[]) {
+  const activeDates = points.filter(p => p.gymDone || p.activeMin > 0).map(p => p.date);
+  let longestStreak = 0, cur = 0, prev: string | null = null, longestGap = 0;
+  for (const d of activeDates) {
+    cur = (prev && dayDiff(prev, d) === 1) ? cur + 1 : 1;
+    longestStreak = Math.max(longestStreak, cur);
+    if (prev) longestGap = Math.max(longestGap, dayDiff(prev, d) - 1);
+    prev = d;
+  }
+  const lastDate = points[points.length - 1]?.date ?? "";
+  const currentGap = activeDates.length ? dayDiff(activeDates[activeDates.length - 1], lastDate) : points.length;
+  return { activeCount: activeDates.length, longestStreak, longestGap, currentGap };
+}
+
 /** Compact text summary of activity history for the LLM prompt. */
 export function summariseActivityHistory(points: DailyActivityPoint[]): string {
   if (points.length === 0) return "No activity history available yet.";
 
   const n = points.length;
-  const gymDays = points.filter(p => p.gymDone).length;
-  const gymMins = points.filter(p => p.gymMin > 0).map(p => p.gymMin);
-  const avgGymMin = gymMins.length ? Math.round(gymMins.reduce((a, b) => a + b, 0) / gymMins.length) : 0;
-  const totalWalks = points.reduce((s, p) => s + p.walks, 0);
-  const totalSoleus = points.reduce((s, p) => s + p.soleus, 0);
-  const avgActiveMin = Math.round(points.reduce((s, p) => s + p.activeMin, 0) / n);
-  const daysWithWalk = points.filter(p => p.walks > 0).length;
-  const daysWithAnything = points.filter(p => p.activeMin > 0 || p.gymDone).length;
+  const sum = (f: (p: DailyActivityPoint) => number) => points.reduce((s, p) => s + f(p), 0);
+  const days = (f: (p: DailyActivityPoint) => boolean) => points.filter(f).length;
 
-  // Breathing practice rollup
-  const breathDays = points.filter(p => p.breathingRounds > 0).length;
-  const totalBox = points.reduce((s, p) => s + p.boxRounds, 0);
-  const totalLongExhale = points.reduce((s, p) => s + p.longExhaleRounds, 0);
-  const avgBox = breathDays ? (totalBox / n).toFixed(1) : "0";
-  const avgLongExhale = breathDays ? (totalLongExhale / n).toFixed(1) : "0";
+  // Cardio
+  const cardioDays = days(p => p.cardioMin > 0);
+  const totalCardio = sum(p => p.cardioMin);
 
-  // Per-day compact line (last 14 for context)
+  // Strength + muscles
+  const strengthDays = days(p => p.strengthSets > 0);
+  const totalSets = sum(p => p.strengthSets);
+  const totalVolume = Math.round(sum(p => p.strengthVolume));
+  const muscleTotals: Record<string, number> = {};
+  for (const p of points) for (const [m, v] of Object.entries(p.muscles)) muscleTotals[m] = (muscleTotals[m] ?? 0) + v;
+  const muscleRank = Object.entries(muscleTotals).sort((a, b) => b[1] - a[1]);
+  const topMuscles = muscleRank.slice(0, 5).map(([m, v]) => `${MUSCLE_LABELS[m as MuscleId] ?? m} (${v} sets)`).join(", ") || "none";
+  const neglected = (Object.keys(MUSCLE_LABELS) as MuscleId[]).filter(m => !muscleTotals[m]).map(m => MUSCLE_LABELS[m]).join(", ") || "none";
+
+  // Indoor
+  const walkDays = days(p => p.walks > 0);
+  const soleusDays = days(p => p.soleus > 0);
+  const totalWalks = sum(p => p.walks);
+  const totalSoleus = sum(p => p.soleus);
+
+  // Badminton
+  const badDays = days(p => p.badmintonMin > 0);
+  const badMin = sum(p => p.badmintonMin);
+  const badGames = sum(p => p.badmintonGames);
+
+  // Breathing
+  const breathDays = days(p => p.breathingRounds > 0);
+  const totalBox = sum(p => p.boxRounds);
+  const totalLongExhale = sum(p => p.longExhaleRounds);
+
+  const c = consistency(points);
+  const avgActiveMin = Math.round(sum(p => p.activeMin) / n);
+
   const recent = points.slice(-14).map(p =>
-    `${p.date}(${p.weekday}): gym ${p.gymDone ? `${p.gymMin || "?"}m` : "no"}, walks ${p.walks}, soleus ${p.soleus}, box ${p.boxRounds}, 4-7-8 ${p.longExhaleRounds}`
+    `${p.date}(${p.weekday}): cardio ${p.cardioMin}m, strength ${p.strengthSets} sets, walks ${p.walks}, soleus ${p.soleus}, badminton ${p.badmintonMin}m, box ${p.boxRounds}, 4-7-8 ${p.longExhaleRounds}`
   ).join("\n  ");
 
-  return `Days tracked: ${n}
-Gym sessions: ${gymDays}/${n} days (${Math.round((gymDays / n) * 100)}%)
-Average gym duration (when known): ${avgGymMin} min
-Days with a post-meal walk: ${daysWithWalk}/${n}
-Total post-meal walks: ${totalWalks} · Total soleus sessions: ${totalSoleus}
-Average total active minutes/day: ${avgActiveMin}
-Active days (any movement): ${daysWithAnything}/${n}
+  return `Days tracked: ${n} · Average total active minutes/day: ${avgActiveMin}
 
-BREATHING PRACTICE (targets: Box 4-4-4-4 ~5-6 rounds/day, 4-7-8 long-exhale ~2 rounds/day):
-Days practiced: ${breathDays}/${n} (${Math.round((breathDays / n) * 100)}%)
-Total Box 4-4-4-4 rounds: ${totalBox} · Total 4-7-8 rounds: ${totalLongExhale}
-Average per day — Box: ${avgBox}, 4-7-8: ${avgLongExhale}
+CARDIO: ${cardioDays}/${n} days · total ${totalCardio} min · avg ${cardioDays ? Math.round(totalCardio / cardioDays) : 0} min/session
+STRENGTH: ${strengthDays}/${n} days · ${totalSets} sets · ~${totalVolume} kg total volume
+  Most-worked muscles: ${topMuscles}
+  Untrained muscle groups: ${neglected}
+INDOOR: walks ${walkDays}/${n} days (${totalWalks} total) · soleus ${soleusDays}/${n} days (${totalSoleus} total)
+BADMINTON: ${badDays}/${n} days · ${badMin} min · ${badGames} games
+BREATHING (targets: Box ~5-6/day, 4-7-8 ~2/day): ${breathDays}/${n} days · Box ${totalBox}, 4-7-8 ${totalLongExhale}
+
+CONSISTENCY: active ${c.activeCount}/${n} days · longest streak ${c.longestStreak} days · longest gap ${c.longestGap} days · current gap ${c.currentGap} days since last active
 
 Recent daily detail (last ${Math.min(14, n)} days):
   ${recent}`;

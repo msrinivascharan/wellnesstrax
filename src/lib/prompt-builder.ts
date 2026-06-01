@@ -105,7 +105,7 @@ Foods already eaten this week — avoid repeating these:
   Dinner this week: ${(weekFoodsByMeal.dinner ?? []).join(", ") || "none logged"}
   Snacks this week: ${(weekFoodsByMeal.snacks ?? []).join(", ") || "none logged"}` : ""}
 ${activityHistorySummary ? `
-ACTIVITY HISTORY (for activity_trend_analysis — analyse trends, not just today):
+ACTIVITY HISTORY (for activity_section_analysis + breathing_trend_analysis — analyse trends, not just today):
 ${activityHistorySummary}` : ""}
 
 Return ONLY this JSON structure (all fields required):
@@ -137,12 +137,33 @@ Return ONLY this JSON structure (all fields required):
     "dinner":    ["<3-4 items from Good to Eat list, not eaten this week, cardiac-appropriate for dinner>"],
     "snacks":    ["<3-4 items from Good to Eat list, not eaten this week, cardiac-appropriate for snacks>"]
   },${activityHistorySummary ? `
-  "activity_trend_analysis": {
-    "summary": "<2-3 sentences on how activity is trending over the period — gym, walks, soleus>",
-    "whats_good": ["<specific positive trend 1>", "<positive trend 2>"],
-    "improvements": ["<specific actionable improvement 1>", "<improvement 2>"],
-    "gym_insight": "<analyse gym time-spend: average session length, consistency, and how this cardiac patient can gain the most cardiovascular benefit from that time>",
-    "consistency_note": "<observation on consistency/streaks and what to aim for next>"
+  "activity_section_analysis": {
+    "overall": {
+      "summary": "<2-3 sentences on how overall activity is trending across cardio, strength, indoor movement and badminton>",
+      "body_feel": "<how this cardiac patient's body benefits and feels good from these activities — energy, circulation, mood, glucose, heart health>",
+      "gap_impact": "<concrete impact of missing activity: a single missed day vs several days in a row vs a long gap — why consistency matters for THIS cardiac patient>",
+      "consistency_note": "<streaks, current gap, and a realistic consistency target to aim for>"
+    },
+    "cardio": {
+      "summary": "<how cardio (treadmill/bike/elliptical etc.) is trending — minutes and frequency>",
+      "whats_good": ["<positive 1>", "<positive 2>"],
+      "improvements": ["<actionable improvement 1>", "<improvement 2>"]
+    },
+    "strength": {
+      "summary": "<how resistance training is trending — sets, volume, and muscle balance; call out over-worked and neglected muscle groups>",
+      "whats_good": ["<positive 1>", "<positive 2>"],
+      "improvements": ["<actionable improvement 1, e.g. a neglected muscle group to train>", "<improvement 2>"]
+    },
+    "indoor": {
+      "summary": "<how indoor glucose-control activity (post-meal walks + soleus pumps) is trending>",
+      "whats_good": ["<positive 1>", "<positive 2>"],
+      "improvements": ["<actionable improvement 1>", "<improvement 2>"]
+    },
+    "badminton": {
+      "summary": "<how badminton play is trending — minutes, games, frequency; note its cardio value>",
+      "whats_good": ["<positive 1>", "<positive 2>"],
+      "improvements": ["<actionable improvement 1>", "<improvement 2>"]
+    }
   },
   "breathing_trend_analysis": {
     "summary": "<2-3 sentences on how the breathing practice (Box 4-4-4-4 + 4-7-8) is trending over the period>",

@@ -786,7 +786,7 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
       {/* ══════════════════════════════════════════════════════════════════════
           ACTIVITY TRENDS & INSIGHTS — charts always; AI text after Re-analyse
          ══════════════════════════════════════════════════════════════════════ */}
-      <ActivityTrends trendAnalysis={analysis?.activity_trend_analysis} breathingAnalysis={analysis?.breathing_trend_analysis} todayNote={analysis?.activity_note} />
+      <ActivityTrends sectionAnalysis={analysis?.activity_section_analysis} breathingAnalysis={analysis?.breathing_trend_analysis} todayNote={analysis?.activity_note} />
 
       {/* ══════════════════════════════════════════════════════════════════════
           AI ANALYSIS RESULTS — only when analysis exists
