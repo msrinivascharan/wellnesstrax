@@ -171,6 +171,8 @@ export interface SleepLog {
   nap_end?: string;     // "HH:MM" — nap end time (auto-calculates nap_hours)
   /** Post-lunch drowsiness intensity (postprandial somnolence / post-lunch dip) */
   post_lunch_sleepiness?: "" | "none" | "controllable" | "uncontrollable";
+  /** Evening energy dip / drowsiness intensity */
+  evening_dip?: "" | "none" | "controllable" | "uncontrollable";
 }
 
 // ─── Day Log (main daily record) ─────────────────────────────────────────────
@@ -385,7 +387,16 @@ export interface ThyroidProfile {
   tsh_uiu_ml: number;           // μIU/mL — always required
 }
 
+export interface BloodPressureReading {
+  id: string;
+  test_date: string;            // "YYYY-MM-DD"
+  systolic: number;             // mmHg
+  diastolic: number;            // mmHg
+  pulse: number | null;         // bpm — optional
+}
+
 export interface BloodWorkData {
   lipid_profile: LipidProfile[];
   thyroid_profile: ThyroidProfile[];
+  bp_readings?: BloodPressureReading[];   // optional — blood pressure history
 }

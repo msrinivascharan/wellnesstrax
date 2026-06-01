@@ -684,6 +684,39 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
           </div>
         </div>
 
+        {/* Nutrition — shown alongside the meal-wise plate balance */}
+        {analysis && (
+          <InsightCard title="Nutrition" icon="🍽️">
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: "Est. Calories", val: `${analysis.nutrition.estimated_calories} kcal`, target: `target ${profile.daily_targets.calories}`, color: "#fb923c" },
+                { label: "Protein", val: `${analysis.nutrition.estimated_protein_g}g`, target: `target ${profile.daily_targets.protein_g}g`, color: "#a78bfa" },
+                { label: "Fiber", val: `${analysis.nutrition.estimated_fiber_g}g`, target: `target ${profile.daily_targets.fiber_g}g`, color: "#86efac" },
+              ].map(n => (
+                <div key={n.label} className="p-2.5 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
+                  <div className="text-base font-bold" style={{ color: n.color }}>{n.val}</div>
+                  <div className="text-xs mt-0.5 text-white">{n.label}</div>
+                  <div className="text-xs" style={{ color: "#475569" }}>{n.target}</div>
+                </div>
+              ))}
+            </div>
+            {analysis.nutrition.highlights.length > 0 && (
+              <div className="space-y-1 mt-1">
+                {analysis.nutrition.highlights.map((h, i) => (
+                  <div key={i} className="text-xs flex gap-1.5"><span style={{ color: "#22c55e" }}>+</span><span style={{ color: "#94a3b8" }}>{h}</span></div>
+                ))}
+              </div>
+            )}
+            {analysis.nutrition.concerns.length > 0 && (
+              <div className="space-y-1">
+                {analysis.nutrition.concerns.map((c, i) => (
+                  <div key={i} className="text-xs flex gap-1.5"><span style={{ color: "#f59e0b" }}>⚠</span><span style={{ color: "#94a3b8" }}>{c}</span></div>
+                ))}
+              </div>
+            )}
+          </InsightCard>
+        )}
+
         {/* Macro bars — only when analysis exists */}
         {analysis && (
           <div className="card p-4 space-y-3 fade-in-up">
@@ -768,69 +801,6 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
               </div>
             </InsightCard>
           </div>
-
-          {/* Cardiac safety — highest priority */}
-          <div className="card p-4 space-y-2" style={{ border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.04)" }}>
-            <div className="flex items-center gap-2">
-              <span>❤️</span>
-              <span className="text-sm font-semibold text-red-300">Cardiac Safety</span>
-            </div>
-            <p className="text-xs" style={{ color: "#fca5a5" }}>{analysis.cardiac_safety_note}</p>
-          </div>
-
-          {/* Nutrition card */}
-          <InsightCard title="Nutrition" icon="🍽️">
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: "Est. Calories", val: `${analysis.nutrition.estimated_calories} kcal`, target: `target ${profile.daily_targets.calories}`, color: "#fb923c" },
-                { label: "Protein", val: `${analysis.nutrition.estimated_protein_g}g`, target: `target ${profile.daily_targets.protein_g}g`, color: "#a78bfa" },
-                { label: "Fiber", val: `${analysis.nutrition.estimated_fiber_g}g`, target: `target ${profile.daily_targets.fiber_g}g`, color: "#86efac" },
-              ].map(n => (
-                <div key={n.label} className="p-2.5 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
-                  <div className="text-base font-bold" style={{ color: n.color }}>{n.val}</div>
-                  <div className="text-xs mt-0.5 text-white">{n.label}</div>
-                  <div className="text-xs" style={{ color: "#475569" }}>{n.target}</div>
-                </div>
-              ))}
-            </div>
-            {analysis.nutrition.highlights.length > 0 && (
-              <div className="space-y-1 mt-1">
-                {analysis.nutrition.highlights.map((h, i) => (
-                  <div key={i} className="text-xs flex gap-1.5"><span style={{ color: "#22c55e" }}>+</span><span style={{ color: "#94a3b8" }}>{h}</span></div>
-                ))}
-              </div>
-            )}
-            {analysis.nutrition.concerns.length > 0 && (
-              <div className="space-y-1">
-                {analysis.nutrition.concerns.map((c, i) => (
-                  <div key={i} className="text-xs flex gap-1.5"><span style={{ color: "#f59e0b" }}>⚠</span><span style={{ color: "#94a3b8" }}>{c}</span></div>
-                ))}
-              </div>
-            )}
-          </InsightCard>
-
-          {/* Hydration & Sleep notes now live in their own trend sections above */}
-
-          {/* Medication adherence */}
-          <InsightCard title="Medication adherence" icon="💊">
-            <div className="flex items-center gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold"
-                  style={{ color: analysis.medication_adherence.score === 100 ? "#22c55e" : analysis.medication_adherence.score >= 60 ? "#f59e0b" : "#ef4444" }}>
-                  {analysis.medication_adherence.score}%
-                </div>
-                <div className="text-xs" style={{ color: "#475569" }}>Adherence</div>
-              </div>
-              <div className="flex-1 text-xs" style={{ color: "#94a3b8" }}>
-                {analysis.medication_adherence.notes}
-                {analysis.medication_adherence.missed.length > 0 && (
-                  <div className="mt-1 text-red-400">
-                    Missed: {analysis.medication_adherence.missed.join(", ")}
-                  </div>
-                )}
-              </div>
-            </div>
-          </InsightCard>
 
           {/* ── Blood work snapshot (if data exists) ── */}
           {bloodWork && (bloodWork.lipid_profile.length > 0 || bloodWork.thyroid_profile.length > 0) && (

@@ -7,9 +7,14 @@ const FILE = path.join(process.cwd(), "data", "bloodwork.json");
 
 async function read(): Promise<BloodWorkData> {
   try {
-    return JSON.parse(await fs.readFile(FILE, "utf-8")) as BloodWorkData;
+    const data = JSON.parse(await fs.readFile(FILE, "utf-8")) as BloodWorkData;
+    return {
+      lipid_profile: data.lipid_profile ?? [],
+      thyroid_profile: data.thyroid_profile ?? [],
+      bp_readings: data.bp_readings ?? [],
+    };
   } catch {
-    return { lipid_profile: [], thyroid_profile: [] };
+    return { lipid_profile: [], thyroid_profile: [], bp_readings: [] };
   }
 }
 

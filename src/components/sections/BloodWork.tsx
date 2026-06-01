@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import type { BloodWorkData, LipidProfile, ThyroidProfile } from "@/types";
+import type { BloodWorkData, LipidProfile, ThyroidProfile, BloodPressureReading } from "@/types";
 
 // ─── Reference range helpers ──────────────────────────────────────────────────
 
@@ -52,6 +52,22 @@ const THYROID_RANGES: Record<keyof Omit<ThyroidProfile, "id" | "test_date">, { l
   },
 };
 
+const BP_RANGES: Record<keyof Omit<BloodPressureReading, "id" | "test_date">, { label: string; unit: string; good: string; status: (v: number) => Status }> = {
+  systolic: {
+    label: "Systolic", unit: "mmHg", good: "<130 (cardiac target)",
+    status: v => v < 120 ? "good" : v <= 139 ? "warn" : "risk",
+  },
+  diastolic: {
+    label: "Diastolic", unit: "mmHg", good: "<80 optimal",
+    status: v => v < 80 ? "good" : v <= 89 ? "warn" : "risk",
+  },
+  pulse: {
+    label: "Pulse", unit: "bpm", good: "60 – 100",
+    status: v => v >= 60 && v <= 100 ? "good" : (v >= 50 && v <= 110) ? "warn" : "risk",
+  },
+};
+const BP_OPTIONAL = new Set<keyof Omit<BloodPressureReading, "id" | "test_date">>(["pulse"]);
+
 function StatusDot({ s }: { s: Status | "none" }) {
   if (s === "none") return <span className="w-2 h-2 rounded-full shrink-0 inline-block" style={{ background: "#334155" }} />;
   const color = s === "good" ? "#22c55e" : s === "warn" ? "#f59e0b" : "#ef4444";
@@ -86,18 +102,23 @@ function emptyThyroid(): Omit<ThyroidProfile, "id"> {
   return { test_date: "", t3_ng_ml: null, t4_ug_dl: null, tsh_uiu_ml: 0 };
 }
 
+function emptyBP(): Omit<BloodPressureReading, "id"> {
+  return { test_date: "", systolic: 0, diastolic: 0, pulse: null };
+}
+
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export default function BloodWork() {
   const [data, setData]         = useState<BloodWorkData>({ lipid_profile: [], thyroid_profile: [] });
-  const [tab, setTab]           = useState<"lipid" | "thyroid">("lipid");
+  const [tab, setTab]           = useState<"lipid" | "thyroid" | "bp">("lipid");
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving]     = useState(false);
 
   const [lipidForm, setLipidForm]     = useState(emptyLipid);
   const [thyroidForm, setThyroidForm] = useState(emptyThyroid);
+  const [bpForm, setBpForm]           = useState(emptyBP);
 
   const persist = useCallback(async (next: BloodWorkData) => {
     setSaving(true);
@@ -157,8 +178,28 @@ export default function BloodWork() {
     persist(next);
   }
 
+  function saveBP() {
+    if (!bpForm.test_date || bpForm.systolic <= 0 || bpForm.diastolic <= 0) return;
+    const entry: BloodPressureReading = { id: genId(), ...bpForm };
+    const next: BloodWorkData = {
+      ...data,
+      bp_readings: [entry, ...(data.bp_readings ?? [])].sort((a, b) => b.test_date.localeCompare(a.test_date)),
+    };
+    setData(next);
+    persist(next);
+    setBpForm(emptyBP());
+    setShowForm(false);
+  }
+
+  function deleteBP(id: string) {
+    const next = { ...data, bp_readings: (data.bp_readings ?? []).filter(e => e.id !== id) };
+    setData(next);
+    persist(next);
+  }
+
   const lipids   = data.lipid_profile;
   const thyroids = data.thyroid_profile;
+  const bps      = data.bp_readings ?? [];
 
   return (
     <div className="p-6 max-w-4xl space-y-6">
@@ -167,7 +208,7 @@ export default function BloodWork() {
         <div>
           <h2 className="text-xl font-bold text-white">Blood Work</h2>
           <p className="text-xs mt-0.5" style={{ color: "#64748b" }}>
-            Track lab results over time — Lipid &amp; Thyroid profiles
+            Track lab results over time — Lipid, Thyroid &amp; Blood Pressure
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -183,13 +224,13 @@ export default function BloodWork() {
 
       {/* Tabs */}
       <div className="flex gap-2">
-        {(["lipid", "thyroid"] as const).map(t => (
+        {(["lipid", "thyroid", "bp"] as const).map(t => (
           <button key={t} onClick={() => { setTab(t); setShowForm(false); }}
             className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
             style={tab === t
               ? { background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.35)" }
               : { background: "rgba(255,255,255,0.04)", color: "#64748b", border: "1px solid var(--border)" }}>
-            {t === "lipid" ? "🧪 Lipid Profile" : "🦋 Thyroid Profile"}
+            {t === "lipid" ? "🧪 Lipid Profile" : t === "thyroid" ? "🦋 Thyroid Profile" : "🩺 Blood Pressure"}
           </button>
         ))}
       </div>
@@ -284,6 +325,59 @@ export default function BloodWork() {
               Cancel
             </button>
           </div>
+        </div>
+      )}
+
+      {showForm && tab === "bp" && (
+        <div className="card p-4 space-y-4 fade-in-up">
+          <div className="section-header">Add blood pressure reading</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <label className="block text-xs mb-1" style={{ color: "#64748b" }}>Date *</label>
+              <input type="date" className="nb-input w-full"
+                max={new Date().toISOString().split("T")[0]}
+                value={bpForm.test_date}
+                onChange={e => setBpForm(f => ({ ...f, test_date: e.target.value }))} />
+            </div>
+            {(Object.keys(BP_RANGES) as Array<keyof typeof BP_RANGES>).map(k => {
+              const optional = BP_OPTIONAL.has(k);
+              return (
+                <div key={k}>
+                  <label className="block text-xs mb-1" style={{ color: "#64748b" }}>
+                    {BP_RANGES[k].label} ({BP_RANGES[k].unit})
+                    {optional ? <span className="ml-1" style={{ color: "#334155" }}>— optional</span> : " *"}
+                  </label>
+                  <input type="number" min="0" step="1" className="nb-input w-full"
+                    placeholder={optional ? "Leave blank if not measured" : k === "systolic" ? "e.g. 120" : "e.g. 80"}
+                    value={bpForm[k] ?? ""}
+                    onChange={e => {
+                      const raw = e.target.value;
+                      setBpForm(f => ({ ...f, [k]: raw === "" ? (optional ? null : 0) : parseInt(raw) }));
+                    }} />
+                  <div className="text-xs mt-0.5" style={{ color: "#334155" }}>{BP_RANGES[k].good}</div>
+                </div>
+              );
+            })}
+          </div>
+          {(() => {
+            const valid = !!bpForm.test_date && bpForm.systolic > 0 && bpForm.diastolic > 0;
+            return (
+              <div className="flex gap-2 pt-1">
+                <button onClick={saveBP} disabled={!valid}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+                  style={valid
+                    ? { background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.35)" }
+                    : { background: "rgba(255,255,255,0.04)", color: "#334155", border: "1px solid var(--border)", cursor: "not-allowed" }}>
+                  Save result
+                </button>
+                <button onClick={() => { setShowForm(false); setBpForm(emptyBP()); }}
+                  className="px-4 py-2 rounded-xl text-sm transition-all"
+                  style={{ background: "rgba(255,255,255,0.04)", color: "#64748b", border: "1px solid var(--border)" }}>
+                  Cancel
+                </button>
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -463,6 +557,87 @@ export default function BloodWork() {
         </div>
       )}
 
+      {/* ── Blood pressure history ── */}
+      {tab === "bp" && (
+        <div className="space-y-3">
+          {bps.length === 0 ? (
+            <div className="card p-8 text-center">
+              <div className="text-3xl mb-3">🩺</div>
+              <div className="text-sm font-medium text-white">No blood pressure readings yet</div>
+              <div className="text-xs mt-1" style={{ color: "#475569" }}>
+                Click &ldquo;+ Add test result&rdquo; to log your first reading
+              </div>
+            </div>
+          ) : bps.map((entry, idx) => {
+            const prev = bps[idx + 1];
+            return (
+              <div key={entry.id} className="card p-4 space-y-3 fade-in-up">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-white">
+                      {new Date(entry.test_date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(20,184,166,0.12)", color: "#5eead4" }}>
+                      {entry.systolic}/{entry.diastolic} mmHg
+                    </span>
+                    {idx === 0 && (
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(20,184,166,0.15)", color: "#14b8a6" }}>Latest</span>
+                    )}
+                  </div>
+                  <button onClick={() => deleteBP(entry.id)}
+                    className="text-xs px-2 py-1 rounded transition-colors hover:bg-red-950/40" style={{ color: "#475569" }}>✕</button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {(Object.keys(BP_RANGES) as Array<keyof typeof BP_RANGES>).map(k => {
+                    const rawVal = entry[k];
+                    const notMeasured = rawVal === null || rawVal === undefined;
+                    const val = rawVal ?? 0;
+                    const s = notMeasured ? ("none" as const) : BP_RANGES[k].status(val);
+                    const prevRaw = prev ? prev[k] : undefined;
+                    const trend = (!notMeasured && prev && prevRaw !== null && prevRaw !== undefined) ? trendArrow(val, prevRaw, false) : null;
+                    const tColor = (!notMeasured && prev && prevRaw !== null && prevRaw !== undefined) ? trendColor(val, prevRaw, false) : "#475569";
+                    const statusColor = notMeasured ? "#1e293b" : s === "good" ? "#22c55e" : s === "warn" ? "#f59e0b" : "#ef4444";
+                    return (
+                      <div key={k} className="p-2.5 rounded-xl text-center"
+                        style={{ background: `${statusColor}08`, border: `1px solid ${notMeasured ? "rgba(255,255,255,0.06)" : `${statusColor}20`}` }}>
+                        <StatusDot s={s} />
+                        <div className="text-xs mt-1" style={{ color: "#94a3b8" }}>{BP_RANGES[k].label}</div>
+                        <div className="text-base font-bold mt-0.5" style={{ color: notMeasured ? "#334155" : statusColor }}>
+                          {notMeasured ? "—" : val}
+                          {trend && <span className="text-xs ml-0.5" style={{ color: tColor }}>{trend}</span>}
+                        </div>
+                        <div className="text-xs" style={{ color: "#475569" }}>{notMeasured ? "not measured" : BP_RANGES[k].unit}</div>
+                        {!notMeasured && <div className="text-xs mt-0.5" style={{ color: "#334155" }}>{BP_RANGES[k].good}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+                {(() => {
+                  const sysS = BP_RANGES.systolic.status(entry.systolic);
+                  const diaS = BP_RANGES.diastolic.status(entry.diastolic);
+                  const worst = [sysS, diaS].includes("risk") ? "risk" : [sysS, diaS].includes("warn") ? "warn" : "good";
+                  if (worst === "good") return (
+                    <div className="text-xs p-2 rounded-lg" style={{ background: "rgba(34,197,94,0.08)", color: "#86efac" }}>
+                      ✓ Within cardiac target (&lt;130/80 mmHg)
+                    </div>
+                  );
+                  if (worst === "risk") return (
+                    <div className="text-xs p-2 rounded-lg" style={{ background: "rgba(239,68,68,0.06)", color: "#fca5a5" }}>
+                      ⚠ Elevated — discuss with your cardiologist; review medication, sodium, and stress.
+                    </div>
+                  );
+                  return (
+                    <div className="text-xs p-2 rounded-lg" style={{ background: "rgba(251,146,60,0.06)", color: "#fdba74" }}>
+                      ↗ Slightly above optimal — monitor and recheck.
+                    </div>
+                  );
+                })()}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Reference guide */}
       <div className="card p-4 space-y-2" style={{ border: "1px solid rgba(20,184,166,0.15)", background: "rgba(20,184,166,0.03)" }}>
         <div className="flex items-center gap-2">
@@ -472,6 +647,7 @@ export default function BloodWork() {
         <div className="text-xs space-y-0.5" style={{ color: "#475569" }}>
           <p>LDL &lt;70 mg/dL is the goal for post-stent patients (more aggressive than general population &lt;100).</p>
           <p>TSH 0.5–2.5 μIU/mL is the typical target while on thyroid replacement therapy.</p>
+          <p>Blood pressure &lt;130/80 mmHg is the typical target for post-stent / cardiac patients.</p>
           <p><span className="inline-block w-2 h-2 rounded-full mr-1 bg-green-500" />Within target &nbsp;
              <span className="inline-block w-2 h-2 rounded-full mr-1 bg-yellow-500" />Borderline &nbsp;
              <span className="inline-block w-2 h-2 rounded-full mr-1 bg-red-500" />At risk</p>

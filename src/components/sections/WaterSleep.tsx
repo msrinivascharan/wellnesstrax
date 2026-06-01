@@ -354,6 +354,48 @@ export default function WaterSleep({ dayLog, profile, onUpdate }: Props) {
           )}
         </div>
 
+        {/* Evening dip */}
+        <div className="p-4 rounded-xl space-y-3"
+          style={{ background: "rgba(167,139,250,0.05)", border: "1px solid rgba(167,139,250,0.15)" }}>
+          <div className="flex items-center gap-2">
+            <span className="text-base">🌆</span>
+            <div>
+              <div className="text-xs font-semibold text-white">Evening dip</div>
+              <div className="text-xs" style={{ color: "#475569" }}>How drowsy / low-energy did you feel in the evening?</div>
+            </div>
+            {sleep.evening_dip && (
+              <button
+                onClick={() => updateSleep({ evening_dip: "" })}
+                className="ml-auto text-xs transition-colors"
+                style={{ color: "#475569" }}
+                title="Clear">
+                ✕ Clear
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {PLS_LEVELS.map(lvl => {
+              const m = PLS_META[lvl];
+              const active = sleep.evening_dip === lvl;
+              return (
+                <button key={lvl} onClick={() => updateSleep({ evening_dip: lvl })}
+                  className="flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-medium transition-all"
+                  style={active
+                    ? { background: `${m.color}18`, color: m.color, border: `1px solid ${m.color}45` }
+                    : { background: "rgba(255,255,255,0.03)", color: "#475569", border: "1px solid var(--border)" }}>
+                  <span className="text-base">{m.icon}</span>
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+          {sleep.evening_dip === "uncontrollable" && (
+            <div className="text-xs" style={{ color: "#fca5a5" }}>
+              Strong evening drowsiness can reflect poor sleep debt, blood-sugar swings, or medication timing — worth noting the pattern for your doctor.
+            </div>
+          )}
+        </div>
+
         {/* Notes */}
         <div>
           <div className="section-header mb-2">Notes (optional)</div>
