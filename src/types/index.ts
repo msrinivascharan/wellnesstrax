@@ -249,6 +249,14 @@ export interface ActivitySectionAnalysis {
   badminton: SectionInsight;
 }
 
+/** Generic trend insight for hydration / sleep sections */
+export interface TrendInsight {
+  summary: string;
+  whats_good: string[];
+  improvements: string[];
+  consistency_note: string;
+}
+
 export interface DayAnalysis {
   overall_score: number;    // 0-100
   nutrition: NutritionInsight;
@@ -273,6 +281,10 @@ export interface DayAnalysis {
   activity_section_analysis?: ActivitySectionAnalysis;
   /** Trend-based breathing-practice analysis (optional, set on Re-analyse) */
   breathing_trend_analysis?: BreathingTrendAnalysis;
+  /** Trend-based hydration analysis (optional, set on Re-analyse) */
+  hydration_trend_analysis?: TrendInsight;
+  /** Trend-based sleep analysis (optional, set on Re-analyse) */
+  sleep_trend_analysis?: TrendInsight;
   analyzed_at: string;
 }
 
@@ -299,6 +311,12 @@ export interface DailyActivityPoint {
   longExhaleRounds: number; // 4-7-8 long-exhale rounds
   breathingRounds: number;  // box + long-exhale rounds (total)
   activeMin: number;        // gymMin + walkMin + soleusMin + badmintonMin
+  // Wellness (hydration + sleep) for the day
+  waterMl: number;
+  sleepHours: number;
+  sleepQuality: string;     // "" | excellent | good | fair | poor
+  napHours: number;
+  postLunchDip: string;     // "" | none | controllable | uncontrollable
 }
 
 // ─── Food preference lists (food_preferences.json) ───────────────────────────

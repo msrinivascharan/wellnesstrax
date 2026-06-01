@@ -4,6 +4,8 @@ import { format } from "date-fns";
 import type { DayAnalysis, DayLog, FoodEntry, FoodPreferenceItem, FoodPreferences, MealType, UserProfile, BloodWorkData } from "@/types";
 import { resolveCategory, mapToBalancedPlate, checkAlwaysAvoidRules } from "@/lib/food-utils";
 import ActivityTrends from "@/components/sections/ActivityTrends";
+import HydrationTrends from "@/components/sections/HydrationTrends";
+import SleepTrends from "@/components/sections/SleepTrends";
 
 interface Props {
   dayLog: DayLog;
@@ -312,10 +314,6 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
   const totalFood  = Object.values(activeLog?.food ?? dayLog.food).flat().length;
   const takenMeds  = (activeLog?.medications ?? dayLog.medications).filter(m => m.taken).length;
   const logForChart = activeLog ?? dayLog;
-
-  const gymDone    = logForChart.activity.gym.did_gym;
-  const walksDone  = logForChart.activity.post_prandial_walks.length;
-  const soleusDone = logForChart.activity.soleus_pumps.length;
 
   return (
     <div className="p-6 max-w-4xl space-y-6">
@@ -686,67 +684,23 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
           </div>
         </div>
 
-        {/* Row 2: Hydration + Activity */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* Hydration */}
-          <div className="card p-4 space-y-3">
-            <div className="flex items-center gap-2 mb-1">
-              <span>💧</span>
-              <span className="text-sm font-semibold text-white">Hydration</span>
-            </div>
-            <BarRow
-              label="Water intake"
-              value={logForChart.water_ml}
-              max={profile.daily_targets.water_ml}
-              color="#60a5fa"
-              valueSuffix="ml"
-            />
-            <div className="text-xs" style={{ color: "#475569" }}>
-              {logForChart.water_ml >= profile.daily_targets.water_ml
-                ? "✓ Daily target reached!"
-                : `${profile.daily_targets.water_ml - logForChart.water_ml}ml remaining to hit target`}
-            </div>
+        {/* Row 2: Hydration quick view */}
+        <div className="card p-4 space-y-3">
+          <div className="flex items-center gap-2 mb-1">
+            <span>💧</span>
+            <span className="text-sm font-semibold text-white">Hydration</span>
           </div>
-
-          {/* Activity */}
-          <div className="card p-4 space-y-3">
-            <div className="flex items-center gap-2 mb-1">
-              <span>🏃</span>
-              <span className="text-sm font-semibold text-white">Activity summary</span>
-            </div>
-            <div className="space-y-2">
-              {/* Gym */}
-              <div className="flex items-center gap-3">
-                <div className="text-xs shrink-0" style={{ width: 120, color: "#64748b" }}>Gym session</div>
-                <div className={`text-xs font-semibold px-2 py-0.5 rounded-full ${gymDone ? "bg-green-900/40 text-green-400" : "bg-slate-800 text-slate-500"}`}>
-                  {gymDone ? "✓ Done" : "Not logged"}
-                </div>
-              </div>
-              {/* Walks */}
-              <BarRow
-                label="Post-meal walks"
-                value={walksDone}
-                max={3}
-                color="#14b8a6"
-                valueSuffix=" / 3"
-                showValue={false}
-              />
-              <div className="text-xs -mt-1" style={{ color: "#475569" }}>
-                {walksDone} of 3 meals walked
-              </div>
-              {/* Soleus */}
-              <BarRow
-                label="Soleus pumps"
-                value={soleusDone}
-                max={3}
-                color="#818cf8"
-                valueSuffix=" / 3"
-                showValue={false}
-              />
-              <div className="text-xs -mt-1" style={{ color: "#475569" }}>
-                {soleusDone} of 3 sessions done
-              </div>
-            </div>
+          <BarRow
+            label="Water intake"
+            value={logForChart.water_ml}
+            max={profile.daily_targets.water_ml}
+            color="#60a5fa"
+            valueSuffix="ml"
+          />
+          <div className="text-xs" style={{ color: "#475569" }}>
+            {logForChart.water_ml >= profile.daily_targets.water_ml
+              ? "✓ Daily target reached!"
+              : `${profile.daily_targets.water_ml - logForChart.water_ml}ml remaining to hit target`}
           </div>
         </div>
 
@@ -787,6 +741,10 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
           ACTIVITY TRENDS & INSIGHTS — charts always; AI text after Re-analyse
          ══════════════════════════════════════════════════════════════════════ */}
       <ActivityTrends sectionAnalysis={analysis?.activity_section_analysis} breathingAnalysis={analysis?.breathing_trend_analysis} todayNote={analysis?.activity_note} />
+
+      {/* ── Hydration & Sleep trend sections ── */}
+      <HydrationTrends waterTarget={profile.daily_targets.water_ml} insight={analysis?.hydration_trend_analysis} todayNote={analysis?.water_note} />
+      <SleepTrends insight={analysis?.sleep_trend_analysis} todayNote={analysis?.sleep_note} />
 
       {/* ══════════════════════════════════════════════════════════════════════
           AI ANALYSIS RESULTS — only when analysis exists
@@ -873,15 +831,7 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
             )}
           </InsightCard>
 
-          {/* 2-column row: Water, Sleep (Activity now has its own trends section above) */}
-          <div className="grid grid-cols-2 gap-4">
-            <InsightCard title="Hydration" icon="💧">
-              <p className="text-xs" style={{ color: "#94a3b8" }}>{analysis.water_note}</p>
-            </InsightCard>
-            <InsightCard title="Sleep" icon="😴">
-              <p className="text-xs" style={{ color: "#94a3b8" }}>{analysis.sleep_note}</p>
-            </InsightCard>
-          </div>
+          {/* Hydration & Sleep notes now live in their own trend sections above */}
 
           {/* Medication adherence */}
           <InsightCard title="Medication adherence" icon="💊">

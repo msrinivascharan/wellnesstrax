@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import { loadProfile, loadFoodRules, loadFoodPreferences } from "@/lib/profile-loader";
 import { buildAnalysisPrompt } from "@/lib/prompt-builder";
 import { saveSession, getSession } from "@/lib/session-store";
-import { loadActivityHistory, summariseActivityHistory } from "@/lib/activity-trends";
+import { loadActivityHistory, summariseActivityHistory, summariseWellnessHistory } from "@/lib/activity-trends";
 import type { DayLog, DayAnalysis } from "@/types";
 
 /** Collect unique food names per meal from the 7 days before `logDate`. */
@@ -60,9 +60,13 @@ export async function POST(req: Request) {
     // Only ask the AI for trend analysis once there's enough history to be meaningful
     const activityHistorySummary =
       activityHistory.length >= 2 ? summariseActivityHistory(activityHistory) : "";
+    const wellnessHistorySummary =
+      activityHistory.length >= 2
+        ? summariseWellnessHistory(activityHistory, profile.daily_targets.water_ml)
+        : "";
 
     const prompt = buildAnalysisPrompt(
-      profile, rules, log, goodToEatNames, weekFoodsByMeal, activityHistorySummary
+      profile, rules, log, goodToEatNames, weekFoodsByMeal, activityHistorySummary, wellnessHistorySummary
     );
 
     const groq = getGroqClient();

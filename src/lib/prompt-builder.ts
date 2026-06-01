@@ -9,7 +9,9 @@ export function buildAnalysisPrompt(
   /** Unique foods eaten each meal over the past 7 days — AI avoids repeating these */
   weekFoodsByMeal: Record<string, string[]> = {},
   /** Compact summary of activity history for trend analysis (empty = skip) */
-  activityHistorySummary: string = ""
+  activityHistorySummary: string = "",
+  /** Compact summary of hydration + sleep history (empty = skip) */
+  wellnessHistorySummary: string = ""
 ): string {
   const meds = profile.medications
     .map(m =>
@@ -107,6 +109,9 @@ Foods already eaten this week — avoid repeating these:
 ${activityHistorySummary ? `
 ACTIVITY HISTORY (for activity_section_analysis + breathing_trend_analysis — analyse trends, not just today):
 ${activityHistorySummary}` : ""}
+${wellnessHistorySummary ? `
+HYDRATION & SLEEP HISTORY (for hydration_trend_analysis + sleep_trend_analysis — analyse trends, not just today):
+${wellnessHistorySummary}` : ""}
 
 Return ONLY this JSON structure (all fields required):
 {
@@ -171,6 +176,18 @@ Return ONLY this JSON structure (all fields required):
     "improvements": ["<specific actionable improvement 1>", "<improvement 2>"],
     "benefit_note": "<how this breathing practice helps THIS cardiac patient — vagal tone, heart-rate variability, blood pressure, stress/cortisol, sleep>",
     "consistency_note": "<observation on breathing-practice consistency/streaks and what to aim for next>"
+  },` : ""}${wellnessHistorySummary ? `
+  "hydration_trend_analysis": {
+    "summary": "<how hydration is trending vs the daily target over the period>",
+    "whats_good": ["<positive 1>", "<positive 2>"],
+    "improvements": ["<actionable improvement 1>", "<improvement 2>"],
+    "consistency_note": "<observation on hydration consistency and a realistic target, relevant for a cardiac patient>"
+  },
+  "sleep_trend_analysis": {
+    "summary": "<how sleep duration/quality (and naps, post-lunch dip) are trending over the period>",
+    "whats_good": ["<positive 1>", "<positive 2>"],
+    "improvements": ["<actionable improvement 1>", "<improvement 2>"],
+    "consistency_note": "<observation on sleep consistency, and how it affects cardiac recovery / blood pressure>"
   },` : ""}
   "analyzed_at": "${new Date().toISOString()}"
 }`;

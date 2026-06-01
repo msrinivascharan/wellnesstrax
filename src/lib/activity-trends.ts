@@ -1,6 +1,13 @@
-import type { DailyActivityPoint, ActivityLog, PrandialActivity } from "@/types";
+import type { DailyActivityPoint, ActivityLog, PrandialActivity, SleepLog } from "@/types";
 import { listSessions, getSession } from "@/lib/session-store";
 import { getMusclesForExercise, MUSCLE_LABELS, type MuscleId } from "@/lib/muscle-map";
+
+/** Minimal shape we read from a raw daily session for the rollup. */
+interface RawSession {
+  activity?: ActivityLog;
+  water_ml?: number;
+  sleep?: Partial<SleepLog>;
+}
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -18,8 +25,9 @@ function sumMin(list: PrandialActivity[] | undefined): number {
   return (list ?? []).reduce((s, a) => s + (a.duration_min || 0), 0);
 }
 
-/** Convert a raw session's activity into a single DailyActivityPoint. */
-function rollup(date: string, activity: ActivityLog | undefined): DailyActivityPoint {
+/** Convert a raw session into a single DailyActivityPoint (activity + wellness). */
+function rollup(date: string, session: RawSession | undefined): DailyActivityPoint {
+  const activity = session?.activity;
   const weekday = WEEKDAYS[new Date(date + "T12:00:00").getDay()] ?? "";
   const gym = activity?.gym;
   const gymDone = !!gym?.did_gym;
@@ -62,6 +70,8 @@ function rollup(date: string, activity: ActivityLog | undefined): DailyActivityP
   const boxRounds = activity?.breathing?.box_4444 ?? 0;
   const longExhaleRounds = activity?.breathing?.long_exhale_478 ?? 0;
 
+  const sleep = session?.sleep;
+
   return {
     date, weekday, gymDone, gymMin, exerciseCount,
     cardioMin, strengthSets, strengthVolume,
@@ -69,6 +79,11 @@ function rollup(date: string, activity: ActivityLog | undefined): DailyActivityP
     badmintonMin, badmintonGames, muscles,
     boxRounds, longExhaleRounds, breathingRounds: boxRounds + longExhaleRounds,
     activeMin: gymMin + walkMin + soleusMin + badmintonMin,
+    waterMl: session?.water_ml ?? 0,
+    sleepHours: sleep?.hours ?? 0,
+    sleepQuality: sleep?.quality ?? "",
+    napHours: sleep?.nap_hours ?? 0,
+    postLunchDip: sleep?.post_lunch_sleepiness ?? "",
   };
 }
 
@@ -80,9 +95,9 @@ export async function loadActivityHistory(days = 90): Promise<DailyActivityPoint
   const dates = (await listSessions()).slice(0, days); // listSessions is newest-first
   const points = await Promise.all(
     dates.map(async date => {
-      const session = await getSession(date) as { activity?: ActivityLog } | null;
+      const session = await getSession(date) as RawSession | null;
       if (!session) return null;
-      return rollup(date, session.activity);
+      return rollup(date, session);
     })
   );
   return points
@@ -165,6 +180,47 @@ BADMINTON: ${badDays}/${n} days · ${badMin} min · ${badGames} games
 BREATHING (targets: Box ~5-6/day, 4-7-8 ~2/day): ${breathDays}/${n} days · Box ${totalBox}, 4-7-8 ${totalLongExhale}
 
 CONSISTENCY: active ${c.activeCount}/${n} days · longest streak ${c.longestStreak} days · longest gap ${c.longestGap} days · current gap ${c.currentGap} days since last active
+
+Recent daily detail (last ${Math.min(14, n)} days):
+  ${recent}`;
+}
+
+/** Compact hydration + sleep summary for the LLM prompt. */
+export function summariseWellnessHistory(points: DailyActivityPoint[], waterTarget: number): string {
+  const logged = points.filter(p => p.waterMl > 0 || p.sleepHours > 0);
+  if (logged.length === 0) return "";
+
+  const n = logged.length;
+  const sum = (f: (p: DailyActivityPoint) => number) => logged.reduce((s, p) => s + f(p), 0);
+  const days = (f: (p: DailyActivityPoint) => boolean) => logged.filter(f).length;
+
+  // Hydration
+  const waterDays = days(p => p.waterMl > 0);
+  const avgWater = waterDays ? Math.round(sum(p => p.waterMl) / waterDays) : 0;
+  const targetMet = days(p => p.waterMl >= waterTarget && waterTarget > 0);
+
+  // Sleep
+  const sleepDays = days(p => p.sleepHours > 0);
+  const avgSleep = sleepDays ? (sum(p => p.sleepHours) / sleepDays).toFixed(1) : "0";
+  const nights7 = days(p => p.sleepHours >= 7);
+  const napDays = days(p => p.napHours > 0);
+  const avgNap = napDays ? (sum(p => p.napHours) / napDays).toFixed(1) : "0";
+  const qualityCounts: Record<string, number> = {};
+  for (const p of logged) if (p.sleepQuality) qualityCounts[p.sleepQuality] = (qualityCounts[p.sleepQuality] ?? 0) + 1;
+  const qualityStr = Object.entries(qualityCounts).map(([q, v]) => `${q} ${v}`).join(", ") || "not rated";
+  const dipUncontrolled = days(p => p.postLunchDip === "uncontrollable");
+  const dipControlled = days(p => p.postLunchDip === "controllable");
+
+  const recent = logged.slice(-14).map(p =>
+    `${p.date}(${p.weekday}): water ${p.waterMl}ml, sleep ${p.sleepHours}h${p.sleepQuality ? `/${p.sleepQuality}` : ""}, nap ${p.napHours}h, post-lunch dip ${p.postLunchDip || "n/a"}`
+  ).join("\n  ");
+
+  return `Days with hydration/sleep data: ${n}
+
+HYDRATION (target ${waterTarget}ml/day): logged ${waterDays}/${n} days · avg ${avgWater}ml · target met ${targetMet}/${n} days
+SLEEP: logged ${sleepDays}/${n} days · avg ${avgSleep}h · nights >=7h: ${nights7}/${n} · quality: ${qualityStr}
+NAPS: ${napDays}/${n} days · avg ${avgNap}h
+POST-LUNCH DIP: uncontrollable ${dipUncontrolled} days · controllable ${dipControlled} days
 
 Recent daily detail (last ${Math.min(14, n)} days):
   ${recent}`;
