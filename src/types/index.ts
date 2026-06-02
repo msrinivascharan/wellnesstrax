@@ -309,6 +309,7 @@ export interface DailyActivityPoint {
   badmintonMin: number;     // total badminton minutes
   badmintonGames: number;   // total badminton games
   muscles: Record<string, number>; // muscle id → sets worked that day
+  strengthExercises: string[];     // names of strength/core exercises done that day
   boxRounds: number;        // 4-4-4-4 box-breathing rounds
   longExhaleRounds: number; // 4-7-8 long-exhale rounds
   breathingRounds: number;  // box + long-exhale rounds (total)

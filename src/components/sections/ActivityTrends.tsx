@@ -237,6 +237,7 @@ export default function ActivityTrends({
   // Muscle work aggregated over the strength window
   const muscleWork: Record<string, number> = {};
   for (const p of win) for (const [m, v] of Object.entries(p.muscles ?? {})) muscleWork[m] = (muscleWork[m] ?? 0) + v;
+  const strengthExerciseNames = [...new Set(win.flatMap(p => p.strengthExercises ?? []))];
 
   const hasData = points.some(p => p.activeMin > 0 || p.gymDone);
   const pw = periodWord(period);
@@ -345,7 +346,7 @@ export default function ActivityTrends({
 
             {/* ── Strength + muscle map ── */}
             <SubCard icon="🏋️" title="Strength &amp; muscles worked">
-              <MuscleMap work={muscleWork} />
+              <MuscleMap work={muscleWork} exercises={strengthExerciseNames} />
               <div className="grid grid-cols-3 gap-2">
                 <StatTile value={`${strengthDays}`} label="Strength days" sub={`last ${pw}`} color={COLORS.strength} />
                 <StatTile value={`${totalSets}`} label="Total sets" sub="resistance work" color="#c4b5fd" />

@@ -1,20 +1,33 @@
 "use client";
-import { MUSCLE_LABELS, MUSCLE_IDS, type MuscleId } from "@/lib/muscle-map";
+import { MUSCLE_LABELS, MUSCLE_IDS, getMusclesForExercise, type MuscleId } from "@/lib/muscle-map";
 
 /**
  * Front + back body diagram, with each muscle group shaded by how much it was
- * worked (sets) over the selected period. `work` maps muscle id → set count.
+ * worked (sets) over the selected period. `work` maps muscle id → set count;
+ * `exercises` is the list of strength exercises done in the period, used to
+ * show which exercises hit each muscle. Untrained muscles are flagged in amber.
  */
-export default function MuscleMap({ work }: { work: Record<string, number> }) {
+export default function MuscleMap({ work, exercises = [] }: { work: Record<string, number>; exercises?: string[] }) {
   const max = Math.max(1, ...MUSCLE_IDS.map(m => work[m] ?? 0));
+  const UNTRAINED = "rgba(245,158,11,0.30)"; // amber — not worked this period
   const shade = (id: MuscleId) => {
     const v = work[id] ?? 0;
-    const o = v > 0 ? 0.25 + 0.7 * (v / max) : 0.08;
+    if (v <= 0) return UNTRAINED;
+    const o = 0.30 + 0.65 * (v / max);
     return `rgba(20,184,166,${o.toFixed(3)})`;
   };
-  const tip = (id: MuscleId) => `${MUSCLE_LABELS[id]}: ${work[id] ?? 0} sets`;
+  const tip = (id: MuscleId) => {
+    const v = work[id] ?? 0;
+    if (v <= 0) return `${MUSCLE_LABELS[id]}: not worked this period`;
+    return `${MUSCLE_LABELS[id]}: ${v} sets — ${exercisesFor(id).join(", ") || "—"}`;
+  };
   const stroke = "rgba(255,255,255,0.12)";
   const base = "rgba(255,255,255,0.05)";
+
+  // which logged exercises target a given muscle
+  function exercisesFor(id: MuscleId): string[] {
+    return exercises.filter(ex => getMusclesForExercise(ex).includes(id));
+  }
 
   // muscles ranked for the side legend
   const ranked = MUSCLE_IDS
@@ -98,26 +111,45 @@ export default function MuscleMap({ work }: { work: Record<string, number> }) {
       </figure>
 
       {/* Legend */}
-      <div className="flex-1 min-w-[160px] space-y-2">
+      <div className="flex-1 min-w-[180px] space-y-2.5">
+        {/* Colour key */}
+        <div className="flex flex-wrap gap-3 text-xs" style={{ color: "#94a3b8" }}>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "#14b8a6" }} />Worked (darker = more)</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: UNTRAINED }} />Not worked</span>
+        </div>
+
         {worked.length === 0 ? (
           <p className="text-xs" style={{ color: "#334155" }}>No resistance training logged in this period.</p>
         ) : (
           <>
             <div className="text-xs font-semibold" style={{ color: "#5eead4" }}>Most worked</div>
-            <div className="space-y-1">
-              {worked.slice(0, 6).map(({ m, v }) => (
-                <div key={m} className="flex items-center gap-2">
-                  <div className="flex-1 rounded-full overflow-hidden" style={{ height: 6, background: "rgba(255,255,255,0.06)" }}>
-                    <div className="h-full rounded-full" style={{ width: `${(v / max) * 100}%`, background: "#14b8a6" }} />
+            <div className="space-y-2">
+              {worked.slice(0, 6).map(({ m, v }) => {
+                const exs = exercisesFor(m);
+                return (
+                  <div key={m} className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 rounded-full overflow-hidden" style={{ height: 6, background: "rgba(255,255,255,0.06)" }}>
+                        <div className="h-full rounded-full" style={{ width: `${(v / max) * 100}%`, background: "#14b8a6" }} />
+                      </div>
+                      <span className="text-xs shrink-0" style={{ color: "#94a3b8", width: 88 }}>{MUSCLE_LABELS[m]}</span>
+                      <span className="text-xs shrink-0 tabular-nums" style={{ color: "#14b8a6", width: 38, textAlign: "right" }}>{v} sets</span>
+                    </div>
+                    {exs.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pl-0.5">
+                        {exs.map(ex => (
+                          <span key={ex} className="text-xs px-1.5 py-0.5 rounded"
+                            style={{ background: "rgba(20,184,166,0.08)", color: "#5eead4" }}>{ex}</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <span className="text-xs shrink-0" style={{ color: "#94a3b8", width: 92 }}>{MUSCLE_LABELS[m]}</span>
-                  <span className="text-xs shrink-0 tabular-nums" style={{ color: "#14b8a6", width: 38, textAlign: "right" }}>{v} sets</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
             {untrained.length > 0 && (
               <div className="text-xs pt-1" style={{ color: "#475569" }}>
-                <span className="font-semibold" style={{ color: "#64748b" }}>Untrained: </span>{untrained.join(", ")}
+                <span className="font-semibold" style={{ color: "#f59e0b" }}>Not worked: </span>{untrained.join(", ")}
               </div>
             )}
           </>

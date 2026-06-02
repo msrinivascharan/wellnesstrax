@@ -40,6 +40,7 @@ function rollup(date: string, session: RawSession | undefined): DailyActivityPoi
   let strengthSets = 0;
   let strengthVolume = 0;
   const muscles: Record<string, number> = {};
+  const strengthExercises: string[] = [];
   const addMuscle = (m: MuscleId, n: number) => { muscles[m] = (muscles[m] ?? 0) + n; };
 
   for (const ex of exercises) {
@@ -48,11 +49,13 @@ function rollup(date: string, session: RawSession | undefined): DailyActivityPoi
     } else if (ex.type === "core") {
       const sets = ex.core_sets ?? 0;
       strengthSets += sets;
+      if (ex.name) strengthExercises.push(ex.name);
       getMusclesForExercise(ex.name).forEach(m => addMuscle(m, sets));
     } else {
       const sets = ex.sets ?? [];
       strengthSets += sets.length;
       strengthVolume += sets.reduce((s, set) => s + (set.reps || 0) * (set.weight_kg || 0), 0);
+      if (ex.name) strengthExercises.push(ex.name);
       getMusclesForExercise(ex.name).forEach(m => addMuscle(m, sets.length));
     }
   }
@@ -76,7 +79,7 @@ function rollup(date: string, session: RawSession | undefined): DailyActivityPoi
     date, weekday, gymDone, gymMin, exerciseCount,
     cardioMin, strengthSets, strengthVolume,
     walks, walkMin, soleus, soleusMin,
-    badmintonMin, badmintonGames, muscles,
+    badmintonMin, badmintonGames, muscles, strengthExercises,
     boxRounds, longExhaleRounds, breathingRounds: boxRounds + longExhaleRounds,
     activeMin: gymMin + walkMin + soleusMin + badmintonMin,
     waterMl: session?.water_ml ?? 0,
