@@ -144,10 +144,10 @@ Return ONLY this JSON structure (all fields required):
   },${activityHistorySummary ? `
   "activity_section_analysis": {
     "overall": {
-      "summary": "<2-3 sentences on how overall activity is trending across cardio, strength, indoor movement and badminton>",
-      "body_feel": "<how this cardiac patient's body benefits and feels good from these activities — energy, circulation, mood, glucose, heart health>",
-      "gap_impact": "<concrete impact of missing activity: a single missed day vs several days in a row vs a long gap — why consistency matters for THIS cardiac patient>",
-      "consistency_note": "<streaks, current gap, and a realistic consistency target to aim for>"
+      "summary": "<2-3 sentences synthesising the WHOLE movement picture using real numbers from ACTIVITY HISTORY: weekly frequency, total active minutes, the mix of cardio vs strength vs walks/soleus vs badminton, and the trend direction (improving / steady / declining). Cite actual figures, not generic statements.>",
+      "body_feel": "<how these SPECIFIC activities benefit THIS cardiac patient's body day to day — resting heart rate, circulation, blood pressure, blood glucose, energy, mood, sleep quality. Tie to what they actually did.>",
+      "balance_note": "<assess the balance between aerobic cardio, resistance training, daily NEAT (post-meal walks + soleus pumps) and badminton. Name the strongest area and the weakest, then give ONE concrete, realistic adjustment to optimise for cardiac health and longevity.>",
+      "consistency_note": "<an encouraging, forward-looking note: reference the active-day count and longest streak, acknowledge progress, and set ONE realistic consistency target to aim for next. Keep it motivating, not critical.>"
     },
     "cardio": {
       "summary": "<how cardio (treadmill/bike/elliptical etc.) is trending — minutes and frequency>",

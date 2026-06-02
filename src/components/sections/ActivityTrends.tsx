@@ -317,10 +317,10 @@ export default function ActivityTrends({
                       <p className="text-xs leading-relaxed" style={{ color: "#94a3b8" }}>{sectionAnalysis.overall.body_feel}</p>
                     </div>
                   )}
-                  {sectionAnalysis?.overall?.gap_impact && (
-                    <div className="p-3 rounded-xl" style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.18)" }}>
-                      <div className="text-xs font-semibold mb-1" style={{ color: "#fca5a5" }}>⚠️ Why gaps hurt</div>
-                      <p className="text-xs leading-relaxed" style={{ color: "#94a3b8" }}>{sectionAnalysis.overall.gap_impact}</p>
+                  {sectionAnalysis?.overall?.balance_note && (
+                    <div className="p-3 rounded-xl" style={{ background: "rgba(20,184,166,0.06)", border: "1px solid rgba(20,184,166,0.18)" }}>
+                      <div className="text-xs font-semibold mb-1" style={{ color: "#5eead4" }}>⚖️ Activity balance</div>
+                      <p className="text-xs leading-relaxed" style={{ color: "#94a3b8" }}>{sectionAnalysis.overall.balance_note}</p>
                     </div>
                   )}
                   {sectionAnalysis?.overall?.consistency_note && (

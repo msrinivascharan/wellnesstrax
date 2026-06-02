@@ -236,10 +236,10 @@ export interface SectionInsight {
 
 /** Overall activity insight tying all sections together */
 export interface OverallActivityInsight {
-  summary: string;          // how activity is going overall
+  summary: string;          // data-grounded synthesis of the whole movement picture
   body_feel: string;        // how the body benefits / feels good from these activities
-  gap_impact: string;       // impact of missing activity (a day, several in a row, long gaps)
-  consistency_note: string; // streaks, current gap, what to aim for
+  balance_note: string;     // balance across cardio / strength / NEAT / badminton + one adjustment
+  consistency_note: string; // constructive, encouraging note on consistency + a realistic target
 }
 
 /** All sectioned activity analyses, generated together on Re-analyse */
