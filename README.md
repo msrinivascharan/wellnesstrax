@@ -14,7 +14,7 @@
 
 WellnessTrax is a **local-first, form-based daily health tracker** built around your personal profile — your medications, health conditions, BMI, daily targets, and doctor-prescribed food rules.
 
-Every day, you log your meals, medications, supplements, gym activity, walks, breathing exercises, water intake, and sleep through a clean sidebar interface. When you're ready, a single click runs a full AI analysis that scores your day, balances each meal's plate, suggests what to eat tomorrow, and analyses how your activity and breathing practice are trending over time.
+Every day, you log your meals, medications, supplements, gym workouts, walks, badminton, breathing exercises, water, sleep, and blood work through a clean sidebar interface. When you're ready, a single click runs a full AI analysis that scores your day, balances each meal's plate, suggests what to eat tomorrow, and analyses how your activity (cardio, strength, indoor movement, badminton), breathing, hydration, and sleep are trending over time — including a body muscle map of what you've trained.
 
 Your health data **never leaves your machine** except the anonymised text log sent to Groq when you explicitly run an analysis.
 
@@ -26,11 +26,11 @@ Your health data **never leaves your machine** except the anonymised text log se
 |---|---------|-----------------|
 | 1 | **Dashboard** | At-a-glance daily rings (food = 3 main meals logged, water, activity, sleep, meds), time-aware missed-medication alerts, quick stats, and today's AI score if analysed |
 | 2 | **Food Log** | Log breakfast/lunch/dinner/snacks with meal time. **Typeahead search** adds items from your food lists, then a quantity/unit picker. Maintain rich **Must Avoid** / **Good to Eat** lists with category filters and per-item enable/disable |
-| 3 | **Activity** | Log gym session with in/out time and auto-calculated duration, exercises with sets/reps/weights, post-prandial walks, soleus pumps, and breathing exercises |
+| 3 | **Activity** | Log gym session with in/out time and auto-calculated duration, exercises with sets/reps/weights, post-prandial walks, soleus pumps, **badminton** (duration/intensity/games), and breathing exercises |
 | 4 | **Medications** | Mark each scheduled medication and supplement taken with timestamp. Periodic injectable tracking with auto-calculated next-due status badge |
-| 5 | **Blood Work** | Log and track lipid and thyroid panels over time with trend arrows and reference ranges. Thyroid supports **TSH-only panels** (T3/T4 optional) |
-| 6 | **Water & Sleep** | Hydration tracker, sleep log (hours, quality, bedtime/wake), daytime nap with start/end times, and a **post-lunch dip** tracker |
-| 7 | **Reports** | Run AI analysis; meal-wise balanced-plate donuts with hover breakdown and avoid-list flagging; **per-meal next-day suggestions**; **Activity trends & insights**; **Breathing insights**; blood work snapshot; and a date navigator to revisit any past day |
+| 5 | **Blood Work** | Log and track **lipid, thyroid, and blood-pressure** panels over time with trend arrows and reference ranges. Thyroid supports **TSH-only panels** (T3/T4 optional); BP captures systolic/diastolic + optional pulse |
+| 6 | **Water & Sleep** | Hydration tracker, sleep log (hours, quality, bedtime/wake), daytime nap with start/end times, and **post-lunch dip** + **evening dip** trackers |
+| 7 | **Reports** | Run AI analysis; meal-wise balanced-plate donuts (with Nutrition) and avoid-list flagging; **per-meal next-day suggestions**; **sectioned Activity trends** (Overall, Cardio, Strength + body **muscle map**, Indoor, Badminton); **Breathing**, **Hydration**, and **Sleep** trend sections — all with charts and AI insights; blood-work snapshot; and a date navigator to revisit any past day |
 
 ---
 
@@ -47,20 +47,33 @@ Your health data **never leaves your machine** except the anonymised text log se
 - **Balanced-plate categorisation** — every item maps to 5 canonical groups (Complex Carbohydrates, Lean/Plant Proteins, Dietary Fiber, Micronutrients, Essential Lipids)
 
 ### Reports & AI analysis
-- **Meal-wise balanced plate** — a donut per meal (breakfast/lunch/dinner/snacks) with a per-meal balance score, missing-group hints, and a hover item breakdown
+- **Meal-wise balanced plate** — a donut per meal (breakfast/lunch/dinner/snacks) with a per-meal balance score, missing-group hints, a hover item breakdown, and a **Nutrition** card (estimated calories/protein/fiber vs target)
 - **Avoid-list flagging** — logged foods are cross-checked against both `food_rules.json` (complex rules) and your editable **Must Avoid** list (parenthetical qualifiers like "White Rice (Regular Use)" still match "White Rice"); violations are highlighted per meal and inside the hover breakdown
 - **Per-meal next-day suggestions** — after Re-analyse, each meal card shows 3–4 "Try tomorrow" picks drawn from your **Good to Eat** list that you have **not** eaten in the past 7 days
-- **Activity trends & insights** *(own section)* — daily / weekly / monthly **stacked bar charts** of gym, walk, and soleus minutes with gym-day markers and stat tiles, plus an AI write-up (what's going well, where to improve, a gym time-spend insight, consistency note)
-- **Breathing insights** *(separate section)* — daily / weekly / monthly charts of Box 4-4-4-4 and 4-7-8 rounds with stat tiles, plus an AI write-up (summary, what's good, improvements, why it helps your heart, consistency)
-- **AI health score** — overall daily score with macro estimates, nutrition highlights/concerns, cardiac-safety note, inflammation balance, hydration & sleep notes, medication adherence, top wins, and areas to improve
-- **Blood work snapshot** — latest lipid & thyroid markers vs cardiac-patient targets, colour-coded
+- **Sectioned Activity trends** *(own section)* — daily / weekly / monthly charts and per-section AI insights for:
+  - **Overall movement** — stacked gym/walk/soleus/badminton minutes, active-day / gym-day / current-gap tiles, plus an AI synthesis (summary, how your body benefits, activity balance, consistency)
+  - **Cardio** — cardio minutes trend
+  - **Strength & muscles** — a front + back **body muscle map** shaded by sets worked (teal = worked, amber = not worked), with the exercises that hit each muscle, plus a sets/volume trend
+  - **Indoor** — post-meal walks + soleus pumps
+  - **Badminton** — minutes + games trend
+- **Breathing insights** — daily / weekly / monthly charts of Box 4-4-4-4 and 4-7-8 rounds, plus an AI write-up (summary, what's good, improvements, why it helps your heart, consistency)
+- **Hydration trends** — daily / weekly / monthly average-intake bars vs your target line, target-met days, with AI analysis
+- **Sleep trends** — average sleep-hours bars vs a 7h target, nights ≥7h, average nap, sleep-quality distribution, post-lunch-dip counts, with AI analysis
+- **AI health score** — overall daily score with macro estimates, nutrition highlights/concerns, top wins, and areas to improve
+- **Blood-work snapshot** — latest lipid & thyroid markers vs cardiac-patient targets, colour-coded
 - **Date navigator** — jump to any previous day and view that day's data and analysis
 
 ### Activity & wellness
 - **Gym session timing** — log gym in/out time; duration auto-calculated and shown as a pill
+- **Badminton** — log each session's duration, intensity (light/moderate/intense), games, and win/loss
 - **Daytime nap tracking** — log nap start/end times; duration auto-calculated
 - **Breathing exercise tracker** — log Box (4-4-4-4) and Long-Exhale (4-7-8) rounds with progress bars
-- **Post-lunch dip** — track post-meal drowsiness on a 3-level scale (None / Controllable / Uncontrollable)
+- **Post-lunch dip** and **evening dip** — track drowsiness/energy dips on a 3-level scale (None / Controllable / Uncontrollable)
+
+### Blood work
+- **Three panels** — Lipid profile, Thyroid profile, and **Blood Pressure**, each with history, trend arrows, and cardiac-patient reference ranges
+- **TSH-only thyroid panels** — leave T3/T4 blank when not tested (stored as null, never flagged as out-of-range)
+- **Blood pressure** — systolic/diastolic (required) + optional pulse, scored against a `<130/80` cardiac target with an interpretation banner
 
 ### Medications
 - **Time-aware alerts** — missed warnings only appear after the scheduled dose time has passed
@@ -166,19 +179,24 @@ wellnesstrax/
 │   ├── components/
 │   │   ├── Sidebar.tsx          # Navigation sidebar with completion rings + date navigation
 │   │   └── sections/
-│   │       ├── Dashboard.tsx     # Overview: rings, missed meds, quick stats, score summary
-│   │       ├── FoodLog.tsx       # Meal logging: typeahead search + Must Avoid/Good to Eat lists
-│   │       ├── ActivityLog.tsx   # Gym (in/out/duration) + walks + soleus + breathing
-│   │       ├── ActivityTrends.tsx# Activity & breathing trend charts + AI insights (Reports)
-│   │       ├── MedicationLog.tsx # Med/supplement check-off + injectable tracker
-│   │       ├── BloodWork.tsx     # Lipid and thyroid panel entry + history
-│   │       ├── WaterSleep.tsx    # Hydration + sleep + nap + post-lunch dip
-│   │       └── Reports.tsx       # Plate charts + AI analysis + trends + history navigator
+│   │       ├── Dashboard.tsx       # Overview: rings, missed meds, quick stats, score summary
+│   │       ├── FoodLog.tsx         # Meal logging: typeahead search + Must Avoid/Good to Eat lists
+│   │       ├── ActivityLog.tsx     # Gym + walks + soleus + badminton + breathing
+│   │       ├── ActivityTrends.tsx  # Sectioned activity (cardio/strength/indoor/badminton) + breathing trends
+│   │       ├── MuscleMap.tsx       # Front+back body muscle map (worked vs untrained, exercise→muscle)
+│   │       ├── HydrationTrends.tsx # Hydration trend charts + AI (Reports)
+│   │       ├── SleepTrends.tsx     # Sleep trend charts + AI (Reports)
+│   │       ├── trends-common.tsx   # Shared trend UI: PeriodToggle, StatTile, bucketing, bar chart
+│   │       ├── MedicationLog.tsx   # Med/supplement check-off + injectable tracker
+│   │       ├── BloodWork.tsx       # Lipid, thyroid & blood-pressure panel entry + history
+│   │       ├── WaterSleep.tsx      # Hydration + sleep + nap + post-lunch/evening dip
+│   │       └── Reports.tsx         # Plate charts + Nutrition + all trend sections + history navigator
 │   │
 │   ├── lib/
 │   │   ├── food-utils.ts         # autoCategory(), resolveCategory(), mapToBalancedPlate(),
 │   │   │                         # checkAlwaysAvoidRules() — shared categorisation helpers
-│   │   ├── activity-trends.ts    # Reads session history → per-day activity rollups + summary
+│   │   ├── activity-trends.ts    # Reads session history → per-day activity/wellness rollups + summaries
+│   │   ├── muscle-map.ts         # Exercise-name → muscle-group mapping (shared, pure)
 │   │   ├── prompt-builder.ts     # Builds the full AI analysis prompt from the day's log + context
 │   │   ├── profile-loader.ts     # Reads/writes all data/*.json config files
 │   │   └── session-store.ts      # Read/write/list daily session JSON files
@@ -276,7 +294,7 @@ Defines available gym exercises and daily activities (post-prandial walks, soleu
 
 ### `data/bloodwork.json`
 
-Lipid + thyroid history. The thyroid panel supports **TSH-only** entries — leave T3/T4 blank and they are stored as `null` (shown as "not tested", never counted as out-of-range).
+Lipid, thyroid, and blood-pressure history (`lipid_profile`, `thyroid_profile`, `bp_readings`). The thyroid panel supports **TSH-only** entries — leave T3/T4 blank and they are stored as `null` (shown as "not tested", never counted as out-of-range). Blood-pressure readings store systolic/diastolic (required) and an optional pulse.
 
 ### `data/injectable_meds.json`
 
@@ -316,15 +334,15 @@ Injectable medication history. The Medications section shows the latest dose dat
 
 - Estimated macros (calories, protein, fiber) with a one-line assessment, highlights, and concerns
 - Overall daily health score (0–100)
-- Cardiac-safety note and inflammation-balance note
-- Hydration and sleep notes
-- Medication adherence score, missed list, and notes
 - Top wins and areas to improve
 - **Per-meal next-day suggestions** — items from your Good to Eat list not eaten in the past 7 days
-- **Activity trend analysis** — summary, what's good, improvements, gym time-spend insight, consistency (when ≥ 2 days of history exist)
+- **Sectioned activity analysis** *(when ≥ 2 days of history exist)* — an overall synthesis (summary, how your body benefits, activity balance, consistency) plus per-section insights for **cardio**, **strength** (with muscle-balance notes), **indoor** movement, and **badminton**
 - **Breathing trend analysis** — summary, what's good, improvements, cardiovascular benefit, consistency
+- **Hydration trend analysis** and **sleep trend analysis** — summary, what's good, improvements, consistency
 
-The analyze route assembles context server-side: today's log, your medications and food rules, the enabled Good to Eat list, the past 7 days of foods per meal, and a 90-day activity/breathing rollup. To switch the model, edit `src/app/api/analyze/route.ts`:
+> The model also generates cardiac-safety, inflammation, medication-adherence, and hydration/sleep daily notes that are retained in each session's data; some are surfaced in their relevant trend sections rather than as standalone cards.
+
+The analyze route assembles context server-side: today's log, your medications and food rules, the enabled Good to Eat list, the past 7 days of foods per meal, and a 90-day activity + hydration/sleep rollup. To switch the model, edit `src/app/api/analyze/route.ts`:
 
 ```typescript
 model: "llama-3.3-70b-versatile",  // or "llama-3.1-8b-instant" for faster/cheaper
@@ -349,8 +367,11 @@ The AI prompt is rebuilt from these files on every analysis call, so the model i
 ## Roadmap
 
 - [x] Activity trend charts (daily / weekly / monthly)
-- [x] Breathing-practice insights
+- [x] Sectioned activity reports (cardio / strength + muscle map / indoor / badminton)
+- [x] Breathing, hydration, and sleep trend insights
 - [x] Per-meal next-day food suggestions
+- [x] Badminton tracking
+- [x] Blood-pressure tracking
 - [ ] 7/14/30-day overall-score trend charts
 - [ ] Weekly digest report (PDF export)
 - [ ] Profile switcher UI (multiple users on one instance)
