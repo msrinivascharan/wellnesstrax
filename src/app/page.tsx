@@ -491,7 +491,7 @@ export default function Home() {
               <MedicationLog dayLog={dayLog} profile={profile} onUpdate={onMedUpdate} />
             )}
             {section === "bloodwork" && (
-              <BloodWork />
+              <BloodWork profile={profile} />
             )}
             {section === "water-sleep" && (
               <WaterSleep dayLog={dayLog} profile={profile} onUpdate={onWaterSleepUpdate} />

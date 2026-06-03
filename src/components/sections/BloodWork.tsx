@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import type { BloodWorkData, LipidProfile, ThyroidProfile, BloodPressureReading } from "@/types";
+import type { BloodWorkData, LipidProfile, ThyroidProfile, BloodPressureReading, WeightReading, UserProfile } from "@/types";
 
 // ─── Reference range helpers ──────────────────────────────────────────────────
 
@@ -106,19 +106,34 @@ function emptyBP(): Omit<BloodPressureReading, "id"> {
   return { test_date: "", systolic: 0, diastolic: 0, pulse: null };
 }
 
+function emptyWeight(): Omit<WeightReading, "id"> {
+  return { test_date: "", weight_kg: 0 };
+}
+
+/** BMI from weight (kg) and height (decimal feet). Returns null if height unknown. */
+function calcBMI(weightKg: number, heightFt: number): number | null {
+  if (!heightFt || heightFt <= 0 || weightKg <= 0) return null;
+  const m = heightFt * 0.3048;
+  return Math.round((weightKg / (m * m)) * 10) / 10;
+}
+function bmiStatus(bmi: number): Status {
+  return bmi >= 18.5 && bmi < 25 ? "good" : (bmi >= 25 && bmi < 30) || (bmi >= 17 && bmi < 18.5) ? "warn" : "risk";
+}
+
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
-export default function BloodWork() {
+export default function BloodWork({ profile }: { profile?: UserProfile }) {
   const [data, setData]         = useState<BloodWorkData>({ lipid_profile: [], thyroid_profile: [] });
-  const [tab, setTab]           = useState<"lipid" | "thyroid" | "bp">("lipid");
+  const [tab, setTab]           = useState<"lipid" | "thyroid" | "bp" | "weight">("lipid");
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving]     = useState(false);
 
   const [lipidForm, setLipidForm]     = useState(emptyLipid);
   const [thyroidForm, setThyroidForm] = useState(emptyThyroid);
   const [bpForm, setBpForm]           = useState(emptyBP);
+  const [weightForm, setWeightForm]   = useState(emptyWeight);
 
   const persist = useCallback(async (next: BloodWorkData) => {
     setSaving(true);
@@ -197,18 +212,39 @@ export default function BloodWork() {
     persist(next);
   }
 
+  function saveWeight() {
+    if (!weightForm.test_date || weightForm.weight_kg <= 0) return;
+    const entry: WeightReading = { id: genId(), ...weightForm };
+    const next: BloodWorkData = {
+      ...data,
+      weight_readings: [entry, ...(data.weight_readings ?? [])].sort((a, b) => b.test_date.localeCompare(a.test_date)),
+    };
+    setData(next);
+    persist(next);
+    setWeightForm(emptyWeight());
+    setShowForm(false);
+  }
+
+  function deleteWeight(id: string) {
+    const next = { ...data, weight_readings: (data.weight_readings ?? []).filter(e => e.id !== id) };
+    setData(next);
+    persist(next);
+  }
+
   const lipids   = data.lipid_profile;
   const thyroids = data.thyroid_profile;
   const bps      = data.bp_readings ?? [];
+  const weights  = data.weight_readings ?? [];
+  const heightFt = profile?.height_ft ?? 0;
 
   return (
     <div className="p-6 max-w-4xl space-y-6">
       {/* Header */}
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-xl font-bold text-white">Blood Work</h2>
+          <h2 className="text-xl font-bold text-white">Blood Work &amp; Vitals</h2>
           <p className="text-xs mt-0.5" style={{ color: "#64748b" }}>
-            Track lab results over time — Lipid, Thyroid &amp; Blood Pressure
+            Track over time — Lipid, Thyroid, Blood Pressure &amp; Weight
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -224,13 +260,13 @@ export default function BloodWork() {
 
       {/* Tabs */}
       <div className="flex gap-2">
-        {(["lipid", "thyroid", "bp"] as const).map(t => (
+        {(["lipid", "thyroid", "bp", "weight"] as const).map(t => (
           <button key={t} onClick={() => { setTab(t); setShowForm(false); }}
             className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
             style={tab === t
               ? { background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.35)" }
               : { background: "rgba(255,255,255,0.04)", color: "#64748b", border: "1px solid var(--border)" }}>
-            {t === "lipid" ? "🧪 Lipid Profile" : t === "thyroid" ? "🦋 Thyroid Profile" : "🩺 Blood Pressure"}
+            {t === "lipid" ? "🧪 Lipid Profile" : t === "thyroid" ? "🦋 Thyroid Profile" : t === "bp" ? "🩺 Blood Pressure" : "⚖️ Weight"}
           </button>
         ))}
       </div>
@@ -371,6 +407,51 @@ export default function BloodWork() {
                   Save result
                 </button>
                 <button onClick={() => { setShowForm(false); setBpForm(emptyBP()); }}
+                  className="px-4 py-2 rounded-xl text-sm transition-all"
+                  style={{ background: "rgba(255,255,255,0.04)", color: "#64748b", border: "1px solid var(--border)" }}>
+                  Cancel
+                </button>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {showForm && tab === "weight" && (
+        <div className="card p-4 space-y-4 fade-in-up">
+          <div className="section-header">Add weight reading</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs mb-1" style={{ color: "#64748b" }}>Date *</label>
+              <input type="date" className="nb-input w-full"
+                max={new Date().toISOString().split("T")[0]}
+                value={weightForm.test_date}
+                onChange={e => setWeightForm(f => ({ ...f, test_date: e.target.value }))} />
+            </div>
+            <div>
+              <label className="block text-xs mb-1" style={{ color: "#64748b" }}>Weight (kg) *</label>
+              <input type="number" min="0" step="0.1" className="nb-input w-full"
+                placeholder="e.g. 78.5"
+                value={weightForm.weight_kg || ""}
+                onChange={e => setWeightForm(f => ({ ...f, weight_kg: parseFloat(e.target.value) || 0 }))} />
+              {(() => {
+                const bmi = calcBMI(weightForm.weight_kg, heightFt);
+                return bmi ? <div className="text-xs mt-0.5" style={{ color: "#334155" }}>BMI ≈ {bmi}{profile?.target_bmi_range ? ` · target ${profile.target_bmi_range}` : ""}</div> : null;
+              })()}
+            </div>
+          </div>
+          {(() => {
+            const valid = !!weightForm.test_date && weightForm.weight_kg > 0;
+            return (
+              <div className="flex gap-2 pt-1">
+                <button onClick={saveWeight} disabled={!valid}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+                  style={valid
+                    ? { background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.35)" }
+                    : { background: "rgba(255,255,255,0.04)", color: "#334155", border: "1px solid var(--border)", cursor: "not-allowed" }}>
+                  Save reading
+                </button>
+                <button onClick={() => { setShowForm(false); setWeightForm(emptyWeight()); }}
                   className="px-4 py-2 rounded-xl text-sm transition-all"
                   style={{ background: "rgba(255,255,255,0.04)", color: "#64748b", border: "1px solid var(--border)" }}>
                   Cancel
@@ -638,6 +719,63 @@ export default function BloodWork() {
         </div>
       )}
 
+      {/* ── Weight history ── */}
+      {tab === "weight" && (
+        <div className="space-y-3">
+          {weights.length === 0 ? (
+            <div className="card p-8 text-center">
+              <div className="text-3xl mb-3">⚖️</div>
+              <div className="text-sm font-medium text-white">No weight readings yet</div>
+              <div className="text-xs mt-1" style={{ color: "#475569" }}>
+                Click &ldquo;+ Add test result&rdquo; to log your first reading
+              </div>
+            </div>
+          ) : weights.map((entry, idx) => {
+            const prev = weights[idx + 1];
+            const bmi = calcBMI(entry.weight_kg, heightFt);
+            const delta = prev ? Math.round((entry.weight_kg - prev.weight_kg) * 10) / 10 : null;
+            const bmiS = bmi != null ? bmiStatus(bmi) : "none";
+            const bmiColor = bmiS === "none" ? "#475569" : bmiS === "good" ? "#22c55e" : bmiS === "warn" ? "#f59e0b" : "#ef4444";
+            return (
+              <div key={entry.id} className="card p-4 fade-in-up">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-white">
+                      {new Date(entry.test_date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    </span>
+                    {idx === 0 && (
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(20,184,166,0.15)", color: "#14b8a6" }}>Latest</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-white tabular-nums">{entry.weight_kg}</span>
+                      <span className="text-xs ml-1" style={{ color: "#64748b" }}>kg</span>
+                      {delta !== null && delta !== 0 && (
+                        <span className="text-xs ml-1.5" style={{ color: delta < 0 ? "#22c55e" : "#f59e0b" }}>
+                          {delta < 0 ? "▼" : "▲"} {Math.abs(delta)}kg
+                        </span>
+                      )}
+                    </div>
+                    {bmi != null && (
+                      <div className="text-center px-2.5 py-1 rounded-lg" style={{ background: `${bmiColor}10`, border: `1px solid ${bmiColor}25` }}>
+                        <div className="text-xs" style={{ color: "#64748b" }}>BMI</div>
+                        <div className="text-sm font-bold" style={{ color: bmiColor }}>{bmi}</div>
+                      </div>
+                    )}
+                    <button onClick={() => deleteWeight(entry.id)}
+                      className="text-xs px-2 py-1 rounded transition-colors hover:bg-red-950/40" style={{ color: "#475569" }}>✕</button>
+                  </div>
+                </div>
+                {idx === 0 && profile?.target_bmi_range && (
+                  <div className="text-xs mt-2" style={{ color: "#475569" }}>Target BMI range: {profile.target_bmi_range}</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Reference guide */}
       <div className="card p-4 space-y-2" style={{ border: "1px solid rgba(20,184,166,0.15)", background: "rgba(20,184,166,0.03)" }}>
         <div className="flex items-center gap-2">
@@ -648,6 +786,7 @@ export default function BloodWork() {
           <p>LDL &lt;70 mg/dL is the goal for post-stent patients (more aggressive than general population &lt;100).</p>
           <p>TSH 0.5–2.5 μIU/mL is the typical target while on thyroid replacement therapy.</p>
           <p>Blood pressure &lt;130/80 mmHg is the typical target for post-stent / cardiac patients.</p>
+          <p>BMI 18.5–24.9 is the healthy range; lowering an elevated BMI eases cardiac load.</p>
           <p><span className="inline-block w-2 h-2 rounded-full mr-1 bg-green-500" />Within target &nbsp;
              <span className="inline-block w-2 h-2 rounded-full mr-1 bg-yellow-500" />Borderline &nbsp;
              <span className="inline-block w-2 h-2 rounded-full mr-1 bg-red-500" />At risk</p>

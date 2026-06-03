@@ -28,7 +28,7 @@ Your health data **never leaves your machine** except the anonymised text log se
 | 2 | **Food Log** | Log breakfast/lunch/dinner/snacks with meal time. **Typeahead search** adds items from your food lists, then a quantity/unit picker. Maintain rich **Must Avoid** / **Good to Eat** lists with category filters and per-item enable/disable |
 | 3 | **Activity** | Log gym session with in/out time and auto-calculated duration, exercises with sets/reps/weights, post-prandial walks, soleus pumps, **badminton** (duration/intensity/games), and breathing exercises |
 | 4 | **Medications** | Mark each scheduled medication and supplement taken with timestamp. Periodic injectable tracking with auto-calculated next-due status badge |
-| 5 | **Blood Work** | Log and track **lipid, thyroid, and blood-pressure** panels over time with trend arrows and reference ranges. Thyroid supports **TSH-only panels** (T3/T4 optional); BP captures systolic/diastolic + optional pulse |
+| 5 | **Blood Work & Vitals** | Log and track **lipid, thyroid, blood-pressure, and weight** panels over time with trend arrows and reference ranges. Thyroid supports **TSH-only panels** (T3/T4 optional); BP captures systolic/diastolic + optional pulse; weight auto-computes **BMI** vs your target range |
 | 6 | **Water & Sleep** | Hydration tracker, sleep log (hours, quality, bedtime/wake), daytime nap with start/end times, and **post-lunch dip** + **evening dip** trackers |
 | 7 | **Reports** | Run AI analysis; meal-wise balanced-plate donuts (with Nutrition) and avoid-list flagging; **per-meal next-day suggestions**; **sectioned Activity trends** (Overall, Cardio, Strength + body **muscle map**, Indoor, Badminton); **Breathing**, **Hydration**, and **Sleep** trend sections — all with charts and AI insights; blood-work snapshot; and a date navigator to revisit any past day |
 
@@ -60,7 +60,7 @@ Your health data **never leaves your machine** except the anonymised text log se
 - **Hydration trends** — daily / weekly / monthly average-intake bars vs your target line, target-met days, with AI analysis
 - **Sleep trends** — average sleep-hours bars vs a 7h target, nights ≥7h, average nap, sleep-quality distribution, post-lunch-dip counts, with AI analysis
 - **AI health score** — overall daily score with macro estimates, nutrition highlights/concerns, top wins, and areas to improve
-- **Blood-work snapshot** — latest lipid & thyroid markers vs cardiac-patient targets, colour-coded
+- **Latest vitals & blood-work snapshot** — most recent weight & BMI, blood pressure, and lipid & thyroid markers vs cardiac-patient targets, colour-coded
 - **Date navigator** — jump to any previous day and view that day's data and analysis
 
 ### Activity & wellness
@@ -70,10 +70,11 @@ Your health data **never leaves your machine** except the anonymised text log se
 - **Breathing exercise tracker** — log Box (4-4-4-4) and Long-Exhale (4-7-8) rounds with progress bars
 - **Post-lunch dip** and **evening dip** — track drowsiness/energy dips on a 3-level scale (None / Controllable / Uncontrollable)
 
-### Blood work
-- **Three panels** — Lipid profile, Thyroid profile, and **Blood Pressure**, each with history, trend arrows, and cardiac-patient reference ranges
+### Blood work & vitals
+- **Four panels** — Lipid profile, Thyroid profile, **Blood Pressure**, and **Weight**, each with history, trend arrows, and cardiac-patient reference ranges
 - **TSH-only thyroid panels** — leave T3/T4 blank when not tested (stored as null, never flagged as out-of-range)
 - **Blood pressure** — systolic/diastolic (required) + optional pulse, scored against a `<130/80` cardiac target with an interpretation banner
+- **Weight** — log weight (kg) over time; **BMI is auto-computed** from your profile height, colour-coded against the healthy range, with the change since the previous reading
 
 ### Medications
 - **Time-aware alerts** — missed warnings only appear after the scheduled dose time has passed
@@ -188,7 +189,7 @@ wellnesstrax/
 │   │       ├── SleepTrends.tsx     # Sleep trend charts + AI (Reports)
 │   │       ├── trends-common.tsx   # Shared trend UI: PeriodToggle, StatTile, bucketing, bar chart
 │   │       ├── MedicationLog.tsx   # Med/supplement check-off + injectable tracker
-│   │       ├── BloodWork.tsx       # Lipid, thyroid & blood-pressure panel entry + history
+│   │       ├── BloodWork.tsx       # Lipid, thyroid, blood-pressure & weight (BMI) entry + history
 │   │       ├── WaterSleep.tsx      # Hydration + sleep + nap + post-lunch/evening dip
 │   │       └── Reports.tsx         # Plate charts + Nutrition + all trend sections + history navigator
 │   │
@@ -294,7 +295,7 @@ Defines available gym exercises and daily activities (post-prandial walks, soleu
 
 ### `data/bloodwork.json`
 
-Lipid, thyroid, and blood-pressure history (`lipid_profile`, `thyroid_profile`, `bp_readings`). The thyroid panel supports **TSH-only** entries — leave T3/T4 blank and they are stored as `null` (shown as "not tested", never counted as out-of-range). Blood-pressure readings store systolic/diastolic (required) and an optional pulse.
+Lipid, thyroid, blood-pressure, and weight history (`lipid_profile`, `thyroid_profile`, `bp_readings`, `weight_readings`). The thyroid panel supports **TSH-only** entries — leave T3/T4 blank and they are stored as `null` (shown as "not tested", never counted as out-of-range). Blood-pressure readings store systolic/diastolic (required) and an optional pulse. Weight readings store a date + weight in kg; BMI is computed live from your profile height.
 
 ### `data/injectable_meds.json`
 
@@ -372,11 +373,11 @@ The AI prompt is rebuilt from these files on every analysis call, so the model i
 - [x] Per-meal next-day food suggestions
 - [x] Badminton tracking
 - [x] Blood-pressure tracking
+- [x] Weight & BMI logging
 - [ ] 7/14/30-day overall-score trend charts
 - [ ] Weekly digest report (PDF export)
 - [ ] Profile switcher UI (multiple users on one instance)
 - [ ] Medication reminder push notifications
-- [ ] Weight and BMI trend logging
 - [ ] Offline PWA support
 
 ---

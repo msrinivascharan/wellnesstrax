@@ -803,11 +803,74 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
           </div>
 
           {/* ── Blood work snapshot (if data exists) ── */}
-          {bloodWork && (bloodWork.lipid_profile.length > 0 || bloodWork.thyroid_profile.length > 0) && (
-            <InsightCard title="Latest blood work" icon="🩸">
+          {bloodWork && (bloodWork.lipid_profile.length > 0 || bloodWork.thyroid_profile.length > 0 || (bloodWork.bp_readings?.length ?? 0) > 0 || (bloodWork.weight_readings?.length ?? 0) > 0) && (
+            <InsightCard title="Latest vitals & blood work" icon="🩸">
               <p className="text-xs mb-3" style={{ color: "#64748b" }}>
-                Most recent lab results vs. cardiac-patient targets. Go to Blood Work section to add new results.
+                Most recent results vs. cardiac-patient targets. Go to Blood Work &amp; Vitals to add new entries.
               </p>
+              {(bloodWork.weight_readings?.length ?? 0) > 0 && (() => {
+                const latest = bloodWork.weight_readings![0];
+                const prev = bloodWork.weight_readings![1];
+                const h = (profile.height_ft ?? 0) * 0.3048;
+                const bmi = h > 0 ? Math.round((latest.weight_kg / (h * h)) * 10) / 10 : null;
+                const delta = prev ? Math.round((latest.weight_kg - prev.weight_kg) * 10) / 10 : null;
+                const bmiColor = bmi == null ? "#64748b"
+                  : bmi >= 18.5 && bmi < 25 ? "#22c55e"
+                  : (bmi >= 25 && bmi < 30) || (bmi >= 17 && bmi < 18.5) ? "#f59e0b" : "#ef4444";
+                return (
+                  <div className="mb-3">
+                    <div className="text-xs font-semibold mb-2" style={{ color: "#94a3b8" }}>
+                      Weight &amp; BMI · {new Date(latest.test_date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <div className="text-center px-2.5 py-1.5 rounded-lg" style={{ background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)", minWidth: 90 }}>
+                        <div className="text-xs" style={{ color: "#64748b" }}>Weight</div>
+                        <div className="text-sm font-bold" style={{ color: "#5eead4" }}>
+                          {latest.weight_kg} kg
+                          {delta !== null && delta !== 0 && (
+                            <span className="text-xs ml-1" style={{ color: delta < 0 ? "#22c55e" : "#f59e0b" }}>{delta < 0 ? "▼" : "▲"}{Math.abs(delta)}</span>
+                          )}
+                        </div>
+                      </div>
+                      {bmi != null && (
+                        <div className="text-center px-2.5 py-1.5 rounded-lg" style={{ background: `${bmiColor}10`, border: `1px solid ${bmiColor}25`, minWidth: 90 }}>
+                          <div className="text-xs" style={{ color: "#64748b" }}>BMI{profile.target_bmi_range ? ` (target ${profile.target_bmi_range})` : ""}</div>
+                          <div className="text-sm font-bold" style={{ color: bmiColor }}>{bmi}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+              {(bloodWork.bp_readings?.length ?? 0) > 0 && (() => {
+                const latest = bloodWork.bp_readings![0];
+                const sColor = (good: boolean, warn: boolean) => good ? "#22c55e" : warn ? "#f59e0b" : "#ef4444";
+                const sysColor = sColor(latest.systolic < 120, latest.systolic <= 139);
+                const diaColor = sColor(latest.diastolic < 80, latest.diastolic <= 89);
+                return (
+                  <div className="mb-3">
+                    <div className="text-xs font-semibold mb-2" style={{ color: "#94a3b8" }}>
+                      Blood pressure · {new Date(latest.test_date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <div className="text-center px-2.5 py-1.5 rounded-lg" style={{ background: `${sysColor}10`, border: `1px solid ${sysColor}25`, minWidth: 78 }}>
+                        <div className="text-xs" style={{ color: "#64748b" }}>Systolic</div>
+                        <div className="text-sm font-bold" style={{ color: sysColor }}>{latest.systolic}</div>
+                      </div>
+                      <div className="text-center px-2.5 py-1.5 rounded-lg" style={{ background: `${diaColor}10`, border: `1px solid ${diaColor}25`, minWidth: 78 }}>
+                        <div className="text-xs" style={{ color: "#64748b" }}>Diastolic</div>
+                        <div className="text-sm font-bold" style={{ color: diaColor }}>{latest.diastolic}</div>
+                      </div>
+                      {latest.pulse != null && (
+                        <div className="text-center px-2.5 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)", minWidth: 78 }}>
+                          <div className="text-xs" style={{ color: "#64748b" }}>Pulse</div>
+                          <div className="text-sm font-bold" style={{ color: "#94a3b8" }}>{latest.pulse}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
               {bloodWork.lipid_profile.length > 0 && (() => {
                 const latest = bloodWork.lipid_profile[0];
                 type LipidKey = "total_cholesterol" | "hdl" | "ldl" | "triglycerides" | "chol_hdl_ratio";

@@ -396,8 +396,15 @@ export interface BloodPressureReading {
   pulse: number | null;         // bpm — optional
 }
 
+export interface WeightReading {
+  id: string;
+  test_date: string;            // "YYYY-MM-DD"
+  weight_kg: number;            // kg
+}
+
 export interface BloodWorkData {
   lipid_profile: LipidProfile[];
   thyroid_profile: ThyroidProfile[];
-  bp_readings?: BloodPressureReading[];   // optional — blood pressure history
+  bp_readings?: BloodPressureReading[];     // optional — blood pressure history
+  weight_readings?: WeightReading[];        // optional — body weight history
 }

@@ -16,7 +16,7 @@ const NAV: NavItem[] = [
   { id: "food",        label: "Food Log",     icon: "🍽️", desc: "Meals & nutrition" },
   { id: "activity",    label: "Activity",     icon: "🏃", desc: "Gym & movement" },
   { id: "medications", label: "Medications",  icon: "💊", desc: "Meds & supplements" },
-  { id: "bloodwork",   label: "Blood Work",   icon: "🩸", desc: "Lipid & thyroid labs" },
+  { id: "bloodwork",   label: "Blood Work & Vitals", icon: "🩸", desc: "Labs, BP & weight" },
   { id: "water-sleep", label: "Water & Sleep",icon: "💧", desc: "Hydration & rest" },
   { id: "reports",     label: "Reports",      icon: "📊", desc: "AI insights" },
 ];
