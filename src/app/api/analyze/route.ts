@@ -53,8 +53,14 @@ export async function POST(req: Request) {
       loadActivityHistory(90),
     ]);
 
+    // Good to Eat options, pre-filtered to items NOT eaten in the past 7 days.
+    // Doing this server-side keeps the prompt smaller (and the suggestions identical).
+    const eatenThisWeek = new Set<string>();
+    for (const names of Object.values(weekFoodsByMeal)) {
+      for (const n of names) eatenThisWeek.add(n.toLowerCase());
+    }
     const goodToEatNames = foodPrefs.encourage
-      .filter(i => i.enabled)
+      .filter(i => i.enabled && !eatenThisWeek.has(i.name.toLowerCase()))
       .map(i => i.name);
 
     // Only ask the AI for trend analysis once there's enough history to be meaningful
@@ -66,7 +72,7 @@ export async function POST(req: Request) {
         : "";
 
     const prompt = buildAnalysisPrompt(
-      profile, rules, log, goodToEatNames, weekFoodsByMeal, activityHistorySummary, wellnessHistorySummary
+      profile, rules, log, goodToEatNames, activityHistorySummary, wellnessHistorySummary
     );
 
     const groq = getGroqClient();
@@ -82,7 +88,10 @@ export async function POST(req: Request) {
       ],
       response_format: { type: "json_object" },
       temperature: 0.3,
-      max_tokens: 6000,
+      // Reserved completion budget. The full structured reply runs ~2,500–3,000
+      // tokens; 4,500 leaves ample headroom while keeping us well under the
+      // per-minute token cap (Groq counts prompt + max_tokens against TPM).
+      max_tokens: 4500,
     });
 
     const raw = completion.choices[0].message.content ?? "{}";
