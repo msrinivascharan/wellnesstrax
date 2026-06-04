@@ -65,6 +65,7 @@ Your health data **never leaves your machine** except the anonymised text log se
 
 ### Activity & wellness
 - **Gym session timing** — log gym in/out time; duration auto-calculated and shown as a pill
+- **Gym defaults carry forward** — a new day pre-fills the gym exercises and their weights/reps from your most recent logged gym session; change them and the new values become the default from then on (gym only)
 - **Badminton** — log each session's duration, intensity (light/moderate/intense), games, and win/loss
 - **Daytime nap tracking** — log nap start/end times; duration auto-calculated
 - **Breathing exercise tracker** — log Box (4-4-4-4) and Long-Exhale (4-7-8) rounds with progress bars

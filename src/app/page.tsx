@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import type {
   DayLog, UserProfile, FoodItemsData, ActivitiesData,
   MealType, FoodEntry, ActivityLog, MedicationEntry, SupplementEntry,
-  SleepLog, DayAnalysis, FoodPreferences,
+  SleepLog, DayAnalysis, FoodPreferences, ExerciseEntry,
 } from "@/types";
 import Sidebar, { type SectionId } from "@/components/Sidebar";
 import Dashboard from "@/components/sections/Dashboard";
@@ -82,6 +82,34 @@ function makeEmptyLog(profile: UserProfile, supplements: SuppDef[], date: string
   };
 }
 
+/**
+ * Seed a fresh day's GYM exercises (only) from the most recent logged gym
+ * session, so today's input carries forward as tomorrow's default. did_gym is
+ * left false — the exercises are pre-filled but the user still confirms the day.
+ */
+async function withGymDefaults(log: DayLog, date: string): Promise<DayLog> {
+  try {
+    const res = await fetch(`/api/last-gym?before=${date}`);
+    if (!res.ok) return log;
+    const { data } = await res.json() as { data?: { exercises: ExerciseEntry[]; started_at: string } | null };
+    if (!data?.exercises?.length) return log;
+    return {
+      ...log,
+      activity: {
+        ...log.activity,
+        gym: {
+          ...log.activity.gym,
+          did_gym: false,
+          exercises: structuredClone(data.exercises),
+          started_at: data.started_at || log.activity.gym.started_at,
+        },
+      },
+    };
+  } catch {
+    return log;
+  }
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -148,8 +176,9 @@ export default function Home() {
     const sessRes = await fetch(`/api/sessions/${date}`);
 
     if (!sessRes.ok) {
-      // No file for this date — return blank log; don't save yet (user may just be browsing)
-      return fresh;
+      // No file for this date — return blank log seeded with the last gym's
+      // exercises; don't save yet (user may just be browsing).
+      return await withGymDefaults(fresh, date);
     }
 
     const raw = await sessRes.json() as { log?: Partial<DayLog> };
@@ -305,13 +334,14 @@ export default function Home() {
           setDayLog(merged);
           logRef.current = merged;
         } else {
-          // Fresh day — create the file immediately
-          setDayLog(fresh);
-          logRef.current = fresh;
+          // Fresh day — seed gym from the last session, then create the file
+          const seeded = await withGymDefaults(fresh, today);
+          setDayLog(seeded);
+          logRef.current = seeded;
           await fetch(`/api/sessions/${today}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ log: fresh }),
+            body: JSON.stringify({ log: seeded }),
           });
         }
       } catch (e) {

@@ -32,7 +32,9 @@ function rollup(date: string, session: RawSession | undefined): DailyActivityPoi
   const gym = activity?.gym;
   const gymDone = !!gym?.did_gym;
   const gymMin = gymDone ? minutesBetween(gym?.started_at, gym?.ended_at) : 0;
-  const exercises = gym?.exercises ?? [];
+  // Only count exercises when the gym was actually done — a day may carry
+  // pre-filled (default) exercises with did_gym=false that must not inflate trends.
+  const exercises = gymDone ? (gym?.exercises ?? []) : [];
   const exerciseCount = exercises.length;
 
   // Cardio / strength split + muscle work

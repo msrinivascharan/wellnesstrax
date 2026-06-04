@@ -40,3 +40,24 @@ export async function deleteSession(date: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Finds the most recent gym session strictly before `beforeDate` where the gym
+ * was actually done and exercises were logged. Used to pre-fill the gym defaults
+ * for a new day, so the latest entry carries forward automatically.
+ */
+export async function getLastGymBefore(
+  beforeDate: string
+): Promise<{ exercises: unknown[]; started_at: string } | null> {
+  const dates = (await listSessions()).filter(d => d < beforeDate); // newest-first
+  for (const date of dates) {
+    const session = await getSession(date) as {
+      activity?: { gym?: { did_gym?: boolean; started_at?: string; exercises?: unknown[] } };
+    } | null;
+    const gym = session?.activity?.gym;
+    if (gym?.did_gym && Array.isArray(gym.exercises) && gym.exercises.length > 0) {
+      return { exercises: gym.exercises, started_at: gym.started_at ?? "07:00" };
+    }
+  }
+  return null;
+}
