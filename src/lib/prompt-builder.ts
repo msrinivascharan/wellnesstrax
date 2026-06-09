@@ -24,7 +24,8 @@ export function buildAnalysisPrompt(
     .map(meal => {
       const items = log.food[meal];
       if (!items || items.length === 0) return `  ${meal}: nothing logged`;
-      const list = items.map(f => `${f.name} (${f.quantity_g}g${f.unit ? " " + f.unit : ""})`).join(", ");
+      // quantity_g holds the logged amount in the item's own unit (g / ml / pieces / cups / …)
+      const list = items.map(f => `${f.name} (${f.quantity_g} ${f.unit || "g"})`).join(", ");
       return `  ${meal}: ${list}`;
     })
     .join("\n");
