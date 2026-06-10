@@ -394,6 +394,7 @@ export interface BloodPressureReading {
   systolic: number;             // mmHg
   diastolic: number;            // mmHg
   pulse: number | null;         // bpm — optional
+  arm?: "left" | "right" | null; // which arm the cuff was on — optional
 }
 
 export interface WeightReading {
@@ -407,4 +408,5 @@ export interface BloodWorkData {
   thyroid_profile: ThyroidProfile[];
   bp_readings?: BloodPressureReading[];     // optional — blood pressure history
   weight_readings?: WeightReading[];        // optional — body weight history
+  weight_target_kg?: number | null;         // optional — target body weight
 }

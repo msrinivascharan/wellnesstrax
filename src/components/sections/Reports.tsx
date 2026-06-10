@@ -824,7 +824,9 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <div className="text-center px-2.5 py-1.5 rounded-lg" style={{ background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)", minWidth: 90 }}>
-                        <div className="text-xs" style={{ color: "#64748b" }}>Weight</div>
+                        <div className="text-xs" style={{ color: "#64748b" }}>
+                          Weight{bloodWork.weight_target_kg != null ? ` (target ${bloodWork.weight_target_kg} kg)` : ""}
+                        </div>
                         <div className="text-sm font-bold" style={{ color: "#5eead4" }}>
                           {latest.weight_kg} kg
                           {delta !== null && delta !== 0 && (
@@ -851,6 +853,7 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
                   <div className="mb-3">
                     <div className="text-xs font-semibold mb-2" style={{ color: "#94a3b8" }}>
                       Blood pressure · {new Date(latest.test_date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                      {latest.arm && <span style={{ color: "#64748b" }}> · {latest.arm} arm</span>}
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <div className="text-center px-2.5 py-1.5 rounded-lg" style={{ background: `${sysColor}10`, border: `1px solid ${sysColor}25`, minWidth: 78 }}>

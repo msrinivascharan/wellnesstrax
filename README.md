@@ -37,7 +37,7 @@ Your health data **never leaves your machine** except the anonymised text log se
 ## Key Features
 
 ### Food logging
-- **Typeahead search** — start typing and pick from a deduplicated pool of your **Good to Eat** list plus the pre-defined `food_items.json`; already-logged items are shown as crossed-out so you never double-add
+- **Typeahead search** — start typing and pick from a deduplicated pool of your **Good to Eat** list, your **Must Avoid** list (shown with a red ⚠ warning — log what you actually ate so Reports can flag it), plus the pre-defined `food_items.json`; already-logged items are shown as crossed-out so you never double-add
 - **Quantity + unit picker** — after selecting an item, set the amount with smart default units (g / ml / pieces / cups / tbsp / tsp), auto-guessed from the food name
 - **Rich Must Avoid / Good to Eat lists** — each item carries `{ name, category, subcategory, frequency, notes, enabled }`
   - **Category filter pills** to slice each list by group (Vegetables, Fruits, Fried Foods, Sweets, etc.)
@@ -74,8 +74,9 @@ Your health data **never leaves your machine** except the anonymised text log se
 ### Blood work & vitals
 - **Four panels** — Lipid profile, Thyroid profile, **Blood Pressure**, and **Weight**, each with history, trend arrows, and cardiac-patient reference ranges
 - **TSH-only thyroid panels** — leave T3/T4 blank when not tested (stored as null, never flagged as out-of-range)
-- **Blood pressure** — systolic/diastolic (required) + optional pulse, scored against a `<130/80` cardiac target with an interpretation banner
+- **Blood pressure** — systolic/diastolic (required) + optional pulse and **cuff arm (left/right)**, scored against a `<130/80` cardiac target with an interpretation banner
 - **Weight** — log weight (kg) over time; **BMI is auto-computed** from your profile height, colour-coded against the healthy range, with the change since the previous reading
+- **Target weight** — set/update a goal weight; the Weight tab shows "X kg to lose/gain" against your latest reading, and Reports shows the target alongside your current weight
 
 ### Medications
 - **Time-aware alerts** — missed warnings only appear after the scheduled dose time has passed

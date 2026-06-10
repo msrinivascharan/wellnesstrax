@@ -313,14 +313,23 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
   const meal = activeMeal;
   const entries = dayLog.food[meal] ?? [];
 
-  // ── Search pool: encourage list + food_items.json (all meals), deduplicated ──
-  const searchPool: Array<{ name: string; category: string }> = (() => {
+  // ── Search pool: encourage + avoid lists + food_items.json, deduplicated ──
+  // Must Avoid items ARE searchable — you log what you actually ate, and
+  // Reports flags it. They carry an avoid marker so the dropdown warns you.
+  const searchPool: Array<{ name: string; category: string; avoid?: boolean }> = (() => {
     const seen = new Set<string>();
-    const pool: Array<{ name: string; category: string }> = [];
+    const pool: Array<{ name: string; category: string; avoid?: boolean }> = [];
     // Primary: Good to Eat list (with full category info)
     for (const item of foodPrefs.encourage) {
       const lc = item.name.toLowerCase();
       if (!seen.has(lc)) { seen.add(lc); pool.push({ name: item.name, category: item.category }); }
+    }
+    // Must Avoid list — category "Custom" so the entry is auto-categorised
+    // into the right plate group on add (avoid categories like "Refined
+    // Grains" don't map to balanced-plate buckets)
+    for (const item of foodPrefs.avoid) {
+      const lc = item.name.toLowerCase();
+      if (!seen.has(lc)) { seen.add(lc); pool.push({ name: item.name, category: "Custom", avoid: true }); }
     }
     // Secondary: food_items.json (all meals, all categories)
     for (const cats of Object.values(foodItems.meals)) {
@@ -647,7 +656,12 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
                         {already && (
                           <span className="text-xs font-medium" style={{ color: "#14b8a6" }}>✓ added</span>
                         )}
-                        {s.category && (
+                        {s.avoid ? (
+                          <span className="text-xs px-1.5 py-0.5 rounded font-medium"
+                            style={{ background: "rgba(239,68,68,0.12)", color: "#f87171", border: "1px solid rgba(239,68,68,0.25)" }}>
+                            ⚠ Must Avoid
+                          </span>
+                        ) : s.category && (
                           <span className="text-xs px-1.5 py-0.5 rounded"
                             style={{ background: "var(--bg-input)", color: "#64748b" }}>
                             {s.category}
@@ -662,7 +676,7 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
           )}
         </div>
         <div className="text-xs" style={{ color: "#334155" }}>
-          {searchPool.length} items in your Good to Eat &amp; pre-defined lists — select one to set quantity
+          {searchPool.length} items across your Good to Eat, Must Avoid &amp; pre-defined lists — select one to set quantity
         </div>
       </div>
 

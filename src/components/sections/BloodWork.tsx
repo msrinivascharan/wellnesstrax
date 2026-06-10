@@ -52,7 +52,8 @@ const THYROID_RANGES: Record<keyof Omit<ThyroidProfile, "id" | "test_date">, { l
   },
 };
 
-const BP_RANGES: Record<keyof Omit<BloodPressureReading, "id" | "test_date">, { label: string; unit: string; good: string; status: (v: number) => Status }> = {
+type BpMetric = "systolic" | "diastolic" | "pulse";
+const BP_RANGES: Record<BpMetric, { label: string; unit: string; good: string; status: (v: number) => Status }> = {
   systolic: {
     label: "Systolic", unit: "mmHg", good: "<130 (cardiac target)",
     status: v => v < 120 ? "good" : v <= 139 ? "warn" : "risk",
@@ -66,7 +67,7 @@ const BP_RANGES: Record<keyof Omit<BloodPressureReading, "id" | "test_date">, { 
     status: v => v >= 60 && v <= 100 ? "good" : (v >= 50 && v <= 110) ? "warn" : "risk",
   },
 };
-const BP_OPTIONAL = new Set<keyof Omit<BloodPressureReading, "id" | "test_date">>(["pulse"]);
+const BP_OPTIONAL = new Set<BpMetric>(["pulse"]);
 
 function StatusDot({ s }: { s: Status | "none" }) {
   if (s === "none") return <span className="w-2 h-2 rounded-full shrink-0 inline-block" style={{ background: "#334155" }} />;
@@ -103,7 +104,7 @@ function emptyThyroid(): Omit<ThyroidProfile, "id"> {
 }
 
 function emptyBP(): Omit<BloodPressureReading, "id"> {
-  return { test_date: "", systolic: 0, diastolic: 0, pulse: null };
+  return { test_date: "", systolic: 0, diastolic: 0, pulse: null, arm: null };
 }
 
 function emptyWeight(): Omit<WeightReading, "id"> {
@@ -134,6 +135,7 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
   const [thyroidForm, setThyroidForm] = useState(emptyThyroid);
   const [bpForm, setBpForm]           = useState(emptyBP);
   const [weightForm, setWeightForm]   = useState(emptyWeight);
+  const [targetInput, setTargetInput] = useState("");
 
   const persist = useCallback(async (next: BloodWorkData) => {
     setSaving(true);
@@ -151,7 +153,10 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
   useEffect(() => {
     fetch("/api/bloodwork")
       .then(r => r.json())
-      .then((d: { data: BloodWorkData }) => setData(d.data))
+      .then((d: { data: BloodWorkData }) => {
+        setData(d.data);
+        setTargetInput(d.data.weight_target_kg != null ? String(d.data.weight_target_kg) : "");
+      })
       .catch(() => {});
   }, []);
 
@@ -227,6 +232,14 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
 
   function deleteWeight(id: string) {
     const next = { ...data, weight_readings: (data.weight_readings ?? []).filter(e => e.id !== id) };
+    setData(next);
+    persist(next);
+  }
+
+  function saveTargetWeight() {
+    const v = parseFloat(targetInput);
+    const target = !isNaN(v) && v > 0 ? Math.round(v * 10) / 10 : null;
+    const next = { ...data, weight_target_kg: target };
     setData(next);
     persist(next);
   }
@@ -394,6 +407,27 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
                 </div>
               );
             })}
+            <div>
+              <label className="block text-xs mb-1" style={{ color: "#64748b" }}>
+                Cuff arm <span style={{ color: "#334155" }}>— optional</span>
+              </label>
+              <div className="flex gap-1.5">
+                {(["left", "right"] as const).map(a => {
+                  const active = bpForm.arm === a;
+                  return (
+                    <button key={a} type="button"
+                      onClick={() => setBpForm(f => ({ ...f, arm: f.arm === a ? null : a }))}
+                      className="flex-1 py-2 rounded-xl text-xs font-medium capitalize transition-all"
+                      style={active
+                        ? { background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.4)" }
+                        : { background: "rgba(255,255,255,0.03)", color: "#475569", border: "1px solid var(--border)" }}>
+                      {a === "left" ? "🫲 Left" : "🫱 Right"}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="text-xs mt-0.5" style={{ color: "#334155" }}>Use the same arm for consistent trends</div>
+            </div>
           </div>
           {(() => {
             const valid = !!bpForm.test_date && bpForm.systolic > 0 && bpForm.diastolic > 0;
@@ -661,6 +695,11 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
                     <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(20,184,166,0.12)", color: "#5eead4" }}>
                       {entry.systolic}/{entry.diastolic} mmHg
                     </span>
+                    {entry.arm && (
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.05)", color: "#94a3b8" }}>
+                        {entry.arm === "left" ? "🫲 Left arm" : "🫱 Right arm"}
+                      </span>
+                    )}
                     {idx === 0 && (
                       <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(20,184,166,0.15)", color: "#14b8a6" }}>Latest</span>
                     )}
@@ -722,6 +761,55 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
       {/* ── Weight history ── */}
       {tab === "weight" && (
         <div className="space-y-3">
+          {/* Target weight */}
+          <div className="card p-4 space-y-3" style={{ border: "1px solid rgba(20,184,166,0.15)", background: "rgba(20,184,166,0.03)" }}>
+            <div className="flex items-center gap-2">
+              <span>🎯</span>
+              <span className="text-sm font-semibold text-white">Target weight</span>
+              {(() => {
+                if (data.weight_target_kg == null || weights.length === 0) return null;
+                const latest = weights[0].weight_kg;
+                const toGo = Math.round((latest - data.weight_target_kg) * 10) / 10;
+                if (toGo === 0) return (
+                  <span className="ml-auto text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e" }}>
+                    🎉 At target!
+                  </span>
+                );
+                return (
+                  <span className="ml-auto text-xs px-2 py-0.5 rounded-full"
+                    style={{ background: toGo > 0 ? "rgba(245,158,11,0.1)" : "rgba(34,197,94,0.1)", color: toGo > 0 ? "#fbbf24" : "#22c55e" }}>
+                    {Math.abs(toGo)} kg {toGo > 0 ? "to lose" : "to gain"}
+                  </span>
+                );
+              })()}
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="number" min="0" step="0.1" className="nb-input"
+                style={{ maxWidth: 130 }}
+                placeholder="e.g. 75"
+                value={targetInput}
+                onChange={e => setTargetInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && saveTargetWeight()} />
+              <span className="text-sm" style={{ color: "#64748b" }}>kg</span>
+              <button onClick={saveTargetWeight}
+                className="px-4 py-2 rounded-xl text-xs font-semibold transition-all"
+                style={{ background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.35)" }}>
+                {data.weight_target_kg != null ? "Update target" : "Set target"}
+              </button>
+              {data.weight_target_kg != null && (
+                <button onClick={() => { setTargetInput(""); const next = { ...data, weight_target_kg: null }; setData(next); persist(next); }}
+                  className="text-xs px-2 py-1 transition-colors" style={{ color: "#475569" }} title="Clear target">
+                  ✕ Clear
+                </button>
+              )}
+              {(() => {
+                const v = parseFloat(targetInput);
+                const bmi = !isNaN(v) ? calcBMI(v, heightFt) : null;
+                return bmi ? <span className="text-xs" style={{ color: "#334155" }}>≈ BMI {bmi}</span> : null;
+              })()}
+            </div>
+          </div>
+
           {weights.length === 0 ? (
             <div className="card p-8 text-center">
               <div className="text-3xl mb-3">⚖️</div>

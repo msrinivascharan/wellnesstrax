@@ -13,9 +13,10 @@ async function read(): Promise<BloodWorkData> {
       thyroid_profile: data.thyroid_profile ?? [],
       bp_readings: data.bp_readings ?? [],
       weight_readings: data.weight_readings ?? [],
+      weight_target_kg: data.weight_target_kg ?? null,
     };
   } catch {
-    return { lipid_profile: [], thyroid_profile: [], bp_readings: [], weight_readings: [] };
+    return { lipid_profile: [], thyroid_profile: [], bp_readings: [], weight_readings: [], weight_target_kg: null };
   }
 }
 
