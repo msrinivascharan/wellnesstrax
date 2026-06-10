@@ -47,35 +47,6 @@ const BP_COLORS: Record<string, string> = {
   "Other":                 "#64748b",
 };
 
-// ─── Shared chart helpers ─────────────────────────────────────────────────────
-
-function BarRow({
-  label, value, max, color, valueSuffix = "", showValue = true,
-}: {
-  label: string; value: number; max: number; color: string; valueSuffix?: string; showValue?: boolean;
-}) {
-  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
-  return (
-    <div className="flex items-center gap-3">
-      <div className="text-xs shrink-0 truncate" style={{ width: 120, color: "#64748b" }}>{label}</div>
-      <div className="flex-1 rounded-full overflow-hidden" style={{ height: 7, background: "rgba(255,255,255,0.06)" }}>
-        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
-      </div>
-      {showValue && (
-        <div className="text-xs shrink-0 text-right" style={{ width: 80, color }}>
-          {value}{valueSuffix}
-          <span style={{ color: "#475569" }}>/{max}{valueSuffix}</span>
-        </div>
-      )}
-      {!showValue && (
-        <div className="text-xs shrink-0 text-right" style={{ width: 36, color }}>
-          {value}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Score arc ────────────────────────────────────────────────────────────────
 
 function ScoreArc({ score, label }: { score: number; label: string }) {
@@ -719,37 +690,6 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
           </InsightCard>
         )}
 
-        {/* Macro bars — only when analysis exists */}
-        {analysis && (
-          <div className="card p-4 space-y-3 fade-in-up">
-            <div className="flex items-center gap-2 mb-1">
-              <span>📐</span>
-              <span className="text-sm font-semibold text-white">Macro targets</span>
-              <span className="text-xs ml-auto" style={{ color: "#475569" }}>estimated vs daily target</span>
-            </div>
-            <BarRow
-              label="Calories"
-              value={analysis.nutrition.estimated_calories}
-              max={profile.daily_targets.calories}
-              color="#fb923c"
-              valueSuffix=" kcal"
-            />
-            <BarRow
-              label="Protein"
-              value={analysis.nutrition.estimated_protein_g}
-              max={profile.daily_targets.protein_g}
-              color="#a78bfa"
-              valueSuffix="g"
-            />
-            <BarRow
-              label="Fiber"
-              value={analysis.nutrition.estimated_fiber_g}
-              max={profile.daily_targets.fiber_g}
-              color="#86efac"
-              valueSuffix="g"
-            />
-          </div>
-        )}
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
