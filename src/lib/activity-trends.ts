@@ -87,7 +87,10 @@ function rollup(date: string, session: RawSession | undefined): DailyActivityPoi
     waterMl: session?.water_ml ?? 0,
     sleepHours: sleep?.hours ?? 0,
     sleepQuality: sleep?.quality ?? "",
-    napHours: sleep?.nap_hours ?? 0,
+    // naps[] is the source of truth when present; nap_hours covers legacy days
+    napHours: Array.isArray(sleep?.naps) && sleep.naps.length > 0
+      ? Math.round(sleep.naps.reduce((s, n) => s + (n.hours || 0), 0) * 10) / 10
+      : (sleep?.nap_hours ?? 0),
     postLunchDip: sleep?.post_lunch_sleepiness ?? "",
   };
 }

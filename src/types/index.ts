@@ -160,15 +160,24 @@ export interface SupplementEntry {
 
 // ─── Sleep ────────────────────────────────────────────────────────────────────
 
+/** One daytime nap (a day can have several) */
+export interface NapEntry {
+  start?: string;   // "HH:MM"
+  end?: string;     // "HH:MM" — auto-calculates hours when both set
+  hours: number;    // duration in hours (manually editable)
+}
+
 export interface SleepLog {
   hours: number;
   quality: "excellent" | "good" | "fair" | "poor" | "";
   bedtime: string;
   wake_time: string;
   notes: string;
-  nap_hours?: number;   // daytime / afternoon nap duration (default 0)
-  nap_start?: string;   // "HH:MM" — nap start time
-  nap_end?: string;     // "HH:MM" — nap end time (auto-calculates nap_hours)
+  /** All daytime naps. nap_hours is kept equal to their total for trends/back-compat. */
+  naps?: NapEntry[];
+  nap_hours?: number;   // total daytime nap duration across all naps
+  nap_start?: string;   // legacy single-nap start — migrated into naps[] on first edit
+  nap_end?: string;     // legacy single-nap end — migrated into naps[] on first edit
   /** Post-lunch drowsiness intensity (postprandial somnolence / post-lunch dip) */
   post_lunch_sleepiness?: "" | "none" | "controllable" | "uncontrollable";
   /** Evening energy dip / drowsiness intensity */
