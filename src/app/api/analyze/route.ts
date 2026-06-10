@@ -107,6 +107,19 @@ export async function POST(req: Request) {
       );
     }
 
+    // Validate next-day suggestions: keep only items that exist in the
+    // Good-to-Eat options we actually provided (drops LLM hallucinations),
+    // max 4 per meal. If the options list was empty, everything is dropped.
+    if (structured.next_day_meal_suggestions) {
+      const allowed = new Set(goodToEatNames.map(n => n.toLowerCase().trim()));
+      for (const m of ["breakfast", "lunch", "dinner", "snacks"] as const) {
+        const arr = structured.next_day_meal_suggestions[m];
+        structured.next_day_meal_suggestions[m] = Array.isArray(arr)
+          ? arr.filter(s => typeof s === "string" && allowed.has(s.toLowerCase().trim())).slice(0, 4)
+          : [];
+      }
+    }
+
     const updatedLog: DayLog = {
       ...log,
       analysis: structured,

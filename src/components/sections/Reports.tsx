@@ -659,6 +659,8 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
 
                   {/* Next-day suggestions — only after analysis */}
                   {(() => {
+                    // No suggestions on plates with nothing logged today
+                    if (isEmpty) return null;
                     const suggestions = analysis?.next_day_meal_suggestions?.[meal];
                     if (!suggestions || suggestions.length === 0) return null;
                     return (
