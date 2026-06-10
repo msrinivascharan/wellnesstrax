@@ -444,15 +444,16 @@ export default function ActivityLog({ dayLog, activitiesData, onUpdate }: Props)
             {/* Duration + games + wins + losses */}
             <div className="grid grid-cols-4 gap-2">
               {[
-                { label: "Minutes", key: "duration_min" as const, val: b.duration_min, max: 240 },
-                { label: "Games", key: "games" as const, val: b.games ?? 0, max: 50 },
-                { label: "Wins", key: "wins" as const, val: b.wins ?? 0, max: 50 },
-                { label: "Losses", key: "losses" as const, val: b.losses ?? 0, max: 50 },
+                { label: "Minutes", key: "duration_min" as const, val: b.duration_min, max: 240, hint: "e.g. 45" },
+                { label: "Games", key: "games" as const, val: b.games ?? 0, max: 50, hint: "e.g. 6" },
+                { label: "Wins", key: "wins" as const, val: b.wins ?? 0, max: 50, hint: "e.g. 4" },
+                { label: "Losses", key: "losses" as const, val: b.losses ?? 0, max: 50, hint: "e.g. 2" },
               ].map(f => (
                 <div key={f.key}>
                   <label className="block text-xs mb-1" style={{ color: "#64748b" }}>{f.label}</label>
                   <input type="number" min="0" max={f.max} className="nb-input-sm w-full text-center"
-                    value={f.val}
+                    placeholder={f.hint}
+                    value={f.val || ""}
                     onChange={e => updateBadminton(i, { [f.key]: parseInt(e.target.value) || 0 })} />
                 </div>
               ))}

@@ -92,23 +92,26 @@ function trendColor(curr: number, prev: number, higherIsBetter: boolean): string
 
 // ─── Empty form states ────────────────────────────────────────────────────────
 
+/** Today's date as YYYY-MM-DD — date fields default to today, editable. */
+function todayISO() { return new Date().toISOString().split("T")[0]; }
+
 function emptyLipid(): Omit<LipidProfile, "id"> {
-  return { test_date: "", total_cholesterol: 0, hdl: 0, ldl: 0, vldl: 0, triglycerides: 0, chol_hdl_ratio: 0, non_hdl: 0 };
+  return { test_date: todayISO(), total_cholesterol: 0, hdl: 0, ldl: 0, vldl: 0, triglycerides: 0, chol_hdl_ratio: 0, non_hdl: 0 };
 }
 
 // T3 and T4 are optional — not every panel tests them
 const THYROID_OPTIONAL = new Set<keyof Omit<ThyroidProfile, "id" | "test_date">>(["t3_ng_ml", "t4_ug_dl"]);
 
 function emptyThyroid(): Omit<ThyroidProfile, "id"> {
-  return { test_date: "", t3_ng_ml: null, t4_ug_dl: null, tsh_uiu_ml: 0 };
+  return { test_date: todayISO(), t3_ng_ml: null, t4_ug_dl: null, tsh_uiu_ml: 0 };
 }
 
 function emptyBP(): Omit<BloodPressureReading, "id"> {
-  return { test_date: "", systolic: 0, diastolic: 0, pulse: null, arm: null };
+  return { test_date: todayISO(), systolic: 0, diastolic: 0, pulse: null, arm: null };
 }
 
 function emptyWeight(): Omit<WeightReading, "id"> {
-  return { test_date: "", weight_kg: 0 };
+  return { test_date: todayISO(), weight_kg: 0 };
 }
 
 /** BMI from weight (kg) and height (decimal feet). Returns null if height unknown. */
@@ -161,7 +164,7 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
   }, []);
 
   function saveLipid() {
-    if (!lipidForm.test_date) return;
+    if (!lipidForm.test_date || lipidForm.total_cholesterol <= 0) return;
     const entry: LipidProfile = { id: genId(), ...lipidForm };
     const next: BloodWorkData = {
       ...data,
@@ -174,7 +177,7 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
   }
 
   function saveThyroid() {
-    if (!thyroidForm.test_date) return;
+    if (!thyroidForm.test_date || thyroidForm.tsh_uiu_ml <= 0) return;
     const entry: ThyroidProfile = { id: genId(), ...thyroidForm };
     const next: BloodWorkData = {
       ...data,
@@ -302,7 +305,7 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
                   {LIPID_RANGES[k].label} {LIPID_RANGES[k].unit && `(${LIPID_RANGES[k].unit})`}
                 </label>
                 <input type="number" min="0" step="0.1" className="nb-input w-full"
-                  placeholder="0"
+                  placeholder={{ total_cholesterol: "e.g. 160", hdl: "e.g. 50", ldl: "e.g. 80", vldl: "e.g. 20", triglycerides: "e.g. 120", chol_hdl_ratio: "e.g. 3.2", non_hdl: "e.g. 110" }[k]}
                   value={lipidForm[k] || ""}
                   onChange={e => setLipidForm(f => ({ ...f, [k]: parseFloat(e.target.value) || 0 }))} />
                 <div className="text-xs mt-0.5" style={{ color: "#334155" }}>{LIPID_RANGES[k].good}</div>
@@ -310,9 +313,9 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
             ))}
           </div>
           <div className="flex gap-2 pt-1">
-            <button onClick={saveLipid} disabled={!lipidForm.test_date}
+            <button onClick={saveLipid} disabled={!lipidForm.test_date || lipidForm.total_cholesterol <= 0}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-              style={lipidForm.test_date
+              style={lipidForm.test_date && lipidForm.total_cholesterol > 0
                 ? { background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.35)" }
                 : { background: "rgba(255,255,255,0.04)", color: "#334155", border: "1px solid var(--border)", cursor: "not-allowed" }}>
               Save result
@@ -347,7 +350,7 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
                   </label>
                   <input type="number" min="0" step="0.01" className="nb-input w-full"
                     placeholder={optional ? "Leave blank if not tested" : "e.g. 1.5"}
-                    value={thyroidForm[k] ?? ""}
+                    value={thyroidForm[k] || ""}
                     onChange={e => {
                       const raw = e.target.value;
                       setThyroidForm(f => ({
@@ -361,9 +364,9 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
             })}
           </div>
           <div className="flex gap-2 pt-1">
-            <button onClick={saveThyroid} disabled={!thyroidForm.test_date}
+            <button onClick={saveThyroid} disabled={!thyroidForm.test_date || thyroidForm.tsh_uiu_ml <= 0}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-              style={thyroidForm.test_date
+              style={thyroidForm.test_date && thyroidForm.tsh_uiu_ml > 0
                 ? { background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.35)" }
                 : { background: "rgba(255,255,255,0.04)", color: "#334155", border: "1px solid var(--border)", cursor: "not-allowed" }}>
               Save result
@@ -398,7 +401,7 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
                   </label>
                   <input type="number" min="0" step="1" className="nb-input w-full"
                     placeholder={optional ? "Leave blank if not measured" : k === "systolic" ? "e.g. 120" : "e.g. 80"}
-                    value={bpForm[k] ?? ""}
+                    value={bpForm[k] || ""}
                     onChange={e => {
                       const raw = e.target.value;
                       setBpForm(f => ({ ...f, [k]: raw === "" ? (optional ? null : 0) : parseInt(raw) }));

@@ -131,7 +131,8 @@ export default function WaterSleep({ dayLog, profile, onUpdate }: Props) {
               step="50"
               className="nb-input"
               style={{ maxWidth: 160 }}
-              value={water_ml}
+              placeholder="e.g. 1500"
+              value={water_ml || ""}
               onChange={e => setWater(parseInt(e.target.value) || 0)}
             />
             <span className="text-sm" style={{ color: "#64748b" }}>ml</span>
