@@ -400,10 +400,24 @@ export interface ThyroidProfile {
 export interface BloodPressureReading {
   id: string;
   test_date: string;            // "YYYY-MM-DD"
+  time?: string;                // "HH:MM" — hour of day the reading was taken
   systolic: number;             // mmHg
   diastolic: number;            // mmHg
   pulse: number | null;         // bpm — optional
   arm?: "left" | "right" | null; // which arm the cuff was on — optional
+}
+
+/**
+ * Daily mood check-in — simplified circumplex model of affect
+ * (valence × energy) plus stress, which is cardiac-relevant. One per day.
+ */
+export interface MoodEntry {
+  id: string;
+  test_date: string;            // "YYYY-MM-DD" — one entry per day
+  valence: number;              // 1 very low · 2 low · 3 neutral · 4 good · 5 great
+  energy: "" | "low" | "medium" | "high";   // arousal dimension — optional
+  stress: "" | "low" | "medium" | "high";   // perceived stress — optional
+  note?: string;                // what influenced it
 }
 
 export interface WeightReading {
@@ -418,4 +432,5 @@ export interface BloodWorkData {
   bp_readings?: BloodPressureReading[];     // optional — blood pressure history
   weight_readings?: WeightReading[];        // optional — body weight history
   weight_target_kg?: number | null;         // optional — target body weight
+  mood_entries?: MoodEntry[];               // optional — daily mood check-ins
 }

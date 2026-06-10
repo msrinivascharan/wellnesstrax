@@ -1,6 +1,25 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import type { BloodWorkData, LipidProfile, ThyroidProfile, BloodPressureReading, WeightReading, UserProfile } from "@/types";
+import type { BloodWorkData, LipidProfile, ThyroidProfile, BloodPressureReading, WeightReading, MoodEntry, UserProfile } from "@/types";
+
+// ─── Mood meta (circumplex: valence × energy, + stress) ───────────────────────
+
+const MOOD_LEVELS = [
+  { v: 1, icon: "😞", label: "Very low", color: "#ef4444" },
+  { v: 2, icon: "🙁", label: "Low",      color: "#fb923c" },
+  { v: 3, icon: "😐", label: "Neutral",  color: "#94a3b8" },
+  { v: 4, icon: "🙂", label: "Good",     color: "#86efac" },
+  { v: 5, icon: "😄", label: "Great",    color: "#22c55e" },
+] as const;
+
+const moodMeta = (v: number) => MOOD_LEVELS.find(m => m.v === v);
+
+const ENERGY_COLORS: Record<"low" | "medium" | "high", string> = {
+  low: "#64748b", medium: "#60a5fa", high: "#2dd4bf",
+};
+const STRESS_COLORS: Record<"low" | "medium" | "high", string> = {
+  low: "#22c55e", medium: "#f59e0b", high: "#ef4444",
+};
 
 // ─── Reference range helpers ──────────────────────────────────────────────────
 
@@ -106,12 +125,19 @@ function emptyThyroid(): Omit<ThyroidProfile, "id"> {
   return { test_date: todayISO(), t3_ng_ml: null, t4_ug_dl: null, tsh_uiu_ml: 0 };
 }
 
+/** Current time as HH:MM — BP time defaults to now, editable. */
+function nowHHMM() { return new Date().toTimeString().slice(0, 5); }
+
 function emptyBP(): Omit<BloodPressureReading, "id"> {
-  return { test_date: todayISO(), systolic: 0, diastolic: 0, pulse: null, arm: null };
+  return { test_date: todayISO(), time: nowHHMM(), systolic: 0, diastolic: 0, pulse: null, arm: null };
 }
 
 function emptyWeight(): Omit<WeightReading, "id"> {
   return { test_date: todayISO(), weight_kg: 0 };
+}
+
+function emptyMood(): Omit<MoodEntry, "id"> {
+  return { test_date: todayISO(), valence: 0, energy: "", stress: "", note: "" };
 }
 
 /** BMI from weight (kg) and height (decimal feet). Returns null if height unknown. */
@@ -130,7 +156,7 @@ function genId() { return Date.now().toString(36) + Math.random().toString(36).s
 
 export default function BloodWork({ profile }: { profile?: UserProfile }) {
   const [data, setData]         = useState<BloodWorkData>({ lipid_profile: [], thyroid_profile: [] });
-  const [tab, setTab]           = useState<"lipid" | "thyroid" | "bp" | "weight">("lipid");
+  const [tab, setTab]           = useState<"lipid" | "thyroid" | "bp" | "weight" | "mood">("lipid");
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving]     = useState(false);
 
@@ -138,6 +164,7 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
   const [thyroidForm, setThyroidForm] = useState(emptyThyroid);
   const [bpForm, setBpForm]           = useState(emptyBP);
   const [weightForm, setWeightForm]   = useState(emptyWeight);
+  const [moodForm, setMoodForm]       = useState(emptyMood);
   const [targetInput, setTargetInput] = useState("");
 
   const persist = useCallback(async (next: BloodWorkData) => {
@@ -247,10 +274,32 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
     persist(next);
   }
 
+  function saveMood() {
+    if (!moodForm.test_date || moodForm.valence < 1) return;
+    const entry: MoodEntry = { id: genId(), ...moodForm, note: moodForm.note?.trim() };
+    const next: BloodWorkData = {
+      ...data,
+      // one check-in per day — a new save for the same date replaces it
+      mood_entries: [entry, ...(data.mood_entries ?? []).filter(e => e.test_date !== entry.test_date)]
+        .sort((a, b) => b.test_date.localeCompare(a.test_date)),
+    };
+    setData(next);
+    persist(next);
+    setMoodForm(emptyMood());
+    setShowForm(false);
+  }
+
+  function deleteMood(id: string) {
+    const next = { ...data, mood_entries: (data.mood_entries ?? []).filter(e => e.id !== id) };
+    setData(next);
+    persist(next);
+  }
+
   const lipids   = data.lipid_profile;
   const thyroids = data.thyroid_profile;
   const bps      = data.bp_readings ?? [];
   const weights  = data.weight_readings ?? [];
+  const moods    = data.mood_entries ?? [];
   const heightFt = profile?.height_ft ?? 0;
 
   return (
@@ -260,7 +309,7 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
         <div>
           <h2 className="text-xl font-bold text-white">Blood Work &amp; Vitals</h2>
           <p className="text-xs mt-0.5" style={{ color: "#64748b" }}>
-            Track over time — Lipid, Thyroid, Blood Pressure &amp; Weight
+            Track over time — Lipid, Thyroid, Blood Pressure, Weight &amp; Mood
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -276,13 +325,13 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
 
       {/* Tabs */}
       <div className="flex gap-2">
-        {(["lipid", "thyroid", "bp", "weight"] as const).map(t => (
+        {(["lipid", "thyroid", "bp", "weight", "mood"] as const).map(t => (
           <button key={t} onClick={() => { setTab(t); setShowForm(false); }}
             className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
             style={tab === t
               ? { background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.35)" }
               : { background: "rgba(255,255,255,0.04)", color: "#64748b", border: "1px solid var(--border)" }}>
-            {t === "lipid" ? "🧪 Lipid Profile" : t === "thyroid" ? "🦋 Thyroid Profile" : t === "bp" ? "🩺 Blood Pressure" : "⚖️ Weight"}
+            {t === "lipid" ? "🧪 Lipid Profile" : t === "thyroid" ? "🦋 Thyroid Profile" : t === "bp" ? "🩺 Blood Pressure" : t === "weight" ? "⚖️ Weight" : "🙂 Mood"}
           </button>
         ))}
       </div>
@@ -384,12 +433,21 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
         <div className="card p-4 space-y-4 fade-in-up">
           <div className="section-header">Add blood pressure reading</div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
+            <div>
               <label className="block text-xs mb-1" style={{ color: "#64748b" }}>Date *</label>
               <input type="date" className="nb-input w-full"
                 max={new Date().toISOString().split("T")[0]}
                 value={bpForm.test_date}
                 onChange={e => setBpForm(f => ({ ...f, test_date: e.target.value }))} />
+            </div>
+            <div>
+              <label className="block text-xs mb-1" style={{ color: "#64748b" }}>
+                Time of day <span style={{ color: "#334155" }}>— defaults to now</span>
+              </label>
+              <input type="time" className="nb-input w-full"
+                value={bpForm.time ?? ""}
+                onChange={e => setBpForm(f => ({ ...f, time: e.target.value }))} />
+              <div className="text-xs mt-0.5" style={{ color: "#334155" }}>Measure at a consistent hour for comparable trends</div>
             </div>
             {(Object.keys(BP_RANGES) as Array<keyof typeof BP_RANGES>).map(k => {
               const optional = BP_OPTIONAL.has(k);
@@ -489,6 +547,101 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
                   Save reading
                 </button>
                 <button onClick={() => { setShowForm(false); setWeightForm(emptyWeight()); }}
+                  className="px-4 py-2 rounded-xl text-sm transition-all"
+                  style={{ background: "rgba(255,255,255,0.04)", color: "#64748b", border: "1px solid var(--border)" }}>
+                  Cancel
+                </button>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {showForm && tab === "mood" && (
+        <div className="card p-4 space-y-4 fade-in-up">
+          <div className="section-header">Daily mood check-in</div>
+          <div>
+            <label className="block text-xs mb-1" style={{ color: "#64748b" }}>Date *</label>
+            <input type="date" className="nb-input" style={{ maxWidth: 200 }}
+              max={new Date().toISOString().split("T")[0]}
+              value={moodForm.test_date}
+              onChange={e => setMoodForm(f => ({ ...f, test_date: e.target.value }))} />
+            <div className="text-xs mt-0.5" style={{ color: "#334155" }}>One check-in per day — saving again for the same date replaces it</div>
+          </div>
+
+          {/* Valence */}
+          <div>
+            <label className="block text-xs mb-1.5" style={{ color: "#64748b" }}>How was your mood overall? *</label>
+            <div className="grid grid-cols-5 gap-2">
+              {MOOD_LEVELS.map(m => {
+                const active = moodForm.valence === m.v;
+                return (
+                  <button key={m.v} type="button"
+                    onClick={() => setMoodForm(f => ({ ...f, valence: m.v }))}
+                    className="flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-medium transition-all"
+                    style={active
+                      ? { background: `${m.color}1f`, color: m.color, border: `1px solid ${m.color}55` }
+                      : { background: "rgba(255,255,255,0.03)", color: "#475569", border: "1px solid var(--border)" }}>
+                    <span className="text-lg">{m.icon}</span>
+                    {m.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Energy + Stress */}
+          <div className="grid grid-cols-2 gap-3">
+            {([
+              { key: "energy" as const, label: "Energy level", colors: ENERGY_COLORS, icons: { low: "🔋", medium: "⚡", high: "🚀" } },
+              { key: "stress" as const, label: "Stress level", colors: STRESS_COLORS, icons: { low: "😌", medium: "😬", high: "🤯" } },
+            ]).map(dim => (
+              <div key={dim.key}>
+                <label className="block text-xs mb-1.5" style={{ color: "#64748b" }}>
+                  {dim.label} <span style={{ color: "#334155" }}>— optional</span>
+                </label>
+                <div className="flex gap-1.5">
+                  {(["low", "medium", "high"] as const).map(lvl => {
+                    const active = moodForm[dim.key] === lvl;
+                    const color = dim.colors[lvl];
+                    return (
+                      <button key={lvl} type="button"
+                        onClick={() => setMoodForm(f => ({ ...f, [dim.key]: f[dim.key] === lvl ? "" : lvl }))}
+                        className="flex-1 py-2 rounded-xl text-xs font-medium capitalize transition-all"
+                        style={active
+                          ? { background: `${color}1f`, color, border: `1px solid ${color}55` }
+                          : { background: "rgba(255,255,255,0.03)", color: "#475569", border: "1px solid var(--border)" }}>
+                        {dim.icons[lvl]} {lvl}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Note */}
+          <div>
+            <label className="block text-xs mb-1" style={{ color: "#64748b" }}>What influenced it? <span style={{ color: "#334155" }}>— optional</span></label>
+            <input type="text" className="nb-input w-full"
+              placeholder="e.g. good gym session, poor sleep, work pressure…"
+              value={moodForm.note ?? ""}
+              onChange={e => setMoodForm(f => ({ ...f, note: e.target.value }))}
+              onKeyDown={e => e.key === "Enter" && saveMood()} />
+          </div>
+
+          {(() => {
+            const valid = !!moodForm.test_date && moodForm.valence >= 1;
+            return (
+              <div className="flex gap-2 pt-1">
+                <button onClick={saveMood} disabled={!valid}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+                  style={valid
+                    ? { background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.35)" }
+                    : { background: "rgba(255,255,255,0.04)", color: "#334155", border: "1px solid var(--border)", cursor: "not-allowed" }}>
+                  Save check-in
+                </button>
+                <button onClick={() => { setShowForm(false); setMoodForm(emptyMood()); }}
                   className="px-4 py-2 rounded-xl text-sm transition-all"
                   style={{ background: "rgba(255,255,255,0.04)", color: "#64748b", border: "1px solid var(--border)" }}>
                   Cancel
@@ -698,6 +851,11 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
                     <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(20,184,166,0.12)", color: "#5eead4" }}>
                       {entry.systolic}/{entry.diastolic} mmHg
                     </span>
+                    {entry.time && (
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.05)", color: "#94a3b8" }}>
+                        🕐 {entry.time}
+                      </span>
+                    )}
                     {entry.arm && (
                       <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.05)", color: "#94a3b8" }}>
                         {entry.arm === "left" ? "🫲 Left arm" : "🫱 Right arm"}
@@ -867,6 +1025,82 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
         </div>
       )}
 
+      {/* ── Mood history ── */}
+      {tab === "mood" && (
+        <div className="space-y-3">
+          {/* Last-14-days strip */}
+          {moods.length > 0 && (
+            <div className="card p-4 space-y-2">
+              <div className="text-xs font-semibold" style={{ color: "#94a3b8" }}>Last 14 days</div>
+              <div className="flex gap-1.5">
+                {Array.from({ length: 14 }, (_, i) => {
+                  const d = new Date();
+                  d.setDate(d.getDate() - (13 - i));
+                  const dateStr = d.toISOString().split("T")[0];
+                  const entry = moods.find(m => m.test_date === dateStr);
+                  const meta = entry ? moodMeta(entry.valence) : undefined;
+                  return (
+                    <div key={dateStr} className="flex-1 rounded"
+                      style={{ height: 26, background: meta ? `${meta.color}40` : "rgba(255,255,255,0.04)", border: `1px solid ${meta ? `${meta.color}70` : "var(--border)"}` }}
+                      title={`${dateStr}${meta ? ` — ${meta.label}` : " — no check-in"}`} />
+                  );
+                })}
+              </div>
+              <div className="flex justify-between text-xs" style={{ color: "#334155" }}>
+                <span>2 weeks ago</span><span>today</span>
+              </div>
+            </div>
+          )}
+
+          {moods.length === 0 ? (
+            <div className="card p-8 text-center">
+              <div className="text-3xl mb-3">🙂</div>
+              <div className="text-sm font-medium text-white">No mood check-ins yet</div>
+              <div className="text-xs mt-1" style={{ color: "#475569" }}>
+                Click &ldquo;+ Add test result&rdquo; for a 10-second daily check-in
+              </div>
+            </div>
+          ) : moods.map((entry, idx) => {
+            const meta = moodMeta(entry.valence);
+            return (
+              <div key={entry.id} className="card p-4 fade-in-up">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-white">
+                      {new Date(entry.test_date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    </span>
+                    {meta && (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        style={{ background: `${meta.color}1a`, color: meta.color, border: `1px solid ${meta.color}40` }}>
+                        {meta.icon} {meta.label}
+                      </span>
+                    )}
+                    {entry.energy && (
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.05)", color: ENERGY_COLORS[entry.energy] }}>
+                        ⚡ {entry.energy} energy
+                      </span>
+                    )}
+                    {entry.stress && (
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.05)", color: STRESS_COLORS[entry.stress] }}>
+                        😮‍💨 {entry.stress} stress
+                      </span>
+                    )}
+                    {idx === 0 && (
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(20,184,166,0.15)", color: "#14b8a6" }}>Latest</span>
+                    )}
+                  </div>
+                  <button onClick={() => deleteMood(entry.id)}
+                    className="text-xs px-2 py-1 rounded transition-colors hover:bg-red-950/40" style={{ color: "#475569" }}>✕</button>
+                </div>
+                {entry.note && (
+                  <div className="text-xs mt-2" style={{ color: "#94a3b8" }}>{entry.note}</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Reference guide */}
       <div className="card p-4 space-y-2" style={{ border: "1px solid rgba(20,184,166,0.15)", background: "rgba(20,184,166,0.03)" }}>
         <div className="flex items-center gap-2">
@@ -878,6 +1112,7 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
           <p>TSH 0.5–2.5 μIU/mL is the typical target while on thyroid replacement therapy.</p>
           <p>Blood pressure &lt;130/80 mmHg is the typical target for post-stent / cardiac patients.</p>
           <p>BMI 18.5–24.9 is the healthy range; lowering an elevated BMI eases cardiac load.</p>
+          <p>Mood check-in follows the circumplex model (valence × energy) plus stress — persistent low mood or high stress is worth raising with your doctor, as both affect cardiac health.</p>
           <p><span className="inline-block w-2 h-2 rounded-full mr-1 bg-green-500" />Within target &nbsp;
              <span className="inline-block w-2 h-2 rounded-full mr-1 bg-yellow-500" />Borderline &nbsp;
              <span className="inline-block w-2 h-2 rounded-full mr-1 bg-red-500" />At risk</p>

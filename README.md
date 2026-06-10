@@ -28,7 +28,7 @@ Your health data **never leaves your machine** except the anonymised text log se
 | 2 | **Food Log** | Log breakfast/lunch/dinner/snacks with meal time. **Typeahead search** adds items from your food lists, then a quantity/unit picker. Maintain rich **Must Avoid** / **Good to Eat** lists with category filters and per-item enable/disable |
 | 3 | **Activity** | Log gym session with in/out time and auto-calculated duration, exercises with sets/reps/weights, post-prandial walks, soleus pumps, **badminton** (duration/intensity/games), and breathing exercises |
 | 4 | **Medications** | Mark each scheduled medication and supplement taken with timestamp. Periodic injectable tracking with auto-calculated next-due status badge |
-| 5 | **Blood Work & Vitals** | Log and track **lipid, thyroid, blood-pressure, and weight** panels over time with trend arrows and reference ranges. Thyroid supports **TSH-only panels** (T3/T4 optional); BP captures systolic/diastolic + optional pulse; weight auto-computes **BMI** vs your target range |
+| 5 | **Blood Work & Vitals** | Log and track **lipid, thyroid, blood-pressure, weight, and daily mood** over time with trend arrows and reference ranges. Thyroid supports **TSH-only panels**; BP captures systolic/diastolic + optional pulse, time of day, and cuff arm; weight auto-computes **BMI** vs your target range; mood is a 10-second circumplex check-in |
 | 6 | **Water & Sleep** | Hydration tracker, sleep log (hours, quality, bedtime/wake), daytime nap with start/end times, and **post-lunch dip** + **evening dip** trackers |
 | 7 | **Reports** | Run AI analysis; meal-wise balanced-plate donuts (with Nutrition) and avoid-list flagging; **per-meal next-day suggestions**; **sectioned Activity trends** (Overall, Cardio, Strength + body **muscle map**, Indoor, Badminton); **Breathing**, **Hydration**, and **Sleep** trend sections — all with charts and AI insights; blood-work snapshot; and a date navigator to revisit any past day |
 
@@ -74,7 +74,8 @@ Your health data **never leaves your machine** except the anonymised text log se
 ### Blood work & vitals
 - **Four panels** — Lipid profile, Thyroid profile, **Blood Pressure**, and **Weight**, each with history, trend arrows, and cardiac-patient reference ranges
 - **TSH-only thyroid panels** — leave T3/T4 blank when not tested (stored as null, never flagged as out-of-range)
-- **Blood pressure** — systolic/diastolic (required) + optional pulse and **cuff arm (left/right)**, scored against a `<130/80` cardiac target with an interpretation banner
+- **Blood pressure** — systolic/diastolic (required) + optional pulse, **time of day** (defaults to now), and **cuff arm (left/right)**, scored against a `<130/80` cardiac target with an interpretation banner
+- **Daily mood check-in** — science-backed (circumplex model of affect): 5-level mood (valence), optional energy and stress levels, and a what-influenced-it note; one entry per day with a colour-coded last-14-days strip. Mood and stress are tracked because both directly affect cardiac health
 - **Weight** — log weight (kg) over time; **BMI is auto-computed** from your profile height, colour-coded against the healthy range, with the change since the previous reading
 - **Target weight** — set/update a goal weight; the Weight tab shows "X kg to lose/gain" against your latest reading, and Reports shows the target alongside your current weight
 
@@ -297,7 +298,7 @@ Defines available gym exercises and daily activities (post-prandial walks, soleu
 
 ### `data/bloodwork.json`
 
-Lipid, thyroid, blood-pressure, and weight history (`lipid_profile`, `thyroid_profile`, `bp_readings`, `weight_readings`). The thyroid panel supports **TSH-only** entries — leave T3/T4 blank and they are stored as `null` (shown as "not tested", never counted as out-of-range). Blood-pressure readings store systolic/diastolic (required) and an optional pulse. Weight readings store a date + weight in kg; BMI is computed live from your profile height.
+Lipid, thyroid, blood-pressure, weight, and mood history (`lipid_profile`, `thyroid_profile`, `bp_readings`, `weight_readings`, `mood_entries`). The thyroid panel supports **TSH-only** entries — leave T3/T4 blank and they are stored as `null` (shown as "not tested", never counted as out-of-range). Blood-pressure readings store systolic/diastolic (required) and an optional pulse. Weight readings store a date + weight in kg; BMI is computed live from your profile height.
 
 ### `data/injectable_meds.json`
 
