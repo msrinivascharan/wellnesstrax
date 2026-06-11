@@ -5,11 +5,16 @@ import type { BloodWorkData, LipidProfile, ThyroidProfile, BloodPressureReading,
 // ─── Mood meta (circumplex: valence × energy, + stress) ───────────────────────
 
 const MOOD_LEVELS = [
-  { v: 1, icon: "😞", label: "Very low", color: "#ef4444" },
-  { v: 2, icon: "🙁", label: "Low",      color: "#fb923c" },
-  { v: 3, icon: "😐", label: "Neutral",  color: "#94a3b8" },
-  { v: 4, icon: "🙂", label: "Good",     color: "#86efac" },
-  { v: 5, icon: "😄", label: "Great",    color: "#22c55e" },
+  { v: 1, icon: "😞", label: "Very low", color: "#ef4444",
+    desc: "Sad, hopeless or down most of the day.\ne.g. wanted to withdraw, nothing felt enjoyable, heavy or tearful." },
+  { v: 2, icon: "🙁", label: "Low",      color: "#fb923c",
+    desc: "Below your usual self — flat, irritable or worried.\ne.g. easily annoyed, low motivation, glass-half-empty day." },
+  { v: 3, icon: "😐", label: "Neutral",  color: "#94a3b8",
+    desc: "Neither good nor bad — steady and ordinary.\ne.g. routine day, no strong feelings either way." },
+  { v: 4, icon: "🙂", label: "Good",     color: "#86efac",
+    desc: "Generally positive and content.\ne.g. enjoyed meals or company, calm and satisfied, small wins felt good." },
+  { v: 5, icon: "😄", label: "Great",    color: "#22c55e",
+    desc: "Upbeat, optimistic and engaged.\ne.g. cheerful with family, motivated, laughed easily, felt grateful." },
 ] as const;
 
 const moodMeta = (v: number) => MOOD_LEVELS.find(m => m.v === v);
@@ -577,6 +582,7 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
                 const active = moodForm.valence === m.v;
                 return (
                   <button key={m.v} type="button"
+                    title={`${m.label} — ${m.desc}`}
                     onClick={() => setMoodForm(f => ({ ...f, valence: m.v }))}
                     className="flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-medium transition-all"
                     style={active
@@ -593,8 +599,24 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
           {/* Energy + Stress */}
           <div className="grid grid-cols-2 gap-3">
             {([
-              { key: "energy" as const, label: "Energy level", colors: ENERGY_COLORS, icons: { low: "🔋", medium: "⚡", high: "🚀" } },
-              { key: "stress" as const, label: "Stress level", colors: STRESS_COLORS, icons: { low: "😌", medium: "😬", high: "🤯" } },
+              {
+                key: "energy" as const, label: "Energy level", colors: ENERGY_COLORS,
+                icons: { low: "🔋", medium: "⚡", high: "🚀" },
+                descs: {
+                  low: "Low energy — drained or sluggish.\ne.g. needed naps, heavy legs, hard to start tasks, dozing on the sofa.",
+                  medium: "Medium energy — normal everyday level.\ne.g. handled routine work, chores and walks without struggle.",
+                  high: "High energy — alert and energetic.\ne.g. strong gym session, brisk walk felt easy, mentally sharp all day.",
+                },
+              },
+              {
+                key: "stress" as const, label: "Stress level", colors: STRESS_COLORS,
+                icons: { low: "😌", medium: "😬", high: "🤯" },
+                descs: {
+                  low: "Low stress — relaxed and in control.\ne.g. calm breathing, no looming worries, easy to unwind.",
+                  medium: "Medium stress — some pressure but manageable.\ne.g. deadlines or errands kept you tense at times, but you coped.",
+                  high: "High stress — overloaded or anxious.\ne.g. racing thoughts, tight chest or shoulders, snapping at people, hard to switch off.",
+                },
+              },
             ]).map(dim => (
               <div key={dim.key}>
                 <label className="block text-xs mb-1.5" style={{ color: "#64748b" }}>
@@ -606,6 +628,7 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
                     const color = dim.colors[lvl];
                     return (
                       <button key={lvl} type="button"
+                        title={dim.descs[lvl]}
                         onClick={() => setMoodForm(f => ({ ...f, [dim.key]: f[dim.key] === lvl ? "" : lvl }))}
                         className="flex-1 py-2 rounded-xl text-xs font-medium capitalize transition-all"
                         style={active
