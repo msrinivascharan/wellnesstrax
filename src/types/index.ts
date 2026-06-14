@@ -196,9 +196,22 @@ export interface DayLog {
   medications: MedicationEntry[];
   supplements: SupplementEntry[];
   activity: ActivityLog;
+  /** Weight-loss-plan checklist item ids ticked for this day */
+  weight_plan_checks?: string[];
   analysis?: DayAnalysis;
   created_at: string;
   updated_at: string;
+}
+
+// ─── Weight loss plan (weight_plan.json) ──────────────────────────────────────
+
+export interface WeightPlanItem {
+  id: string;
+  label: string;
+}
+
+export interface WeightPlan {
+  checklist: WeightPlanItem[];
 }
 
 // ─── Analysis output ──────────────────────────────────────────────────────────
