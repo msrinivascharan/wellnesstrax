@@ -2,6 +2,7 @@
 import { useState } from "react";
 import type { DayLog, FoodEntry, FoodItemsData, FoodPreferences, FoodPreferenceItem, MealType } from "@/types";
 import { autoCategory, resolveCategory } from "@/lib/food-utils";
+import BreakfastPlanner from "@/components/sections/BreakfastPlanner";
 
 interface Props {
   dayLog: DayLog;
@@ -298,6 +299,7 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
   const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showPlanner, setShowPlanner] = useState(false);
   // ── Preference list UI state ──────────────────────────────────────────────
   const [avoidCatFilter, setAvoidCatFilter]       = useState("");
   const [encourageCatFilter, setEncourageCatFilter] = useState("");
@@ -517,6 +519,22 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
           )}
         </div>
       </div>
+
+      {/* Breakfast Planner — only on the breakfast meal */}
+      {meal === "breakfast" && (
+        <div className="space-y-0">
+          <button
+            onClick={() => setShowPlanner(v => !v)}
+            className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all"
+            style={{ background: "rgba(20,184,166,0.06)", border: "1px solid rgba(20,184,166,0.2)" }}>
+            <span className="text-base">🗓️</span>
+            <span className="text-sm font-semibold text-white">Breakfast Planner</span>
+            <span className="text-xs" style={{ color: "#475569" }}>plan tomorrow&apos;s plate</span>
+            <span className="ml-auto text-sm" style={{ color: "#14b8a6" }}>{showPlanner ? "▲" : "▼"}</span>
+          </button>
+          {showPlanner && <div className="mt-3"><BreakfastPlanner /></div>}
+        </div>
+      )}
 
       {/* Pending quantity + unit input */}
       {pendingItem && (

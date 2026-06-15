@@ -214,6 +214,37 @@ export interface WeightPlan {
   checklist: WeightPlanItem[];
 }
 
+// ─── Breakfast planner (breakfast_foods.json + breakfast_plans.json) ──────────
+
+/** One food in the per-100g breakfast database (Foods tab) */
+export interface BreakfastFood {
+  id: string;
+  category: string;        // Base | Protein | Dairy | Veg | Fruit | Nuts & Seeds | Cooking Fat
+  item: string;
+  kcal_100g: number;
+  protein_100g: number;
+  carbs_100g: number;
+  fiber_100g: number;
+  cooking_method: string;
+  typical_unit: string;
+  notes: string;
+}
+
+export interface BreakfastTarget { kcal: number; protein: number; carbs: number; fiber: number; }
+
+/** breakfast_foods.json — editable database + notes + plate target */
+export interface BreakfastFoodsData {
+  foods: BreakfastFood[];
+  notes: string;
+  target: BreakfastTarget;
+}
+
+/** A chosen item + raw grams for one plate slot */
+export interface BreakfastPlanSlot { item: string; qty_g: number; }
+
+/** slotId → chosen item; a whole day's planned plate */
+export type BreakfastPlan = Record<string, BreakfastPlanSlot>;
+
 // ─── Analysis output ──────────────────────────────────────────────────────────
 
 export interface NutritionInsight {
