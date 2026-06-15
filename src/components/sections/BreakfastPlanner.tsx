@@ -144,20 +144,49 @@ export default function BreakfastPlanner() {
             </div>
           );
         })}
-        {/* totals / target / diff */}
+        {/* totals + target */}
         {[
           { label: "TOTAL PLATE", vals: [Math.round(t.kcal), r1(t.protein), r1(t.carbs), r1(t.fiber)], bold: true, color: "#fff" },
           { label: "Target (guide)", vals: [target.kcal, target.protein, target.carbs, target.fiber], bold: false, color: "#475569" },
-          { label: "Difference", vals: [Math.round(target.kcal - t.kcal), r1(target.protein - t.protein), r1(target.carbs - t.carbs), r1(target.fiber - t.fiber)], bold: false, diff: true },
         ].map((row, i) => (
           <div key={i} className="grid gap-2 items-center pt-1" style={{ gridTemplateColumns: grid, borderTop: i === 0 ? "1px solid var(--border)" : undefined }}>
             <div className="text-xs font-semibold" style={{ color: row.color ?? "#94a3b8", gridColumn: "1 / 4" }}>{row.label}</div>
-            {row.vals.map((v, j) => {
-              const c = row.diff ? (Number(v) >= 0 ? "#22c55e" : "#ef4444") : (row.bold ? ["#fb923c", "#a78bfa", "#60a5fa", "#2dd4bf"][j] : "#64748b");
-              return <div key={j} className="text-xs text-right tabular-nums" style={{ color: c, fontWeight: row.bold ? 700 : 400 }}>{v}</div>;
-            })}
+            {row.vals.map((v, j) => (
+              <div key={j} className="text-xs text-right tabular-nums" style={{ color: row.bold ? ["#fb923c", "#a78bfa", "#60a5fa", "#2dd4bf"][j] : "#64748b", fontWeight: row.bold ? 700 : 400 }}>{v}</div>
+            ))}
           </div>
         ))}
+
+        {/* vs target — in plain words */}
+        <div className="pt-2 space-y-1.5" style={{ borderTop: "1px dashed var(--border)" }}>
+          <div className="text-xs font-semibold" style={{ color: "#94a3b8" }}>How the plate compares to the target</div>
+          <div className="flex flex-wrap gap-1.5">
+            {([
+              { label: "Calories", unit: " kcal", diff: target.kcal - t.kcal, round: (x: number) => Math.round(x) },
+              { label: "Protein", unit: "g", diff: target.protein - t.protein, round: r1 },
+              { label: "Carbs", unit: "g", diff: target.carbs - t.carbs, round: r1 },
+              { label: "Fiber", unit: "g", diff: target.fiber - t.fiber, round: r1 },
+            ]).map(d => {
+              const onTarget = Math.abs(d.diff) < (d.unit === " kcal" ? 1 : 0.1);
+              const over = d.diff < 0;                 // plate exceeds target
+              const color = onTarget ? "#22c55e" : over ? "#f59e0b" : "#2dd4bf";
+              const text = onTarget
+                ? "on target"
+                : over
+                  ? `${d.round(-d.diff)}${d.unit} over`
+                  : `${d.round(d.diff)}${d.unit} short`;
+              return (
+                <span key={d.label} className="text-xs px-2 py-1 rounded-lg"
+                  style={{ background: `${color}14`, color, border: `1px solid ${color}33` }}>
+                  {onTarget ? "✓" : over ? "▲" : "▼"} {d.label}: {text}
+                </span>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: 10, color: "#475569" }}>
+            ▼ <span style={{ color: "#2dd4bf" }}>short</span> = under target (room left) · ▲ <span style={{ color: "#f59e0b" }}>over</span> = exceeded target (trim nuts / oil / base)
+          </div>
+        </div>
       </div>
     );
   }
