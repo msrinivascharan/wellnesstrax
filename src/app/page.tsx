@@ -377,10 +377,10 @@ export default function Home() {
   function onWaterSleepUpdate(water_ml: number, sleep: SleepLog) { updateLog({ water_ml, sleep }); }
   function onAnalysisComplete(analysis: DayAnalysis) { updateLog({ analysis }); }
 
-  // Breakfast planner: apply a plate to a date's breakfast log (manual, on demand).
-  // Appends the planned items to that day's breakfast; updates the live view if
-  // it's the date being viewed, otherwise writes straight to that date's session.
-  async function onApplyBreakfastPlan(date: string, items: { name: string; qty_g: number }[]) {
+  // Meal planner: apply a plate to a date's meal log (manual, on demand).
+  // Appends the planned items to that day's meal; updates the live view if it's
+  // the date being viewed, otherwise writes straight to that date's session.
+  async function onApplyMealPlan(meal: MealType, date: string, items: { name: string; qty_g: number }[]) {
     const entries: FoodEntry[] = items
       .filter(i => i.name && i.qty_g > 0)
       .map(i => ({
@@ -396,13 +396,13 @@ export default function Home() {
 
     if (date === selectedDate && logRef.current) {
       const cur = logRef.current;
-      const merged: DayLog = { ...cur, food: { ...cur.food, breakfast: [...cur.food.breakfast, ...entries] }, updated_at: new Date().toISOString() };
+      const merged: DayLog = { ...cur, food: { ...cur.food, [meal]: [...cur.food[meal], ...entries] }, updated_at: new Date().toISOString() };
       setDayLog(merged);
       logRef.current = merged;
       persistLog(merged);
     } else {
       const log = await loadSessionForDate(date);
-      const merged: DayLog = { ...log, food: { ...log.food, breakfast: [...log.food.breakfast, ...entries] }, updated_at: new Date().toISOString() };
+      const merged: DayLog = { ...log, food: { ...log.food, [meal]: [...log.food[meal], ...entries] }, updated_at: new Date().toISOString() };
       await fetch(`/api/sessions/${date}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -567,7 +567,7 @@ export default function Home() {
               <Dashboard dayLog={dayLog} profile={profile} onNavigate={s => setSection(s as SectionId)} />
             )}
             {section === "food" && (
-              <FoodLog dayLog={dayLog} foodItems={foodItems} onUpdate={onFoodUpdate} onMealTimeUpdate={onMealTimeUpdate} onSaveToList={onSaveToList} onRemoveFromList={onRemoveFromList} onMoveItem={onMoveItem} foodPrefs={foodPrefs} onUpdatePrefs={onUpdatePrefs} onApplyBreakfastPlan={onApplyBreakfastPlan} />
+              <FoodLog dayLog={dayLog} foodItems={foodItems} onUpdate={onFoodUpdate} onMealTimeUpdate={onMealTimeUpdate} onSaveToList={onSaveToList} onRemoveFromList={onRemoveFromList} onMoveItem={onMoveItem} foodPrefs={foodPrefs} onUpdatePrefs={onUpdatePrefs} onApplyMealPlan={onApplyMealPlan} />
             )}
             {section === "activity" && (
               <ActivityLogSection dayLog={dayLog} activitiesData={activitiesData} onUpdate={onActivityUpdate} />

@@ -2,7 +2,8 @@
 import { useState } from "react";
 import type { DayLog, FoodEntry, FoodItemsData, FoodPreferences, FoodPreferenceItem, MealType } from "@/types";
 import { autoCategory, resolveCategory } from "@/lib/food-utils";
-import BreakfastPlanner from "@/components/sections/BreakfastPlanner";
+import MealPlanner from "@/components/sections/MealPlanner";
+import type { MealKey } from "@/types";
 
 interface Props {
   dayLog: DayLog;
@@ -19,8 +20,8 @@ interface Props {
   foodPrefs: FoodPreferences;
   /** Called when either preference list changes */
   onUpdatePrefs: (prefs: FoodPreferences) => Promise<void>;
-  /** Apply a breakfast plate to a date's breakfast log */
-  onApplyBreakfastPlan: (date: string, items: { name: string; qty_g: number }[]) => Promise<void>;
+  /** Apply a planned plate to a date's meal log */
+  onApplyMealPlan: (meal: MealType, date: string, items: { name: string; qty_g: number }[]) => Promise<void>;
 }
 
 // ─── Unit helpers ─────────────────────────────────────────────────────────────
@@ -296,7 +297,7 @@ interface PendingItem {
   custom: boolean;
 }
 
-export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate, onSaveToList: _onSaveToList, onRemoveFromList: _onRemoveFromList, onMoveItem: _onMoveItem, foodPrefs, onUpdatePrefs, onApplyBreakfastPlan }: Props) {
+export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate, onSaveToList: _onSaveToList, onRemoveFromList: _onRemoveFromList, onMoveItem: _onMoveItem, foodPrefs, onUpdatePrefs, onApplyMealPlan }: Props) {
   const [activeMeal, setActiveMeal] = useState<MealType>("breakfast");
   const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -522,19 +523,23 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
         </div>
       </div>
 
-      {/* Breakfast Planner — only on the breakfast meal */}
-      {meal === "breakfast" && (
+      {/* Meal Planner — breakfast & lunch (dinner later) */}
+      {(meal === "breakfast" || meal === "lunch") && (
         <div className="space-y-0">
           <button
             onClick={() => setShowPlanner(v => !v)}
             className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all"
             style={{ background: "rgba(20,184,166,0.06)", border: "1px solid rgba(20,184,166,0.2)" }}>
             <span className="text-base">🗓️</span>
-            <span className="text-sm font-semibold text-white">Breakfast Planner</span>
-            <span className="text-xs" style={{ color: "#475569" }}>plan tomorrow&apos;s plate</span>
+            <span className="text-sm font-semibold text-white">{MEAL_META[meal].label} Planner</span>
+            <span className="text-xs" style={{ color: "#475569" }}>build &amp; apply a plate</span>
             <span className="ml-auto text-sm" style={{ color: "#14b8a6" }}>{showPlanner ? "▲" : "▼"}</span>
           </button>
-          {showPlanner && <div className="mt-3"><BreakfastPlanner onApply={onApplyBreakfastPlan} /></div>}
+          {showPlanner && (
+            <div className="mt-3">
+              <MealPlanner meal={meal as MealKey} onApply={(date, items) => onApplyMealPlan(meal, date, items)} />
+            </div>
+          )}
         </div>
       )}
 

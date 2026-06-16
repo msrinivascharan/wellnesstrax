@@ -214,12 +214,14 @@ export interface WeightPlan {
   checklist: WeightPlanItem[];
 }
 
-// ─── Breakfast planner (breakfast_foods.json + breakfast_plans.json) ──────────
+// ─── Meal planner (breakfast / lunch / dinner — <meal>_foods.json + <meal>_plans.json) ──
 
-/** One food in the per-100g breakfast database (Foods tab) */
-export interface BreakfastFood {
+export type MealKey = "breakfast" | "lunch" | "dinner";
+
+/** One food in a meal's per-100g database (Foods tab) */
+export interface MealFood {
   id: string;
-  category: string;        // Base | Protein | Dairy | Veg | Fruit | Nuts & Seeds | Cooking Fat
+  category: string;
   item: string;
   kcal_100g: number;
   protein_100g: number;
@@ -230,20 +232,20 @@ export interface BreakfastFood {
   notes: string;
 }
 
-export interface BreakfastTarget { kcal: number; protein: number; carbs: number; fiber: number; }
+export interface MealTarget { kcal: number; protein: number; carbs: number; fiber: number; }
 
-/** breakfast_foods.json — editable database + notes + plate target */
-export interface BreakfastFoodsData {
-  foods: BreakfastFood[];
+/** <meal>_foods.json — editable database + notes + plate target */
+export interface MealFoodsData {
+  foods: MealFood[];
   notes: string;
-  target: BreakfastTarget;
+  target: MealTarget;
 }
 
 /** A chosen item + raw grams for one plate slot */
-export interface BreakfastPlanSlot { item: string; qty_g: number; }
+export interface MealPlanSlot { item: string; qty_g: number; }
 
 /** slotId → chosen item; a whole day's planned plate */
-export type BreakfastPlan = Record<string, BreakfastPlanSlot>;
+export type MealPlan = Record<string, MealPlanSlot>;
 
 // ─── Analysis output ──────────────────────────────────────────────────────────
 

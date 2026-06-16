@@ -1,0 +1,227 @@
+import type { MealKey, MealFood, MealFoodsData } from "@/types";
+
+/** A fixed plate slot → which Foods category fills its dropdown. */
+export interface MealSlot { id: string; label: string; category: string; }
+
+export interface MealPlannerConfig {
+  title: string;
+  slots: MealSlot[];
+  categories: string[];      // category order for the Foods editor
+  defaults: MealFoodsData;   // seeded when no <meal>_foods.json exists yet
+}
+
+const F = (category: string, item: string, kcal: number, protein: number, carbs: number, fiber: number, cooking_method: string, typical_unit: string, notes = ""): MealFood =>
+  ({ id: item.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""), category, item, kcal_100g: kcal, protein_100g: protein, carbs_100g: carbs, fiber_100g: fiber, cooking_method, typical_unit, notes });
+
+// ─── Breakfast ────────────────────────────────────────────────────────────────
+
+const BREAKFAST_NOTES = [
+  "How to use the planner",
+  "1. In the plate, each row is one slot. Pick an Item from its dropdown and type the RAW/DRY quantity in grams.",
+  "2. Calories, protein, carbs and fibre fill in automatically; TOTAL PLATE sums the breakfast.",
+  "3. Leave a slot's item blank to skip it (counts as 0).",
+  "",
+  "Conventions",
+  "- All numbers in 'Foods' are per 100 g of the RAW / DRY ingredient — enter raw weights.",
+  "- Quick conversions: 1 egg ~ 50 g | 1 tsp oil ~ 5 g | 10 almonds ~ 12 g | 1 tbsp seeds ~ 10-12 g.",
+  "",
+  "Targets (a guide, not a rule)",
+  "- Aim roughly 500 kcal and ~35 g protein. The 'vs target' summary shows how far the plate is from target.",
+  "- If over on calories, trim the nuts, the oil, or the base grams first.",
+  "",
+  "Health notes",
+  "- Fruit is whole and ripe only — no juice, no smoothie. Guava, apple, pear, berries are the lowest-GI picks.",
+  "- Nuts & seeds are calorie-dense: 10-20 g is plenty.",
+  "",
+  "Note: this is a planning tool, not medical advice. Keep medication and clinical decisions with your doctor.",
+].join("\n");
+
+const BREAKFAST: MealPlannerConfig = {
+  title: "Breakfast",
+  categories: ["Base", "Protein", "Dairy", "Veg", "Fruit", "Nuts & Seeds", "Cooking Fat"],
+  slots: [
+    { id: "base", label: "Base (cereal/legume)", category: "Base" },
+    { id: "protein", label: "Eggs / Protein", category: "Protein" },
+    { id: "dairy", label: "Dairy", category: "Dairy" },
+    { id: "veg", label: "Vegetables", category: "Veg" },
+    { id: "fruit", label: "Fruit", category: "Fruit" },
+    { id: "nuts", label: "Nuts & Seeds", category: "Nuts & Seeds" },
+    { id: "fat", label: "Cooking Fat", category: "Cooking Fat" },
+  ],
+  defaults: {
+    target: { kcal: 500, protein: 35, carbs: 50, fiber: 12 },
+    notes: BREAKFAST_NOTES,
+    foods: [
+      F("Base", "Moong / Green gram (pesarattu) - dry", 347, 24, 59, 16, "Soak 4h, grind to batter, cook as dosa on tawa", "1 dosa ~ 30g dry", "Low-GI, high protein + fibre"),
+      F("Base", "Besan / Gram flour (chilla) - dry", 387, 22, 58, 11, "Batter with water + veg, cook as chilla", "1 chilla ~ 30g", "Good protein, low-GI"),
+      F("Base", "Rolled oats - dry", 389, 13, 66, 10, "Cook with water/milk, savoury or plain", "1 bowl ~ 40g", "Use rolled/steel-cut, not instant"),
+      F("Protein", "Egg, whole (raw)", 143, 13, 1, 0, "Boiled / bhurji / poached, low oil", "1 egg ~ 50g"),
+      F("Protein", "Egg white (raw)", 52, 11, 0.7, 0, "Boiled / scrambled", "1 white ~ 33g", "Extra protein, very low cal"),
+      F("Protein", "Paneer", 296, 18, 6, 0, "Grilled / scrambled, low oil", "100g block", "Pick low-fat paneer (~206 kcal) to cut calories"),
+      F("Dairy", "Curd (toned)", 60, 3.4, 4.7, 0, "Plain, chilled", "1 katori ~ 150g", "Use toned / low-fat"),
+      F("Dairy", "Greek yogurt (plain)", 60, 10, 3.6, 0, "Plain, chilled", "1 cup ~ 200g", "High protein per calorie"),
+      F("Veg", "Onion", 40, 1.1, 9, 1.7, "Saute / raw", "-"),
+      F("Veg", "Tomato", 18, 0.9, 3.9, 1.2, "Saute / raw", "-"),
+      F("Veg", "Spinach (palak)", 23, 2.9, 3.6, 2.2, "Chop into bhurji / chilla", "-"),
+      F("Veg", "Capsicum", 31, 1, 6, 2.1, "Saute", "-"),
+      F("Veg", "Mixed veg (onion-tomato-palak)", 30, 1.5, 6, 2, "Saute for bhurji / chilla", "-", "Adds volume + fibre for few calories"),
+      F("Fruit", "Guava", 68, 2.6, 14, 5.4, "Fresh, ripe - eat as-is", "1 medium ~ 100g", "Best fibre, low-GI - top pick"),
+      F("Fruit", "Apple", 52, 0.3, 14, 2.4, "Fresh, with skin - as-is", "1 medium ~ 180g", "Low-GI"),
+      F("Fruit", "Papaya", 43, 0.5, 11, 1.7, "Ripe - as-is", "1 cup ~ 140g"),
+      F("Fruit", "Pear", 57, 0.4, 15, 3.1, "Fresh, with skin - as-is", "1 medium ~ 180g", "Low-GI"),
+      F("Fruit", "Orange / Mosambi", 47, 0.9, 12, 2.4, "Fresh segments - as-is", "1 medium ~ 130g"),
+      F("Fruit", "Pomegranate", 83, 1.7, 19, 4, "Fresh arils - as-is", "1/2 cup ~ 90g"),
+      F("Fruit", "Berries (mixed)", 50, 1, 12, 4, "Fresh / thawed - as-is", "1/2 cup ~ 75g", "Lowest sugar; frozen is fine"),
+      F("Fruit", "Banana", 89, 1.1, 23, 2.6, "Ripe - as-is", "1 medium ~ 120g", "Higher sugar - keep small / half"),
+      F("Nuts & Seeds", "Almonds", 579, 21, 22, 12.5, "Raw / soaked - as-is", "10 nuts ~ 12g", "Calorie-dense - keep 10-20g"),
+      F("Nuts & Seeds", "Walnuts", 654, 15, 14, 6.7, "Raw - as-is", "2 halves ~ 8g", "Omega-3"),
+      F("Nuts & Seeds", "Chia seeds", 486, 17, 42, 34, "Soak 10 min, then sprinkle", "1 tbsp ~ 12g", "Soak before eating"),
+      F("Nuts & Seeds", "Flax seeds (ground)", 534, 18, 29, 27, "Grind, then sprinkle", "1 tbsp ~ 10g", "Grind for absorption"),
+      F("Nuts & Seeds", "Pumpkin seeds", 559, 30, 11, 6, "Raw / roasted - sprinkle", "1 tbsp ~ 10g", "High protein"),
+      F("Nuts & Seeds", "Sunflower seeds", 584, 21, 20, 9, "Raw / roasted - sprinkle", "1 tbsp ~ 10g"),
+      F("Nuts & Seeds", "Mixed nuts & seeds", 600, 20, 20, 10, "As-is", "1 tbsp ~ 12g", "Keep portion small"),
+      F("Cooking Fat", "Groundnut oil", 884, 0, 0, 0, "For tawa / saute", "1 tsp ~ 5g"),
+      F("Cooking Fat", "Olive oil", 884, 0, 0, 0, "Low-heat / finishing", "1 tsp ~ 5g"),
+      F("Cooking Fat", "Ghee", 900, 0, 0, 0, "Small amount only", "1 tsp ~ 5g"),
+      F("Cooking Fat", "Mustard oil", 884, 0, 0, 0, "For tawa / saute", "1 tsp ~ 5g"),
+    ],
+  },
+};
+
+// ─── Lunch ────────────────────────────────────────────────────────────────────
+
+const LUNCH_NOTES = [
+  "How to use this Lunch planner",
+  "1. Each row is one component of the plate. Pick an Item from its dropdown and type the RAW/DRY grams.",
+  "2. Calories + macros auto-fill; TOTAL PLATE sums the whole lunch. Leave an item blank to skip a slot.",
+  "3. Eat protein + veg first, grain LAST, then a 10-min walk.",
+  "",
+  "Vegetables — four groups",
+  "- A1 + A2 = the two MAIN vegetables; pick one from each for your daily two-veg curry.",
+  "- Leafy = leaves only; optional — clear it on no-greens days.",
+  "- Curry base = ONE freshly-ground paste: Onion 100 + Tomato 50 + Green chili 25 + Ginger 30 + Garlic 30 (235g full recipe).",
+  "",
+  "The curry paste — watch the grams",
+  "- The paste is per 100g; the default uses the FULL 235g recipe (~128 kcal). If you batch it across meals, set Qty(g) to just this meal's share (80-120g).",
+  "",
+  "Spices & seed powders",
+  "- 'Spices' is ONE dry powder mix: Turmeric + Red chilli + Cumin + Coriander + Garam masala (~10g). Ginger/garlic are in the paste.",
+  "- Seed powders (flax / sesame / groundnut) carry real calories — keep to 5-10g.",
+  "",
+  "Starchy vegetables — a prediabetes note",
+  "- Potato, sweet potato, yam, colocasia, plantain are starchy / higher-GI. Treat partly like grain: small portion, and trim the millet/rice if used heavily.",
+  "",
+  "Raw vs cooked",
+  "- All numbers are per 100 g of RAW / DRY ingredient — enter RAW weights.",
+  "- Chicken/fish: weigh raw (loses ~25% cooking). Dal: weigh DRY (~30g dry = ~1 katori). Millet/rice: weigh DRY (~50g dry ~ 1 cup cooked).",
+  "- Psyllium husk: 1 tsp in a full glass of water 10-15 min before eating; keep it 1-2h apart from oral meds.",
+  "",
+  "Note: a planning tool, not medical advice. Keep medication and clinical decisions with your doctor.",
+].join("\n");
+
+const LUNCH: MealPlannerConfig = {
+  title: "Lunch",
+  categories: ["Pre-meal", "Protein", "Dal", "Legumes", "Veg A1 (main)", "Veg A2 (main)", "Leafy (greens)", "Curry base", "Grain", "Dairy", "Seed powders", "Spices", "Cooking Fat"],
+  slots: [
+    { id: "premeal", label: "Pre-meal fibre", category: "Pre-meal" },
+    { id: "protein", label: "Protein (main)", category: "Protein" },
+    { id: "dal", label: "Dal", category: "Dal" },
+    { id: "legumes", label: "Legumes (in veg)", category: "Legumes" },
+    { id: "veg_a1", label: "Vegetable A1 (main)", category: "Veg A1 (main)" },
+    { id: "veg_a2", label: "Vegetable A2 (main)", category: "Veg A2 (main)" },
+    { id: "leafy", label: "Leafy greens (opt.)", category: "Leafy (greens)" },
+    { id: "curry_base", label: "Curry base (paste)", category: "Curry base" },
+    { id: "grain", label: "Grain (measured)", category: "Grain" },
+    { id: "dairy", label: "Dairy", category: "Dairy" },
+    { id: "seedpowder", label: "Seed powders", category: "Seed powders" },
+    { id: "spices", label: "Spices", category: "Spices" },
+    { id: "fat", label: "Cooking Fat", category: "Cooking Fat" },
+  ],
+  defaults: {
+    target: { kcal: 700, protein: 52, carbs: 75, fiber: 18 },
+    notes: LUNCH_NOTES,
+    foods: [
+      F("Pre-meal", "Psyllium husk (isabgol)", 20, 1.5, 85, 80, "Stir 1 tsp in a full glass of water; drink 10-15 min BEFORE the meal", "1 tsp ~ 5g", "Almost all fibre - negligible digestible carb. Keep 1-2h apart from oral meds"),
+      F("Protein", "Chicken breast, skinless (raw)", 120, 22.5, 0, 0, "Light curry/grill/pan, low chilli", "loses ~25% wt on cooking", "Leanest, highest protein"),
+      F("Protein", "Chicken curry-cut, skinless (raw)", 150, 19, 0, 0, "Light curry", "loses ~25% wt on cooking", "Thigh/leg - tastier, a bit fattier"),
+      F("Protein", "Boneless fish fillet, lean (seer/tilapia) (raw)", 100, 20, 0, 0, "Pan-sear/bake in light oil + spices (boneless only)", "150-180g raw", "Lean, low-GI"),
+      F("Protein", "Salmon (raw)", 208, 20, 0, 0, "Bake/pan in light oil", "150g raw", "Omega-3 rich, higher fat"),
+      F("Protein", "Paneer (full-fat)", 296, 18, 6, 0, "Grilled/scrambled, low oil", "100g block", "Veg protein"),
+      F("Protein", "Paneer (low-fat)", 206, 18, 6, 0, "Grilled/scrambled, low oil", "100g block", "Same protein, fewer calories"),
+      F("Protein", "Egg, whole (raw)", 143, 13, 1, 0, "Egg curry / boiled", "1 egg ~ 50g", "For egg-curry days"),
+      F("Dal", "Toor / Arhar dal (dry)", 343, 22, 63, 15, "Pressure-cook ~1:3 water; light tadka", "30g dry ~ 6.5g protein, ~1 katori", "Most common"),
+      F("Dal", "Moong dal, split (dry)", 347, 24, 59, 16, "Pressure-cook; light tadka", "30g dry", "Lightest, easy to digest"),
+      F("Dal", "Masoor dal (dry)", 352, 25, 63, 11, "Pressure-cook; light tadka", "30g dry", "Highest protein dal"),
+      F("Dal", "Chana dal (dry)", 360, 20, 60, 13, "Pressure-cook; light tadka", "30g dry", "Lower-GI, nutty"),
+      F("Legumes", "Chickpeas / Kabuli chana (dry)", 360, 19, 61, 17, "Soak overnight, boil; add to sabzi", "20-30g dry", "Protein + fibre boost"),
+      F("Legumes", "Rajma / Kidney beans (dry)", 333, 24, 60, 25, "Soak overnight, boil; add to sabzi", "20-30g dry", "Very high fibre"),
+      F("Legumes", "Black chana / Kala chana (dry)", 360, 19, 61, 17, "Soak overnight, boil; add to sabzi", "20-30g dry", "High fibre, low-GI"),
+      F("Legumes", "Green peas (fresh/frozen)", 81, 5, 14, 5, "Add fresh/frozen to sabzi", "eaten as-is weight"),
+      F("Legumes", "Sprouted moong", 30, 3, 6, 2, "Steam lightly / add to sabzi-salad", "eaten as-is weight", "Mostly water - low cal"),
+      F("Veg A1 (main)", "French beans", 31, 1.8, 7, 3.4, "Stir-fry / poriyal with little oil", "1 cup ~ 100g", "Pairs with Carrot / Potato (A2)"),
+      F("Veg A1 (main)", "Cluster beans (goru chikkudu)", 32, 3.2, 11, 3.2, "Stir-fry / curry", "1 cup ~ 100g", "High fibre"),
+      F("Veg A1 (main)", "Broad / flat beans (chikkudukaya)", 47, 2.5, 9, 3.8, "Stir-fry / curry with groundnut", "1 cup ~ 100g"),
+      F("Veg A1 (main)", "Brinjal (vankaya)", 25, 1, 6, 3, "Curry / fry (light oil)", "1 cup ~ 100g", "Pairs with Potato (A2)"),
+      F("Veg A1 (main)", "Bhindi / Okra", 33, 1.9, 7, 3.2, "Stir-fry, minimal oil", "1 cup ~ 100g"),
+      F("Veg A1 (main)", "Cabbage", 25, 1.3, 6, 2.5, "Stir-fry / poriyal", "1 cup ~ 100g", "Pairs with Carrot (A2)"),
+      F("Veg A1 (main)", "Cauliflower", 25, 1.9, 5, 2, "Stir-fry / curry", "1 cup ~ 100g", "Pairs with Potato / Carrot (A2)"),
+      F("Veg A1 (main)", "Capsicum", 31, 1, 6, 2.1, "Stir-fry", "1 cup ~ 100g", "Pairs with Potato / Mushroom (A2)"),
+      F("Veg A1 (main)", "Bottle gourd (sorakaya)", 14, 0.6, 3.4, 0.5, "Curry / kootu", "1 cup ~ 100g", "Very low cal"),
+      F("Veg A1 (main)", "Ridge gourd (beerakaya)", 20, 1.2, 4.4, 1.5, "Curry with groundnut/sesame", "1 cup ~ 100g"),
+      F("Veg A1 (main)", "Snake gourd", 18, 0.5, 3.3, 0.8, "Curry / kootu", "1 cup ~ 100g"),
+      F("Veg A1 (main)", "Ash gourd", 13, 0.4, 3, 2.9, "Curry / kootu", "1 cup ~ 100g", "Very low cal"),
+      F("Veg A1 (main)", "Bitter gourd (kakarakaya)", 17, 1, 3.7, 2.8, "Fry / curry (often solo)", "1 cup ~ 100g", "Good for blood sugar"),
+      F("Veg A1 (main)", "Tindora (dondakaya)", 18, 1.2, 3.1, 1.6, "Stir-fry", "1 cup ~ 100g", "Low-GI"),
+      F("Veg A2 (main)", "Carrot", 41, 0.9, 10, 2.8, "Stir-fry / poriyal", "1 cup ~ 100g", "Classic with French beans / Cabbage (A1)"),
+      F("Veg A2 (main)", "Beetroot", 43, 1.6, 10, 2.8, "Poriyal / curry", "1 cup ~ 100g", "Higher sugar - moderate"),
+      F("Veg A2 (main)", "Radish (mullangi)", 16, 0.7, 3.4, 1.6, "Curry / poriyal", "1 cup ~ 100g", "Low cal"),
+      F("Veg A2 (main)", "Pumpkin (gummadikaya)", 26, 1, 6.5, 0.5, "Curry / pulusu", "1 cup ~ 100g"),
+      F("Veg A2 (main)", "Cucumber (dosakaya)", 15, 0.7, 3.6, 0.5, "Pappu / curry", "1 cup ~ 100g", "Very low cal"),
+      F("Veg A2 (main)", "Raw papaya (boppayikaya)", 32, 0.5, 8, 1.7, "Curry / kootu", "1 cup ~ 100g", "Low-GI"),
+      F("Veg A2 (main)", "Drumstick (munakkaya)", 37, 2.1, 8.5, 3.2, "In sambar / curry (the pods)", "few pieces", "Sambar companion"),
+      F("Veg A2 (main)", "Mushrooms (button)", 22, 3.1, 3.3, 1, "Stir-fry with capsicum / peas", "1 cup ~ 100g", "Low cal, savoury protein"),
+      F("Veg A2 (main)", "Potato (aloo)", 77, 2, 17, 2.2, "Curry / fry - keep portion small", "1 medium ~ 120g", "Starchy / high-GI - treat partly like grain"),
+      F("Veg A2 (main)", "Sweet potato", 86, 1.6, 20, 3, "Boil / curry - small portion", "1 medium ~ 130g", "Starchy - moderate portion"),
+      F("Veg A2 (main)", "Yam, elephant foot (kanda)", 118, 1.5, 28, 4, "Fry / curry - small portion", "1 cup ~ 100g", "Starchy - moderate portion"),
+      F("Veg A2 (main)", "Colocasia / Arbi (chamadumpa)", 112, 1.5, 26, 4.1, "Fry / curry - small portion", "1 cup ~ 100g", "Starchy - moderate portion"),
+      F("Veg A2 (main)", "Plantain / Raw banana (aratikaya)", 122, 1.3, 32, 2.3, "Fry / curry - small portion", "1 medium ~ 120g", "Starchy / high carb - moderate portion"),
+      F("Veg A2 (main)", "Mixed veg (generic)", 35, 1.8, 7, 2.5, "Mixed sabzi", "1 cup ~ 100g", "Already mixed"),
+      F("Leafy (greens)", "Spinach (palak)", 23, 2.9, 3.6, 2.2, "Saute / palak curry / dal-palak", "1 cup ~ 100g"),
+      F("Leafy (greens)", "Amaranth (thotakura)", 23, 2.5, 4, 2.2, "Saute / fry / pappu", "1 cup ~ 100g"),
+      F("Leafy (greens)", "Methi leaves (menthikura)", 49, 4.4, 6, 1.1, "Saute / methi curry", "1 cup ~ 100g", "Good for glucose"),
+      F("Leafy (greens)", "Gongura (sorrel)", 43, 3.5, 5, 2, "Pachadi / curry", "1 cup ~ 100g"),
+      F("Leafy (greens)", "Malabar spinach (bachalikura)", 19, 1.8, 3.4, 2, "Curry / pappu", "1 cup ~ 100g"),
+      F("Leafy (greens)", "Drumstick leaves (munaga aaku)", 64, 9.4, 8.3, 2, "Saute / fry / dal", "1 cup ~ 100g", "Very high protein (moringa)"),
+      F("Leafy (greens)", "Ponnaganti aaku", 40, 4.5, 6, 2.5, "Saute / fry", "1 cup ~ 100g"),
+      F("Leafy (greens)", "Mint (pudina)", 70, 3.8, 15, 8, "Small amounts in curry / chutney", "small handful", "Used in small amounts"),
+      F("Leafy (greens)", "Coriander leaves (kothimeera)", 23, 2.1, 3.7, 2.8, "Garnish / curry", "small handful", "Used in small amounts"),
+      F("Curry base", "Curry base paste (onion100+tomato50+grnchili25+ginger30+garlic30)", 54, 1.9, 12.1, 1.7, "Grind fresh; the base for almost any curry", "full recipe = 235g", "Onion 100 + Tomato 50 + Green chili 25 + Ginger 30 + Garlic 30. Scale grams to the share used per meal if you batch it"),
+      F("Grain", "Foxtail millet (korralu) - dry", 351, 12, 63, 8, "Cook 1:2.5 water like rice. Eat LAST + walk after", "50g dry ~ 1 cup cooked", "Higher protein/fibre than rice"),
+      F("Grain", "Little millet (samalu) - dry", 346, 7.7, 67, 7.7, "Cook like rice. Eat LAST + walk", "50g dry ~ 1 cup cooked"),
+      F("Grain", "Kodo millet (arikelu) - dry", 353, 9.8, 66, 6, "Cook like rice. Eat LAST + walk", "50g dry ~ 1 cup cooked"),
+      F("Grain", "Barnyard millet (udalu) - dry", 342, 11, 65, 10, "Cook like rice. Eat LAST + walk", "50g dry ~ 1 cup cooked", "Lowest-GI, high fibre"),
+      F("Grain", "White rice - dry", 345, 6.8, 78, 1.3, "Cook like rice. Eat LAST + walk", "50g dry ~ 1 cup cooked", "Keep portion measured"),
+      F("Grain", "Brown rice - dry", 362, 7.5, 76, 3.5, "Cook like rice. Eat LAST + walk", "50g dry ~ 1 cup cooked"),
+      F("Dairy", "Curd (toned)", 60, 3.4, 4.7, 0, "Plain, chilled", "1 katori ~ 150g", "Use toned"),
+      F("Dairy", "Greek yogurt (plain)", 60, 10, 3.6, 0, "Plain, chilled", "1 cup ~ 200g", "High protein"),
+      F("Seed powders", "Flaxseed powder", 534, 18, 29, 27, "Sprinkle 1-2 tsp into veg curry (off heat)", "1 tsp ~ 5g", "Omega-3, lignans; calorie-dense - keep 5-10g"),
+      F("Seed powders", "Sesame (til) powder", 573, 18, 23, 12, "Stir into curry / podi", "1 tsp ~ 5g", "Calcium-rich; keep 5-10g"),
+      F("Seed powders", "Groundnut powder", 567, 26, 16, 8, "Common in S.Indian gourd curries", "1 tsp ~ 5g", "Calorie-dense - small amount"),
+      F("Spices", "Spice powder mix (turmeric+red chili+cumin+coriander+garam masala)", 335, 13, 52, 27, "Dry powder mix added to curry", "~10g per meal", "Turmeric + Red chilli + Cumin + Coriander + Garam masala. Ginger/garlic are in the curry paste, not here"),
+      F("Cooking Fat", "Groundnut oil", 884, 0, 0, 0, "For tawa / curry", "1 tsp ~ 5g"),
+      F("Cooking Fat", "Olive oil", 884, 0, 0, 0, "Low-heat / finishing", "1 tsp ~ 5g"),
+      F("Cooking Fat", "Mustard oil", 884, 0, 0, 0, "For tawa / curry", "1 tsp ~ 5g"),
+      F("Cooking Fat", "Ghee", 900, 0, 0, 0, "Small amount only", "1 tsp ~ 5g"),
+    ],
+  },
+};
+
+export const MEAL_PLANNER: Partial<Record<MealKey, MealPlannerConfig>> = {
+  breakfast: BREAKFAST,
+  lunch: LUNCH,
+  // dinner: added later
+};
+
+export function isPlannerMeal(meal: string): meal is MealKey {
+  return meal === "breakfast" || meal === "lunch" || meal === "dinner";
+}

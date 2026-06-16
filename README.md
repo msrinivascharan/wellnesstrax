@@ -25,7 +25,7 @@ Your health data **never leaves your machine** except the anonymised text log se
 | # | Section | What you do here |
 |---|---------|-----------------|
 | 1 | **Dashboard** | At-a-glance daily rings (food = 3 main meals logged, water, activity, sleep, meds), time-aware missed-medication alerts, quick stats, and today's AI score if analysed |
-| 2 | **Food Log** | Log breakfast/lunch/dinner/snacks with meal time. **Typeahead search** adds items, then a quantity/unit picker. Rich **Must Avoid** / **Good to Eat** lists with filters and enable/disable. A **Breakfast Planner** (3-tab: plate builder + per-100g Foods DB + Notes) lets you build a plate for any chosen day and **Apply** it into that day's breakfast log |
+| 2 | **Food Log** | Log breakfast/lunch/dinner/snacks with meal time. **Typeahead search** adds items, then a quantity/unit picker. Rich **Must Avoid** / **Good to Eat** lists with filters and enable/disable. A **Meal Planner** (breakfast & lunch; 3-tab: plate builder + per-100g Foods DB + Notes) lets you build a plate for any chosen day and **Apply** it into that day's meal log |
 | 3 | **Activity** | Log gym session with in/out time and auto-calculated duration, exercises with sets/reps/weights, post-prandial walks, soleus pumps, **badminton** (duration/intensity/games), and breathing exercises |
 | 4 | **Medications** | Mark each scheduled medication and supplement taken with timestamp. Periodic injectable tracking with auto-calculated next-due status badge |
 | 5 | **Blood Work & Vitals** | Log and track **lipid, thyroid, blood-pressure, weight, and daily mood** over time with trend arrows and reference ranges. Thyroid supports **TSH-only panels**; BP captures systolic/diastolic + optional pulse, time of day, and cuff arm; weight auto-computes **BMI** vs your target range; mood is a 10-second circumplex check-in |
@@ -46,11 +46,12 @@ Your health data **never leaves your machine** except the anonymised text log se
   - Add new items inline with category + notes
 - **Meal time logging** — record the actual clock time of each meal
 - **Balanced-plate categorisation** — every item maps to 5 canonical groups (Complex Carbohydrates, Lean/Plant Proteins, Dietary Fiber, Micronutrients, Essential Lipids)
-- **Breakfast Planner** (in the Breakfast view) — a 3-tab tool mirroring a meal-planning spreadsheet:
-  - **Plate** — a **day/date picker** (next 21 days; year is implicit and rolls over automatically) + 7 fixed slots (Base, Protein, Dairy, Veg, Fruit, Nuts & Seeds, Cooking Fat). Pick an item per slot from a category dropdown + raw grams; calories/protein/carbs/fibre auto-fill with a **TOTAL / target / plain-words "vs target"** summary
-  - **Apply** — when ready, hit **Apply** (with a confirmation): the plate is logged into that day's **breakfast** entries and the plan is cleared. It's manual — nothing auto-fills, nothing is "frozen"
+- **Meal Planner** (Breakfast & Lunch views; Dinner later) — a 3-tab tool mirroring meal-planning spreadsheets, parameterised per meal:
+  - **Plate** — a **day/date picker** (next 21 days; year is implicit and rolls over automatically; applied/past days drop off) + the meal's fixed slots (breakfast: 7; lunch: 13). Pick an item per slot from a category dropdown + raw grams; calories/protein/carbs/fibre auto-fill with a **TOTAL / target / plain-words "vs target"** summary
+  - **Apply** — hit **Apply** (with a confirmation): the plate is logged into that day's meal entries, the plan is cleared, **and that day disappears from the picker** (so it only moves forward). It's manual — nothing auto-fills, nothing is "frozen"
   - **Foods** — the editable per-100g database that powers the dropdowns (add/edit/remove)
   - **Notes** — editable planner notes
+  - Each meal has its own config (slots, seeded foods, target) in `lib/meal-planner-config.ts`
 
 ### Reports & AI analysis
 - **Meal-wise balanced plate** — a donut per meal (breakfast/lunch/dinner/snacks) with a per-meal balance score, missing-group hints, a hover item breakdown, and a **Nutrition** card (estimated calories/protein/fiber vs target)
@@ -169,8 +170,10 @@ wellnesstrax/
 │   ├── food_preferences.json    # Rich Must Avoid / Good to Eat lists (edit in-app)
 │   ├── activities.json          # Exercise definitions: gym + daily activities
 │   ├── weight_plan.json         # Weight-loss-plan habit checklist (editable in-app)
-│   ├── breakfast_foods.json     # Breakfast per-100g food DB + notes + target (editable in-app)
-│   ├── breakfast_plans.json     # Per-day planned breakfast plates
+│   ├── breakfast_foods.json     # Breakfast per-100g DB + notes + target (editable in-app)
+│   ├── breakfast_plans.json     # Per-day planned breakfast plates + applied dates
+│   ├── lunch_foods.json         # Lunch per-100g DB + notes + target (editable in-app)
+│   ├── lunch_plans.json         # Per-day planned lunch plates + applied dates
 │   ├── bloodwork.json           # Blood work history
 │   ├── injectable_meds.json     # Injectable medication history
 │   └── sessions/                # Daily logs — one file per day
@@ -192,8 +195,8 @@ wellnesstrax/
 │   │       ├── food-items/       # GET · PUT add · DELETE remove · PATCH recategorise
 │   │       ├── food-preferences/ # GET + PUT — Must Avoid / Good to Eat lists
 │   │       ├── weight-plan/      # GET + PUT — weight-loss-plan habit checklist
-│   │       ├── breakfast-foods/  # GET + PUT — breakfast per-100g food DB + notes + target
-│   │       ├── breakfast-plans/  # GET + PUT — per-day planned breakfast plates
+│   │       ├── meal-foods/[meal]/ # GET + PUT — per-meal per-100g food DB + notes + target
+│   │       ├── meal-plans/[meal]/ # GET + PUT — per-day planned plates + applied dates
 │   │       └── activities/       # GET activities.json
 │   │
 │   ├── components/
@@ -201,7 +204,7 @@ wellnesstrax/
 │   │   └── sections/
 │   │       ├── Dashboard.tsx       # Overview: rings, missed meds, quick stats, score summary
 │   │       ├── FoodLog.tsx         # Meal logging: typeahead search + Must Avoid/Good to Eat lists
-│   │       ├── BreakfastPlanner.tsx# 3-tab breakfast planner (plate builder + Foods DB + Notes)
+│   │       ├── MealPlanner.tsx     # 3-tab meal planner (plate + Foods DB + Notes), per meal
 │   │       ├── ActivityLog.tsx     # Gym + walks + soleus + badminton + breathing
 │   │       ├── ActivityTrends.tsx  # Sectioned activity (cardio/strength/indoor/badminton) + breathing trends
 │   │       ├── MuscleMap.tsx       # Front+back body muscle map (worked vs untrained, exercise→muscle)
