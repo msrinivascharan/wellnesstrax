@@ -523,8 +523,8 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
         </div>
       </div>
 
-      {/* Meal Planner — breakfast & lunch (dinner later) */}
-      {(meal === "breakfast" || meal === "lunch") && (
+      {/* Meal Planner — breakfast, lunch & dinner */}
+      {(meal === "breakfast" || meal === "lunch" || meal === "dinner") && (
         <div className="space-y-0">
           <button
             onClick={() => setShowPlanner(v => !v)}

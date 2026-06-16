@@ -25,7 +25,7 @@ Your health data **never leaves your machine** except the anonymised text log se
 | # | Section | What you do here |
 |---|---------|-----------------|
 | 1 | **Dashboard** | At-a-glance daily rings (food = 3 main meals logged, water, activity, sleep, meds), time-aware missed-medication alerts, quick stats, and today's AI score if analysed |
-| 2 | **Food Log** | Log breakfast/lunch/dinner/snacks with meal time. **Typeahead search** adds items, then a quantity/unit picker. Rich **Must Avoid** / **Good to Eat** lists with filters and enable/disable. A **Meal Planner** (breakfast & lunch; 3-tab: plate builder + per-100g Foods DB + Notes) lets you build a plate for any chosen day and **Apply** it into that day's meal log |
+| 2 | **Food Log** | Log breakfast/lunch/dinner/snacks with meal time. **Typeahead search** adds items, then a quantity/unit picker. Rich **Must Avoid** / **Good to Eat** lists with filters and enable/disable. A **Meal Planner** (breakfast, lunch & dinner; 3-tab: plate builder + per-100g Foods DB + Notes) lets you build a plate for any chosen day and **Apply** it into that day's meal log |
 | 3 | **Activity** | Log gym session with in/out time and auto-calculated duration, exercises with sets/reps/weights, post-prandial walks, soleus pumps, **badminton** (duration/intensity/games), and breathing exercises |
 | 4 | **Medications** | Mark each scheduled medication and supplement taken with timestamp. Periodic injectable tracking with auto-calculated next-due status badge |
 | 5 | **Blood Work & Vitals** | Log and track **lipid, thyroid, blood-pressure, weight, and daily mood** over time with trend arrows and reference ranges. Thyroid supports **TSH-only panels**; BP captures systolic/diastolic + optional pulse, time of day, and cuff arm; weight auto-computes **BMI** vs your target range; mood is a 10-second circumplex check-in |
@@ -46,8 +46,8 @@ Your health data **never leaves your machine** except the anonymised text log se
   - Add new items inline with category + notes
 - **Meal time logging** — record the actual clock time of each meal
 - **Balanced-plate categorisation** — every item maps to 5 canonical groups (Complex Carbohydrates, Lean/Plant Proteins, Dietary Fiber, Micronutrients, Essential Lipids)
-- **Meal Planner** (Breakfast & Lunch views; Dinner later) — a 3-tab tool mirroring meal-planning spreadsheets, parameterised per meal:
-  - **Plate** — a **day/date picker** (next 21 days; year is implicit and rolls over automatically; applied/past days drop off) + the meal's fixed slots (breakfast: 7; lunch: 13). Pick an item per slot from a category dropdown + raw grams; calories/protein/carbs/fibre auto-fill with a **TOTAL / target / plain-words "vs target"** summary
+- **Meal Planner** (Breakfast, Lunch & Dinner views) — a 3-tab tool mirroring meal-planning spreadsheets, parameterised per meal:
+  - **Plate** — a **day/date picker** (next 21 days; year is implicit and rolls over automatically; applied/past days drop off) + the meal's fixed slots (breakfast: 7; lunch: 13; dinner: 8). Pick an item per slot from a category dropdown + raw grams; calories/protein/carbs/fibre auto-fill with a **TOTAL / target / plain-words "vs target"** summary
   - **Apply** — hit **Apply** (with a confirmation): the plate is logged into that day's meal entries, the plan is cleared, **and that day disappears from the picker** (so it only moves forward). It's manual — nothing auto-fills, nothing is "frozen"
   - **Foods** — the editable per-100g database that powers the dropdowns (add/edit/remove)
   - **Notes** — editable planner notes
@@ -174,6 +174,8 @@ wellnesstrax/
 │   ├── breakfast_plans.json     # Per-day planned breakfast plates + applied dates
 │   ├── lunch_foods.json         # Lunch per-100g DB + notes + target (editable in-app)
 │   ├── lunch_plans.json         # Per-day planned lunch plates + applied dates
+│   ├── dinner_foods.json        # Dinner per-100g DB + notes + target (editable in-app)
+│   ├── dinner_plans.json        # Per-day planned dinner plates + applied dates
 │   ├── bloodwork.json           # Blood work history
 │   ├── injectable_meds.json     # Injectable medication history
 │   └── sessions/                # Daily logs — one file per day
