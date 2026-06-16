@@ -19,6 +19,8 @@ interface Props {
   foodPrefs: FoodPreferences;
   /** Called when either preference list changes */
   onUpdatePrefs: (prefs: FoodPreferences) => Promise<void>;
+  /** Apply a breakfast plate to a date's breakfast log */
+  onApplyBreakfastPlan: (date: string, items: { name: string; qty_g: number }[]) => Promise<void>;
 }
 
 // ─── Unit helpers ─────────────────────────────────────────────────────────────
@@ -294,7 +296,7 @@ interface PendingItem {
   custom: boolean;
 }
 
-export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate, onSaveToList: _onSaveToList, onRemoveFromList: _onRemoveFromList, onMoveItem: _onMoveItem, foodPrefs, onUpdatePrefs }: Props) {
+export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate, onSaveToList: _onSaveToList, onRemoveFromList: _onRemoveFromList, onMoveItem: _onMoveItem, foodPrefs, onUpdatePrefs, onApplyBreakfastPlan }: Props) {
   const [activeMeal, setActiveMeal] = useState<MealType>("breakfast");
   const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -532,7 +534,7 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
             <span className="text-xs" style={{ color: "#475569" }}>plan tomorrow&apos;s plate</span>
             <span className="ml-auto text-sm" style={{ color: "#14b8a6" }}>{showPlanner ? "▲" : "▼"}</span>
           </button>
-          {showPlanner && <div className="mt-3"><BreakfastPlanner /></div>}
+          {showPlanner && <div className="mt-3"><BreakfastPlanner onApply={onApplyBreakfastPlan} /></div>}
         </div>
       )}
 

@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import type {
   DayLog, UserProfile, FoodItemsData, ActivitiesData,
   MealType, FoodEntry, ActivityLog, MedicationEntry, SupplementEntry,
-  SleepLog, DayAnalysis, FoodPreferences, ExerciseEntry, WeightPlan, BreakfastPlan,
+  SleepLog, DayAnalysis, FoodPreferences, ExerciseEntry, WeightPlan,
 } from "@/types";
 import { autoCategory } from "@/lib/food-utils";
 import Sidebar, { type SectionId } from "@/components/Sidebar";
@@ -112,32 +112,6 @@ async function withGymDefaults(log: DayLog, date: string): Promise<DayLog> {
   }
 }
 
-/**
- * If a day has a frozen breakfast plan and its breakfast isn't logged yet,
- * turn the plan into that day's actual breakfast entries (the "auto-fill as
- * that day's log" behaviour). Only applies once the planned day has arrived
- * and never overwrites a breakfast you already logged manually.
- */
-function applyBreakfastPlan(log: DayLog, date: string, plans: Record<string, BreakfastPlan>, todayStr: string): DayLog {
-  if (date > todayStr) return log;
-  const plan = plans[date];
-  if (!plan || Object.keys(plan).length === 0) return log;
-  if ((log.food.breakfast?.length ?? 0) > 0) return log;
-  const entries: FoodEntry[] = Object.values(plan)
-    .filter(s => s.item && s.qty_g > 0)
-    .map(s => ({
-      id: crypto.randomUUID(),
-      name: s.item,
-      category: autoCategory(s.item),
-      quantity_g: s.qty_g,
-      unit: "g",
-      custom: false,
-      logged_at: new Date().toISOString(),
-    }));
-  if (entries.length === 0) return log;
-  return { ...log, food: { ...log.food, breakfast: entries } };
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -163,7 +137,6 @@ export default function Home() {
   const logRef      = useRef<DayLog | null>(null);
   const profileRef  = useRef<UserProfile | null>(null);
   const suppDefsRef = useRef<SuppDef[]>([]);
-  const breakfastPlansRef = useRef<Record<string, BreakfastPlan>>({});
 
   // ── Save to server (debounced) ────────────────────────────────────────────
   const persistLog = useCallback(async (log: DayLog) => {
@@ -206,12 +179,9 @@ export default function Home() {
     const sessRes = await fetch(`/api/sessions/${date}`);
 
     if (!sessRes.ok) {
-      // No file for this date — seed gym from last session; if a frozen
-      // breakfast plan exists for this (arrived) day, auto-fill & persist it.
-      const blank = await withGymDefaults(fresh, date);
-      const withPlan = applyBreakfastPlan(blank, date, breakfastPlansRef.current, todayStr);
-      if (withPlan !== blank) persistLog(withPlan);
-      return withPlan;
+      // No file for this date — return blank log seeded with the last gym's
+      // exercises; don't save yet (user may just be browsing).
+      return await withGymDefaults(fresh, date);
     }
 
     const raw = await sessRes.json() as { log?: Partial<DayLog> };
@@ -247,9 +217,7 @@ export default function Home() {
       supplements: mergedSupps,
       analysis: savedAnalysis,
     };
-    const withPlan = applyBreakfastPlan(result, date, breakfastPlansRef.current, todayStr);
-    if (withPlan !== result) persistLog(withPlan);
-    return withPlan;
+    return result;
   }
 
   // ── Switch to a different date ────────────────────────────────────────────
@@ -277,7 +245,7 @@ export default function Home() {
     async function boot() {
       const today = format(new Date(), "yyyy-MM-dd");
       try {
-        const [profRes, foodRes, actRes, sessRes, bwRes, prefsRes, wpRes, bpRes] = await Promise.all([
+        const [profRes, foodRes, actRes, sessRes, bwRes, prefsRes, wpRes] = await Promise.all([
           fetch("/api/profile"),
           fetch("/api/food-items"),
           fetch("/api/activities"),
@@ -285,13 +253,7 @@ export default function Home() {
           fetch("/api/bloodwork"),
           fetch("/api/food-preferences"),
           fetch("/api/weight-plan"),
-          fetch("/api/breakfast-plans"),
         ]);
-
-        if (bpRes.ok) {
-          const { data: bp } = await bpRes.json() as { data: { plans: Record<string, BreakfastPlan> } };
-          breakfastPlansRef.current = bp?.plans ?? {};
-        }
 
         if (bwRes.ok) {
           const bwJson = await bwRes.json() as { data: import("@/types").BloodWorkData };
@@ -370,31 +332,26 @@ export default function Home() {
             analysis: savedAnalysis,
           };
 
-          // Auto-fill today's breakfast from a frozen plan (if any, breakfast empty)
-          const withPlan = applyBreakfastPlan(merged, today, breakfastPlansRef.current, today);
-
-          // Overwrite if old format, or if the plan just filled breakfast
-          if (!saved.food || !saved.activity || !savedAnalysis !== !saved.analysis || withPlan !== merged) {
+          // Overwrite if old format
+          if (!saved.food || !saved.activity || !savedAnalysis !== !saved.analysis) {
             await fetch(`/api/sessions/${today}`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ log: withPlan }),
+              body: JSON.stringify({ log: merged }),
             });
           }
 
-          setDayLog(withPlan);
-          logRef.current = withPlan;
+          setDayLog(merged);
+          logRef.current = merged;
         } else {
-          // Fresh day — seed gym from the last session, apply any frozen
-          // breakfast plan, then create the file
+          // Fresh day — seed gym from the last session, then create the file
           const seeded = await withGymDefaults(fresh, today);
-          const final = applyBreakfastPlan(seeded, today, breakfastPlansRef.current, today);
-          setDayLog(final);
-          logRef.current = final;
+          setDayLog(seeded);
+          logRef.current = seeded;
           await fetch(`/api/sessions/${today}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ log: final }),
+            body: JSON.stringify({ log: seeded }),
           });
         }
       } catch (e) {
@@ -419,6 +376,40 @@ export default function Home() {
   }
   function onWaterSleepUpdate(water_ml: number, sleep: SleepLog) { updateLog({ water_ml, sleep }); }
   function onAnalysisComplete(analysis: DayAnalysis) { updateLog({ analysis }); }
+
+  // Breakfast planner: apply a plate to a date's breakfast log (manual, on demand).
+  // Appends the planned items to that day's breakfast; updates the live view if
+  // it's the date being viewed, otherwise writes straight to that date's session.
+  async function onApplyBreakfastPlan(date: string, items: { name: string; qty_g: number }[]) {
+    const entries: FoodEntry[] = items
+      .filter(i => i.name && i.qty_g > 0)
+      .map(i => ({
+        id: crypto.randomUUID(),
+        name: i.name,
+        category: autoCategory(i.name),
+        quantity_g: i.qty_g,
+        unit: "g",
+        custom: false,
+        logged_at: new Date().toISOString(),
+      }));
+    if (entries.length === 0) return;
+
+    if (date === selectedDate && logRef.current) {
+      const cur = logRef.current;
+      const merged: DayLog = { ...cur, food: { ...cur.food, breakfast: [...cur.food.breakfast, ...entries] }, updated_at: new Date().toISOString() };
+      setDayLog(merged);
+      logRef.current = merged;
+      persistLog(merged);
+    } else {
+      const log = await loadSessionForDate(date);
+      const merged: DayLog = { ...log, food: { ...log.food, breakfast: [...log.food.breakfast, ...entries] }, updated_at: new Date().toISOString() };
+      await fetch(`/api/sessions/${date}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ log: merged }),
+      });
+    }
+  }
 
   // Weight-loss plan: checklist template is global config; ticks are per-day
   function onWeightPlanChecks(ids: string[]) { updateLog({ weight_plan_checks: ids }); }
@@ -576,7 +567,7 @@ export default function Home() {
               <Dashboard dayLog={dayLog} profile={profile} onNavigate={s => setSection(s as SectionId)} />
             )}
             {section === "food" && (
-              <FoodLog dayLog={dayLog} foodItems={foodItems} onUpdate={onFoodUpdate} onMealTimeUpdate={onMealTimeUpdate} onSaveToList={onSaveToList} onRemoveFromList={onRemoveFromList} onMoveItem={onMoveItem} foodPrefs={foodPrefs} onUpdatePrefs={onUpdatePrefs} />
+              <FoodLog dayLog={dayLog} foodItems={foodItems} onUpdate={onFoodUpdate} onMealTimeUpdate={onMealTimeUpdate} onSaveToList={onSaveToList} onRemoveFromList={onRemoveFromList} onMoveItem={onMoveItem} foodPrefs={foodPrefs} onUpdatePrefs={onUpdatePrefs} onApplyBreakfastPlan={onApplyBreakfastPlan} />
             )}
             {section === "activity" && (
               <ActivityLogSection dayLog={dayLog} activitiesData={activitiesData} onUpdate={onActivityUpdate} />

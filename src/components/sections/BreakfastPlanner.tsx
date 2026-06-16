@@ -19,15 +19,25 @@ function genId() {
 function isoAddDays(n: number) { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().split("T")[0]; }
 function prettyDate(iso: string) { return new Date(iso + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" }); }
 const r1 = (n: number) => Math.round(n * 10) / 10;
+// Next 21 days as date chips — weekday + day + month; the year is implicit
+// (always the current year, and rolls over naturally on Jan 1).
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export default function BreakfastPlanner() {
+export default function BreakfastPlanner({ onApply }: { onApply: (date: string, items: { name: string; qty_g: number }[]) => Promise<void> }) {
   const [fd, setFd] = useState<BreakfastFoodsData | null>(null);
   const [plans, setPlans] = useState<Record<string, BreakfastPlan>>({});
   const [tab, setTab] = useState<"plan" | "foods" | "notes">("plan");
   const [loading, setLoading] = useState(true);
+  const [planDate, setPlanDate] = useState(isoAddDays(1));
+  const [confirmApply, setConfirmApply] = useState(false);
+  const [applying, setApplying] = useState(false);
 
-  const today = isoAddDays(0);
-  const tomorrow = isoAddDays(1);
+  const dateChips = Array.from({ length: 21 }, (_, i) => {
+    const iso = isoAddDays(i);
+    const d = new Date(iso + "T12:00:00");
+    return { iso, weekday: WEEKDAYS[d.getDay()], day: d.getDate(), month: MONTHS[d.getMonth()], isToday: i === 0 };
+  });
 
   useEffect(() => {
     Promise.all([
@@ -55,6 +65,23 @@ export default function BreakfastPlanner() {
     planTimer.current = setTimeout(() => {
       fetch("/api/breakfast-plans", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date, plan }) });
     }, 500);
+  }
+
+  // Apply the selected date's plate to that day's breakfast log, then the plan vanishes.
+  async function applyNow() {
+    const plan = plans[planDate] ?? {};
+    const items = Object.values(plan).filter(s => s.item && s.qty_g > 0).map(s => ({ name: s.item, qty_g: s.qty_g }));
+    if (items.length === 0) { setConfirmApply(false); return; }
+    setApplying(true);
+    try {
+      await onApply(planDate, items);
+      // Plan has been logged — delete it so it completely vanishes
+      await fetch("/api/breakfast-plans", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date: planDate, plan: {} }) });
+      setPlans(p => { const n = { ...p }; delete n[planDate]; return n; });
+    } finally {
+      setApplying(false);
+      setConfirmApply(false);
+    }
   }
 
   if (loading || !fd) {
@@ -208,7 +235,7 @@ export default function BreakfastPlanner() {
           <span className="text-lg">🗓️</span>
           <div>
             <div className="text-sm font-semibold text-white">Breakfast Planner</div>
-            <div className="text-xs" style={{ color: "#475569" }}>Plan tomorrow&apos;s plate — it auto-fills as that day&apos;s breakfast log</div>
+            <div className="text-xs" style={{ color: "#475569" }}>Pick a day, build the plate, then Apply to log it</div>
           </div>
         </div>
         <div className="flex gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.04)" }}>
@@ -223,33 +250,76 @@ export default function BreakfastPlanner() {
       </div>
 
       {/* ── PLAN TAB ── */}
-      {tab === "plan" && (
-        <div className="space-y-4">
-          <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.2)" }}>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold" style={{ color: "#14b8a6" }}>Planning for {prettyDate(tomorrow)}</span>
-              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(20,184,166,0.12)", color: "#5eead4" }}>editable</span>
-              <span className="ml-auto text-xs" style={{ color: "#475569" }}>only tomorrow can be edited</span>
-            </div>
-            <PlateTable date={tomorrow} editable />
-          </div>
-
-          {plans[today] && Object.keys(plans[today]).length > 0 && (
-            <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid var(--border)" }}>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-white">Today&apos;s locked plan · {prettyDate(today)}</span>
-                <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.06)", color: "#64748b" }}>🔒 frozen</span>
-                <span className="ml-auto text-xs" style={{ color: "#475569" }}>auto-logged to today&apos;s breakfast</span>
+      {tab === "plan" && (() => {
+        const plan = plans[planDate] ?? {};
+        const hasItems = Object.values(plan).some(s => s.item && s.qty_g > 0);
+        return (
+          <div className="space-y-4">
+            {/* Day & date picker (year is implicit — current year, auto on Jan 1) */}
+            <div>
+              <div className="text-xs mb-1.5" style={{ color: "#64748b" }}>Plan breakfast for</div>
+              <div className="flex gap-1.5 overflow-x-auto pb-1">
+                {dateChips.map(c => {
+                  const active = c.iso === planDate;
+                  return (
+                    <button key={c.iso} onClick={() => { setPlanDate(c.iso); setConfirmApply(false); }}
+                      className="shrink-0 flex flex-col items-center px-2.5 py-1.5 rounded-xl transition-all"
+                      style={active
+                        ? { background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.4)" }
+                        : { background: "rgba(255,255,255,0.03)", color: "#64748b", border: "1px solid var(--border)" }}>
+                      <span style={{ fontSize: 10 }}>{c.isToday ? "Today" : c.weekday}</span>
+                      <span className="text-sm font-bold leading-none">{c.day}</span>
+                      <span style={{ fontSize: 9, opacity: 0.8 }}>{c.month}</span>
+                    </button>
+                  );
+                })}
               </div>
-              <PlateTable date={today} editable={false} />
             </div>
-          )}
 
-          <div className="text-xs" style={{ color: "#334155" }}>
-            Enter raw / dry weight in grams. Leave a slot on “— skip —” to drop it.
+            {/* Editable plate */}
+            <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.2)" }}>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold" style={{ color: "#14b8a6" }}>Plate for {prettyDate(planDate)}</span>
+              </div>
+              <PlateTable date={planDate} editable />
+            </div>
+
+            <div className="text-xs" style={{ color: "#334155" }}>Enter raw / dry weight in grams. Leave a slot on “— skip —” to drop it.</div>
+
+            {/* Apply */}
+            {!confirmApply ? (
+              <button onClick={() => setConfirmApply(true)} disabled={!hasItems}
+                className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all"
+                style={hasItems
+                  ? { background: "rgba(20,184,166,0.15)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.4)" }
+                  : { background: "rgba(255,255,255,0.04)", color: "#334155", border: "1px solid var(--border)", cursor: "not-allowed" }}>
+                ✓ Apply to {prettyDate(planDate)} breakfast
+              </button>
+            ) : (
+              <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.3)" }}>
+                <div className="flex items-start gap-2">
+                  <span>⚠️</span>
+                  <div className="text-xs" style={{ color: "#fcd34d" }}>
+                    This logs the plate into <strong>{prettyDate(planDate)}</strong>&apos;s <strong>Logged for Breakfast</strong> and then the plan is <strong>cleared</strong>. This can&apos;t be undone.
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={applyNow} disabled={applying}
+                    className="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
+                    style={{ background: "rgba(245,158,11,0.18)", color: "#fbbf24", border: "1px solid rgba(245,158,11,0.45)" }}>
+                    {applying ? "Applying…" : "Apply & clear plan"}
+                  </button>
+                  <button onClick={() => setConfirmApply(false)} disabled={applying}
+                    className="px-4 py-2 rounded-xl text-sm transition-all"
+                    style={{ background: "rgba(255,255,255,0.04)", color: "#64748b", border: "1px solid var(--border)" }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── FOODS TAB ── */}
       {tab === "foods" && (
