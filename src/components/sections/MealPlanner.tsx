@@ -28,7 +28,7 @@ export default function MealPlanner({ meal, onApply }: {
   const [planDate, setPlanDate] = useState(isoAddDays(1));
   const [confirmApply, setConfirmApply] = useState(false);
   const [applying, setApplying] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [servings, setServings] = useState(1);   // people eating — scales the kitchen list only
 
   useEffect(() => {
     setLoading(true);
@@ -89,24 +89,17 @@ export default function MealPlanner({ meal, onApply }: {
     }
   }
 
-  // Plain-text "kitchen list" — just item + grams, in slot order — for WhatsApp/copy.
+  // Plain-text "kitchen list" — item + grams only, in slot order — scaled by the
+  // number of people eating (servings affects this list ONLY, not the plate/totals).
   function planText(): string {
     const plan = plans[planDate] ?? {};
     const lines = SLOTS
       .map(s => plan[s.id])
       .filter((c): c is { item: string; qty_g: number } => !!c?.item && c.qty_g > 0)
-      .map(c => `• ${c.item} — ${c.qty_g}g`);
+      .map(c => `• ${c.item} — ${Math.round(c.qty_g * servings)}g`);
     if (lines.length === 0) return "";
-    return `${cfg.title} plan · ${prettyDate(planDate)}\n${lines.join("\n")}`;
-  }
-  async function copyPlanText() {
-    const text = planText();
-    if (!text) return;
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch { /* clipboard blocked — user can select the preview text manually */ }
+    const who = servings === 1 ? "" : ` · for ${servings} people`;
+    return `${cfg.title} plan · ${prettyDate(planDate)}${who}\n${lines.join("\n")}`;
   }
   function shareWhatsApp() {
     const text = planText();
@@ -298,23 +291,34 @@ export default function MealPlanner({ meal, onApply }: {
 
           <div className="text-xs" style={{ color: "#334155" }}>Enter raw / dry weight in grams. Leave a slot on “— skip —” to drop it.</div>
 
-          {/* Kitchen list — item + grams only, to copy / send to WhatsApp */}
+          {/* Kitchen list — item + grams only, scaled by people, sent to WhatsApp */}
           {hasItems && (
-            <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
-              <div className="text-xs font-semibold" style={{ color: "#94a3b8" }}>📋 Kitchen list — item &amp; grams only</div>
-              <pre className="text-xs whitespace-pre-wrap" style={{ color: "#cbd5e1", fontFamily: "inherit", margin: 0 }}>{planText()}</pre>
-              <div className="flex gap-2">
-                <button onClick={copyPlanText}
-                  className="flex-1 py-2 rounded-xl text-xs font-medium transition-all"
-                  style={{ background: "rgba(20,184,166,0.1)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.3)" }}>
-                  {copied ? "✓ Copied!" : "📋 Copy"}
-                </button>
-                <button onClick={shareWhatsApp}
-                  className="flex-1 py-2 rounded-xl text-xs font-medium transition-all"
-                  style={{ background: "rgba(37,211,102,0.12)", color: "#25d366", border: "1px solid rgba(37,211,102,0.4)" }}>
-                  💬 Send to WhatsApp
-                </button>
+            <div className="rounded-xl p-3 space-y-2.5" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="text-xs font-semibold" style={{ color: "#94a3b8" }}>📋 Kitchen list — item &amp; grams</div>
+                {/* People stepper — scales this list only */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs" style={{ color: "#64748b" }}>People eating</span>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setServings(s => Math.max(1, s - 1))}
+                      className="w-6 h-6 rounded-lg flex items-center justify-center text-sm font-bold"
+                      style={{ background: "rgba(255,255,255,0.05)", color: "#94a3b8", border: "1px solid var(--border)" }}>−</button>
+                    <span className="text-sm font-bold tabular-nums" style={{ color: "#14b8a6", minWidth: 18, textAlign: "center" }}>{servings}</span>
+                    <button onClick={() => setServings(s => Math.min(12, s + 1))}
+                      className="w-6 h-6 rounded-lg flex items-center justify-center text-sm font-bold"
+                      style={{ background: "rgba(20,184,166,0.12)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.3)" }}>+</button>
+                  </div>
+                </div>
               </div>
+              {servings > 1 && (
+                <div className="text-xs" style={{ color: "#475569" }}>Quantities below are scaled ×{servings} for {servings} people (the plate above stays per-person).</div>
+              )}
+              <pre className="text-xs whitespace-pre-wrap" style={{ color: "#cbd5e1", fontFamily: "inherit", margin: 0 }}>{planText()}</pre>
+              <button onClick={shareWhatsApp}
+                className="w-full py-2 rounded-xl text-xs font-medium transition-all"
+                style={{ background: "rgba(37,211,102,0.12)", color: "#25d366", border: "1px solid rgba(37,211,102,0.4)" }}>
+                💬 Send to WhatsApp
+              </button>
             </div>
           )}
 

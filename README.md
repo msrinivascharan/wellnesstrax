@@ -48,7 +48,7 @@ Your health data **never leaves your machine** except the anonymised text log se
 - **Meal Planner** (Breakfast, Lunch & Dinner views) — a 3-tab tool mirroring meal-planning spreadsheets, parameterised per meal:
   - **Plate** — a **day/date picker** (next 21 days; year is implicit and rolls over automatically; applied/past days drop off) + the meal's fixed slots (breakfast: 7; lunch: 13; dinner: 8). Pick an item per slot from a category dropdown + raw grams; calories/protein/carbs/fibre auto-fill with a **TOTAL / target / plain-words "vs target"** summary
   - **Apply** — hit **Apply** (with a confirmation): the plate is logged into that day's meal entries, the plan is cleared, **and that day disappears from the picker** (so it only moves forward). It's manual — nothing auto-fills, nothing is "frozen"
-  - **Kitchen list** — copy the day's plan (item + grams only) as plain text, or **send it straight to WhatsApp**, so you can cook from your phone without the laptop
+  - **Kitchen list** — the day's plan as plain text (item + grams only), with a **people-eating stepper** that scales the quantities (×2, ×3…) for that list only, and **Send to WhatsApp**, so you can cook from your phone without the laptop
   - **Foods** — the editable per-100g database that powers the dropdowns (add/edit/remove)
   - **Notes** — editable planner notes
   - Each meal has its own config (slots, seeded foods, target) in `lib/meal-planner-config.ts`
