@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import type {
   DayLog, UserProfile, FoodItemsData, ActivitiesData,
   MealType, FoodEntry, ActivityLog, MedicationEntry, SupplementEntry,
-  SleepLog, DayAnalysis, FoodPreferences, ExerciseEntry, WeightPlan,
+  SleepLog, DayAnalysis, FoodPreferences, ExerciseEntry,
 } from "@/types";
 import { autoCategory } from "@/lib/food-utils";
 import Sidebar, { type SectionId } from "@/components/Sidebar";
@@ -14,7 +14,6 @@ import ActivityLogSection from "@/components/sections/ActivityLog";
 import MedicationLog from "@/components/sections/MedicationLog";
 import BloodWork from "@/components/sections/BloodWork";
 import WaterSleep from "@/components/sections/WaterSleep";
-import WeightLossPlan from "@/components/sections/WeightLossPlan";
 import Reports from "@/components/sections/Reports";
 
 // ─── Medication entry builder (handles multi-time meds) ──────
@@ -128,7 +127,6 @@ export default function Home() {
   const [bloodWork, setBloodWork]             = useState<import("@/types").BloodWorkData | undefined>(undefined);
   const [alwaysAvoid, setAlwaysAvoid]         = useState<string[]>([]);
   const [foodPrefs, setFoodPrefs]             = useState<FoodPreferences>({ avoid: [], encourage: [] });
-  const [weightPlan, setWeightPlan]           = useState<WeightPlan>({ checklist: [] });
   const [selectedDate, setSelectedDate]       = useState<string>(todayStr);
   const [dateLoading, setDateLoading]         = useState(false);
 
@@ -245,14 +243,13 @@ export default function Home() {
     async function boot() {
       const today = format(new Date(), "yyyy-MM-dd");
       try {
-        const [profRes, foodRes, actRes, sessRes, bwRes, prefsRes, wpRes] = await Promise.all([
+        const [profRes, foodRes, actRes, sessRes, bwRes, prefsRes] = await Promise.all([
           fetch("/api/profile"),
           fetch("/api/food-items"),
           fetch("/api/activities"),
           fetch(`/api/sessions/${today}`),
           fetch("/api/bloodwork"),
           fetch("/api/food-preferences"),
-          fetch("/api/weight-plan"),
         ]);
 
         if (bwRes.ok) {
@@ -263,11 +260,6 @@ export default function Home() {
         if (prefsRes.ok) {
           const { data: fp } = await prefsRes.json() as { data: FoodPreferences };
           setFoodPrefs(fp);
-        }
-
-        if (wpRes.ok) {
-          const { data: wp } = await wpRes.json() as { data: WeightPlan };
-          setWeightPlan(wp);
         }
 
         if (!profRes.ok) throw new Error("Failed to load profile.json");
@@ -409,17 +401,6 @@ export default function Home() {
         body: JSON.stringify({ log: merged }),
       });
     }
-  }
-
-  // Weight-loss plan: checklist template is global config; ticks are per-day
-  function onWeightPlanChecks(ids: string[]) { updateLog({ weight_plan_checks: ids }); }
-  async function onUpdateWeightPlan(plan: WeightPlan) {
-    setWeightPlan(plan);
-    await fetch("/api/weight-plan", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: plan }),
-    });
   }
 
   async function onSaveToList(meal: string, category: string, name: string) {
@@ -580,15 +561,6 @@ export default function Home() {
             )}
             {section === "water-sleep" && (
               <WaterSleep dayLog={dayLog} profile={profile} onUpdate={onWaterSleepUpdate} />
-            )}
-            {section === "weight-plan" && (
-              <WeightLossPlan
-                plan={weightPlan}
-                onUpdatePlan={onUpdateWeightPlan}
-                checks={dayLog.weight_plan_checks ?? []}
-                onUpdateChecks={onWeightPlanChecks}
-                profile={profile}
-              />
             )}
             {section === "reports" && (
               <Reports dayLog={dayLog} profile={profile} onAnalysisComplete={onAnalysisComplete} bloodWork={bloodWork} alwaysAvoid={alwaysAvoid} foodPrefs={foodPrefs} />

@@ -994,6 +994,63 @@ export default function BloodWork({ profile }: { profile?: UserProfile }) {
             </div>
           </div>
 
+          {/* Weight goal — current vs target, BMI, and progress */}
+          {weights.length > 0 && (() => {
+            const target = data.weight_target_kg ?? null;
+            const current = weights[0].weight_kg;
+            const currentBmi = calcBMI(current, heightFt);
+            const targetBmi = target != null ? calcBMI(target, heightFt) : null;
+            const toGo = target != null ? Math.round((current - target) * 10) / 10 : null;
+            const start = weights[weights.length - 1].weight_kg;
+            const totalSpan = target != null ? start - target : 0;
+            const progress = totalSpan > 0 ? Math.max(0, Math.min(100, Math.round(((start - current) / totalSpan) * 100))) : null;
+            return (
+              <div className="card p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span>⚖️</span>
+                  <span className="text-sm font-semibold text-white">Weight goal</span>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-3 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
+                    <div className="text-xs" style={{ color: "#64748b" }}>Current weight</div>
+                    <div className="text-xl font-bold mt-0.5" style={{ color: "#5eead4" }}>{current} kg</div>
+                    <div className="text-xs mt-0.5" style={{ color: "#475569" }}>
+                      {new Date(weights[0].test_date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                      {currentBmi != null && <> · BMI {currentBmi}</>}
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-xl text-center" style={{ background: "rgba(20,184,166,0.06)", border: "1px solid rgba(20,184,166,0.2)" }}>
+                    <div className="text-xs" style={{ color: "#64748b" }}>Target weight</div>
+                    <div className="text-xl font-bold mt-0.5" style={{ color: "#14b8a6" }}>{target != null ? `${target} kg` : "—"}</div>
+                    <div className="text-xs mt-0.5" style={{ color: "#475569" }}>{target == null ? "not set" : targetBmi != null ? `BMI ${targetBmi}` : "goal"}</div>
+                  </div>
+                  <div className="p-3 rounded-xl text-center"
+                    style={{ background: toGo == null ? "rgba(255,255,255,0.03)" : toGo <= 0 ? "rgba(34,197,94,0.08)" : "rgba(245,158,11,0.08)",
+                             border: `1px solid ${toGo == null ? "var(--border)" : toGo <= 0 ? "rgba(34,197,94,0.25)" : "rgba(245,158,11,0.25)"}` }}>
+                    <div className="text-xs" style={{ color: "#64748b" }}>To go</div>
+                    <div className="text-xl font-bold mt-0.5" style={{ color: toGo == null ? "#475569" : toGo <= 0 ? "#22c55e" : "#fbbf24" }}>
+                      {toGo == null ? "—" : toGo === 0 ? "🎉" : `${Math.abs(toGo)} kg`}
+                    </div>
+                    <div className="text-xs mt-0.5" style={{ color: "#475569" }}>
+                      {toGo == null ? "set a target" : toGo === 0 ? "at target!" : toGo > 0 ? "to lose" : "to gain"}
+                    </div>
+                  </div>
+                </div>
+                {progress != null && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span style={{ color: "#475569" }}>Progress from {start} kg → {target} kg</span>
+                      <span style={{ color: "#14b8a6", fontWeight: 600 }}>{progress}%</span>
+                    </div>
+                    <div className="rounded-full overflow-hidden" style={{ height: 7, background: "rgba(255,255,255,0.06)" }}>
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progress}%`, background: "#14b8a6" }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {weights.length === 0 ? (
             <div className="card p-8 text-center">
               <div className="text-3xl mb-3">⚖️</div>

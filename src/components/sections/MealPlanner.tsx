@@ -28,6 +28,7 @@ export default function MealPlanner({ meal, onApply }: {
   const [planDate, setPlanDate] = useState(isoAddDays(1));
   const [confirmApply, setConfirmApply] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -88,6 +89,31 @@ export default function MealPlanner({ meal, onApply }: {
     }
   }
 
+  // Plain-text "kitchen list" — just item + grams, in slot order — for WhatsApp/copy.
+  function planText(): string {
+    const plan = plans[planDate] ?? {};
+    const lines = SLOTS
+      .map(s => plan[s.id])
+      .filter((c): c is { item: string; qty_g: number } => !!c?.item && c.qty_g > 0)
+      .map(c => `• ${c.item} — ${c.qty_g}g`);
+    if (lines.length === 0) return "";
+    return `${cfg.title} plan · ${prettyDate(planDate)}\n${lines.join("\n")}`;
+  }
+  async function copyPlanText() {
+    const text = planText();
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* clipboard blocked — user can select the preview text manually */ }
+  }
+  function shareWhatsApp() {
+    const text = planText();
+    if (!text) return;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+  }
+
   if (loading || !fd) {
     return <div className="card p-5 text-center text-sm" style={{ color: "#475569" }}>Loading {cfg.title.toLowerCase()} planner…</div>;
   }
@@ -110,7 +136,10 @@ export default function MealPlanner({ meal, onApply }: {
   }
 
   // ── editable plate ──────────────────────────────────────────────────────────
-  function PlateTable({ date }: { date: string }) {
+  // NOTE: this is a render *function* (called inline as {renderPlate(date)}),
+  // NOT a nested component. Rendering it as <PlateTable/> would give it a new
+  // identity each keystroke and remount the inputs, dropping cursor focus.
+  function renderPlate(date: string) {
     const plan = plans[date] ?? {};
     const t = totals(plan);
     const grid = "minmax(96px,1.4fr) minmax(150px,2fr) 64px 60px 48px 48px 48px";
@@ -264,10 +293,30 @@ export default function MealPlanner({ meal, onApply }: {
 
           <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.2)" }}>
             <div className="text-xs font-semibold" style={{ color: "#14b8a6" }}>Plate for {prettyDate(planDate)}</div>
-            <PlateTable date={planDate} />
+            {renderPlate(planDate)}
           </div>
 
           <div className="text-xs" style={{ color: "#334155" }}>Enter raw / dry weight in grams. Leave a slot on “— skip —” to drop it.</div>
+
+          {/* Kitchen list — item + grams only, to copy / send to WhatsApp */}
+          {hasItems && (
+            <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
+              <div className="text-xs font-semibold" style={{ color: "#94a3b8" }}>📋 Kitchen list — item &amp; grams only</div>
+              <pre className="text-xs whitespace-pre-wrap" style={{ color: "#cbd5e1", fontFamily: "inherit", margin: 0 }}>{planText()}</pre>
+              <div className="flex gap-2">
+                <button onClick={copyPlanText}
+                  className="flex-1 py-2 rounded-xl text-xs font-medium transition-all"
+                  style={{ background: "rgba(20,184,166,0.1)", color: "#14b8a6", border: "1px solid rgba(20,184,166,0.3)" }}>
+                  {copied ? "✓ Copied!" : "📋 Copy"}
+                </button>
+                <button onClick={shareWhatsApp}
+                  className="flex-1 py-2 rounded-xl text-xs font-medium transition-all"
+                  style={{ background: "rgba(37,211,102,0.12)", color: "#25d366", border: "1px solid rgba(37,211,102,0.4)" }}>
+                  💬 Send to WhatsApp
+                </button>
+              </div>
+            </div>
+          )}
 
           {!confirmApply ? (
             <button onClick={() => setConfirmApply(true)} disabled={!hasItems}

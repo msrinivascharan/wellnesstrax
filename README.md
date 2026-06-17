@@ -28,10 +28,9 @@ Your health data **never leaves your machine** except the anonymised text log se
 | 2 | **Food Log** | Log breakfast/lunch/dinner/snacks with meal time. **Typeahead search** adds items, then a quantity/unit picker. Rich **Must Avoid** / **Good to Eat** lists with filters and enable/disable. A **Meal Planner** (breakfast, lunch & dinner; 3-tab: plate builder + per-100g Foods DB + Notes) lets you build a plate for any chosen day and **Apply** it into that day's meal log |
 | 3 | **Activity** | Log gym session with in/out time and auto-calculated duration, exercises with sets/reps/weights, post-prandial walks, soleus pumps, **badminton** (duration/intensity/games), and breathing exercises |
 | 4 | **Medications** | Mark each scheduled medication and supplement taken with timestamp. Periodic injectable tracking with auto-calculated next-due status badge |
-| 5 | **Blood Work & Vitals** | Log and track **lipid, thyroid, blood-pressure, weight, and daily mood** over time with trend arrows and reference ranges. Thyroid supports **TSH-only panels**; BP captures systolic/diastolic + optional pulse, time of day, and cuff arm; weight auto-computes **BMI** vs your target range; mood is a 10-second circumplex check-in |
+| 5 | **Blood Work & Vitals** | Log and track **lipid, thyroid, blood-pressure, weight, and daily mood** over time with trend arrows and reference ranges. Thyroid supports **TSH-only panels**; BP captures systolic/diastolic + optional pulse, time of day, and cuff arm; the Weight tab sets a target and shows a **weight-goal panel** (current vs target, BMI, to-go, progress bar); mood is a 10-second circumplex check-in |
 | 6 | **Water & Sleep** | Hydration tracker, sleep log (hours, quality, bedtime/wake), **multiple daytime naps**, and **post-lunch dip** + **evening dip** trackers |
-| 7 | **Weight Loss Plan** | Read-only weight goal (current vs target + BMI and progress, pulled from Blood Work & Vitals) and a **configurable daily-habits checklist** you tick each day (add/remove your own items) |
-| 8 | **Reports** | Run AI analysis; meal-wise balanced-plate donuts (with Nutrition) and avoid-list flagging; **per-meal next-day suggestions**; **sectioned Activity trends** (Overall, Cardio, Strength + body **muscle map**, Indoor, Badminton); **Breathing**, **Hydration**, and **Sleep** trend sections — all with charts and AI insights; blood-work snapshot; and a date navigator to revisit any past day |
+| 7 | **Reports** | Run AI analysis; meal-wise balanced-plate donuts (with Nutrition) and avoid-list flagging; **per-meal next-day suggestions**; **sectioned Activity trends** (Overall, Cardio, Strength + body **muscle map**, Indoor, Badminton); **Breathing**, **Hydration**, and **Sleep** trend sections — all with charts and AI insights; blood-work snapshot; and a date navigator to revisit any past day |
 
 ---
 
@@ -49,6 +48,7 @@ Your health data **never leaves your machine** except the anonymised text log se
 - **Meal Planner** (Breakfast, Lunch & Dinner views) — a 3-tab tool mirroring meal-planning spreadsheets, parameterised per meal:
   - **Plate** — a **day/date picker** (next 21 days; year is implicit and rolls over automatically; applied/past days drop off) + the meal's fixed slots (breakfast: 7; lunch: 13; dinner: 8). Pick an item per slot from a category dropdown + raw grams; calories/protein/carbs/fibre auto-fill with a **TOTAL / target / plain-words "vs target"** summary
   - **Apply** — hit **Apply** (with a confirmation): the plate is logged into that day's meal entries, the plan is cleared, **and that day disappears from the picker** (so it only moves forward). It's manual — nothing auto-fills, nothing is "frozen"
+  - **Kitchen list** — copy the day's plan (item + grams only) as plain text, or **send it straight to WhatsApp**, so you can cook from your phone without the laptop
   - **Foods** — the editable per-100g database that powers the dropdowns (add/edit/remove)
   - **Notes** — editable planner notes
   - Each meal has its own config (slots, seeded foods, target) in `lib/meal-planner-config.ts`
@@ -84,11 +84,7 @@ Your health data **never leaves your machine** except the anonymised text log se
 - **Blood pressure** — systolic/diastolic (required) + optional pulse, **time of day** (defaults to now), and **cuff arm (left/right)**, scored against a `<130/80` cardiac target with an interpretation banner
 - **Daily mood check-in** — science-backed (circumplex model of affect): 5-level mood (valence), optional energy and stress levels, and a what-influenced-it note; one entry per day with a colour-coded last-14-days strip. Mood and stress are tracked because both directly affect cardiac health
 - **Weight** — log weight (kg) over time; **BMI is auto-computed** from your profile height, colour-coded against the healthy range, with the change since the previous reading
-- **Target weight** — set/update a goal weight; the Weight tab shows "X kg to lose/gain" against your latest reading, and Reports shows the target alongside your current weight
-
-### Weight loss plan
-- **Goal at a glance** — current weight, target weight, BMI, "to-go" delta, and a progress bar, all read-only and pulled live from Blood Work & Vitals (edit the numbers there)
-- **Configurable daily-habits checklist** — tick the weight-loss practices you stuck to today (hydration, movement, gym, portions, sleep…); add or remove your own items. The list is shared across days; your ticks are saved per day
+- **Weight goal** — set/update a target weight; the Weight tab shows a **goal panel** (current vs target, BMI, "to-go" delta, and a progress bar from your starting weight), and Reports shows the target alongside your current weight
 
 ### Medications
 - **Time-aware alerts** — missed warnings only appear after the scheduled dose time has passed
@@ -169,7 +165,6 @@ wellnesstrax/
 │   ├── food_items.json          # Pre-defined food lists per meal (search source)
 │   ├── food_preferences.json    # Rich Must Avoid / Good to Eat lists (edit in-app)
 │   ├── activities.json          # Exercise definitions: gym + daily activities
-│   ├── weight_plan.json         # Weight-loss-plan habit checklist (editable in-app)
 │   ├── breakfast_foods.json     # Breakfast per-100g DB + notes + target (editable in-app)
 │   ├── breakfast_plans.json     # Per-day planned breakfast plates + applied dates
 │   ├── lunch_foods.json         # Lunch per-100g DB + notes + target (editable in-app)
@@ -196,7 +191,6 @@ wellnesstrax/
 │   │       ├── food-rules/       # GET food_rules.json
 │   │       ├── food-items/       # GET · PUT add · DELETE remove · PATCH recategorise
 │   │       ├── food-preferences/ # GET + PUT — Must Avoid / Good to Eat lists
-│   │       ├── weight-plan/      # GET + PUT — weight-loss-plan habit checklist
 │   │       ├── meal-foods/[meal]/ # GET + PUT — per-meal per-100g food DB + notes + target
 │   │       ├── meal-plans/[meal]/ # GET + PUT — per-day planned plates + applied dates
 │   │       └── activities/       # GET activities.json
@@ -214,9 +208,8 @@ wellnesstrax/
 │   │       ├── SleepTrends.tsx     # Sleep trend charts + AI (Reports)
 │   │       ├── trends-common.tsx   # Shared trend UI: PeriodToggle, StatTile, bucketing, bar chart
 │   │       ├── MedicationLog.tsx   # Med/supplement check-off + injectable tracker
-│   │       ├── BloodWork.tsx       # Lipid, thyroid, blood-pressure & weight (BMI) entry + history
+│   │       ├── BloodWork.tsx       # Lipid, thyroid, BP, weight (BMI + goal panel) & mood entry + history
 │   │       ├── WaterSleep.tsx      # Hydration + sleep + naps + post-lunch/evening dip
-│   │       ├── WeightLossPlan.tsx  # Read-only weight goal + configurable daily-habits checklist
 │   │       └── Reports.tsx         # Plate charts + Nutrition + all trend sections + history navigator
 │   │
 │   ├── lib/
