@@ -12,12 +12,12 @@ export async function GET() {
   }
 }
 
-/** Replace food preferences. Body: { avoid: FoodPreferenceItem[], encourage: FoodPreferenceItem[] } */
+/** Replace food preferences. Body: { encourage: FoodPreferenceItem[] } */
 export async function PUT(req: Request) {
   try {
     const body = await req.json() as Partial<FoodPreferences>;
-    if (!Array.isArray(body.avoid) || !Array.isArray(body.encourage)) {
-      return NextResponse.json({ error: "avoid and encourage must be arrays" }, { status: 400 });
+    if (!Array.isArray(body.encourage)) {
+      return NextResponse.json({ error: "encourage must be an array" }, { status: 400 });
     }
     // Accept either rich objects or legacy strings (migration-safe)
     function normalise(arr: unknown[]): FoodPreferenceItem[] {
@@ -29,7 +29,6 @@ export async function PUT(req: Request) {
       }).filter(i => i.name && i.name.trim());
     }
     const prefs: FoodPreferences = {
-      avoid:    normalise(body.avoid),
       encourage: normalise(body.encourage),
     };
     await saveFoodPreferences(prefs);

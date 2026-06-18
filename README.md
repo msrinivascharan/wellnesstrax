@@ -25,21 +25,21 @@ Your health data **never leaves your machine** except the anonymised text log se
 | # | Section | What you do here |
 |---|---------|-----------------|
 | 1 | **Dashboard** | At-a-glance daily rings (food = 3 main meals logged, water, activity, sleep, meds), time-aware missed-medication alerts, quick stats, and today's AI score if analysed |
-| 2 | **Food Log** | Log breakfast/lunch/dinner/snacks with meal time. **Typeahead search** adds items, then a quantity/unit picker. Rich **Must Avoid** / **Good to Eat** lists with filters and enable/disable. A **Meal Planner** (breakfast, lunch & dinner; 3-tab: plate builder + per-100g Foods DB + Notes) lets you build a plate for any chosen day and **Apply** it into that day's meal log |
+| 2 | **Food Log** | Log breakfast/lunch/dinner/snacks with meal time. **Typeahead search** adds items, then a quantity/unit picker. A rich **Good to Eat** list with filters and enable/disable. A **Meal Planner** (breakfast, lunch & dinner; 3-tab: plate builder + per-100g Foods DB + Notes) lets you build a plate for any chosen day and **Apply** it into that day's meal log |
 | 3 | **Activity** | Log gym session with in/out time and auto-calculated duration, exercises with sets/reps/weights, post-prandial walks, soleus pumps, **badminton** (duration/intensity/games), and breathing exercises |
 | 4 | **Medications** | Mark each scheduled medication and supplement taken with timestamp. Periodic injectable tracking with auto-calculated next-due status badge |
 | 5 | **Blood Work & Vitals** | Log and track **lipid, thyroid, blood-pressure, weight, and daily mood** over time with trend arrows and reference ranges. Thyroid supports **TSH-only panels**; BP captures systolic/diastolic + optional pulse, time of day, and cuff arm; the Weight tab sets a target and shows a **weight-goal panel** (current vs target, BMI, to-go, progress bar); mood is a 10-second circumplex check-in |
 | 6 | **Water & Sleep** | Hydration tracker, sleep log (hours, quality, bedtime/wake), **multiple daytime naps**, and **post-lunch dip** + **evening dip** trackers |
-| 7 | **Reports** | Run AI analysis; meal-wise balanced-plate donuts (with Nutrition) and avoid-list flagging; **per-meal next-day suggestions**; **sectioned Activity trends** (Overall, Cardio, Strength + body **muscle map**, Indoor, Badminton); **Breathing**, **Hydration**, and **Sleep** trend sections — all with charts and AI insights; blood-work snapshot; and a date navigator to revisit any past day |
+| 7 | **Reports** | Run AI analysis; meal-wise balanced-plate donuts (with Nutrition); **per-meal next-day suggestions**; **sectioned Activity trends** (Overall, Cardio, Strength + body **muscle map**, Indoor, Badminton); **Breathing**, **Hydration**, and **Sleep** trend sections — all with charts and AI insights; blood-work snapshot; and a date navigator to revisit any past day |
 
 ---
 
 ## Key Features
 
 ### Food logging
-- **Typeahead search** — start typing and pick from a deduplicated pool of your **Good to Eat** list, your **Must Avoid** list (shown with a red ⚠ warning — log what you actually ate so Reports can flag it), plus the pre-defined `food_items.json`; already-logged items are shown as crossed-out so you never double-add
+- **Typeahead search** — start typing and pick from a deduplicated pool of your **Good to Eat** list plus the pre-defined `food_items.json`; already-logged items are shown as crossed-out so you never double-add
 - **Quantity + unit picker** — after selecting an item, set the amount with smart default units (g / ml / pieces / cups / tbsp / tsp), auto-guessed from the food name
-- **Rich Must Avoid / Good to Eat lists** — each item carries `{ name, category, subcategory, frequency, notes, enabled }`
+- **Rich Good to Eat list** — each item carries `{ name, category, subcategory, frequency, notes, enabled }`
   - **Category filter pills** to slice each list by group (Vegetables, Fruits, Fried Foods, Sweets, etc.)
   - **Per-item enable/disable** (soft toggle) — pause an item without deleting it, or remove entirely
   - Add new items inline with category + notes
@@ -55,7 +55,6 @@ Your health data **never leaves your machine** except the anonymised text log se
 
 ### Reports & AI analysis
 - **Meal-wise balanced plate** — a donut per meal (breakfast/lunch/dinner/snacks) with a per-meal balance score, missing-group hints, a hover item breakdown, and a **Nutrition** card (estimated calories/protein/fiber vs target)
-- **Avoid-list flagging** — logged foods are cross-checked against both `food_rules.json` (complex rules) and your editable **Must Avoid** list (parenthetical qualifiers like "White Rice (Regular Use)" still match "White Rice"); violations are highlighted per meal and inside the hover breakdown
 - **Per-meal next-day suggestions** — after Re-analyse, each meal card shows 3–4 "Try tomorrow" picks drawn from your **Good to Eat** list that you have **not** eaten in the past 7 days
 - **Sectioned Activity trends** *(own section)* — daily / weekly / monthly charts and per-section AI insights for:
   - **Overall movement** — stacked gym/walk/soleus/badminton minutes, active-day / gym-day / current-gap tiles, plus an AI synthesis (summary, how your body benefits, activity balance, consistency)
@@ -161,9 +160,9 @@ Open [http://localhost:3000](http://localhost:3000). The app creates `data/sessi
 wellnesstrax/
 ├── data/                        # All personal health data — gitignored, local only
 │   ├── profile.json             # User profile: age, weight, medications, targets
-│   ├── food_rules.json          # Always-avoid/encourage rules + supplements + expert panel
+│   ├── food_rules.json          # Always-encourage rules + supplements + expert panel
 │   ├── food_items.json          # Pre-defined food lists per meal (search source)
-│   ├── food_preferences.json    # Rich Must Avoid / Good to Eat lists (edit in-app)
+│   ├── food_preferences.json    # Rich Good to Eat list (edit in-app)
 │   ├── activities.json          # Exercise definitions: gym + daily activities
 │   ├── breakfast_foods.json     # Breakfast per-100g DB + notes + target (editable in-app)
 │   ├── breakfast_plans.json     # Per-day planned breakfast plates + applied dates
@@ -190,7 +189,7 @@ wellnesstrax/
 │   │       ├── profile/          # GET profile.json
 │   │       ├── food-rules/       # GET food_rules.json
 │   │       ├── food-items/       # GET · PUT add · DELETE remove · PATCH recategorise
-│   │       ├── food-preferences/ # GET + PUT — Must Avoid / Good to Eat lists
+│   │       ├── food-preferences/ # GET + PUT — Good to Eat list
 │   │       ├── meal-foods/[meal]/ # GET + PUT — per-meal per-100g food DB + notes + target
 │   │       ├── meal-plans/[meal]/ # GET + PUT — per-day planned plates + applied dates
 │   │       └── activities/       # GET activities.json
@@ -199,7 +198,7 @@ wellnesstrax/
 │   │   ├── Sidebar.tsx          # Navigation sidebar with completion rings + date navigation
 │   │   └── sections/
 │   │       ├── Dashboard.tsx       # Overview: rings, missed meds, quick stats, score summary
-│   │       ├── FoodLog.tsx         # Meal logging: typeahead search + Must Avoid/Good to Eat lists
+│   │       ├── FoodLog.tsx         # Meal logging: typeahead search + Good to Eat list
 │   │       ├── MealPlanner.tsx     # 3-tab meal planner (plate + Foods DB + Notes), per meal
 │   │       ├── ActivityLog.tsx     # Gym + walks + soleus + badminton + breathing
 │   │       ├── ActivityTrends.tsx  # Sectioned activity (cardio/strength/indoor/badminton) + breathing trends
@@ -213,8 +212,8 @@ wellnesstrax/
 │   │       └── Reports.tsx         # Plate charts + Nutrition + all trend sections + history navigator
 │   │
 │   ├── lib/
-│   │   ├── food-utils.ts         # autoCategory(), resolveCategory(), mapToBalancedPlate(),
-│   │   │                         # checkAlwaysAvoidRules() — shared categorisation helpers
+│   │   ├── food-utils.ts         # autoCategory(), resolveCategory(), mapToBalancedPlate()
+│   │   │                         # — shared categorisation helpers
 │   │   ├── activity-trends.ts    # Reads session history → per-day activity/wellness rollups + summaries
 │   │   ├── muscle-map.ts         # Exercise-name → muscle-group mapping (shared, pure)
 │   │   ├── prompt-builder.ts     # Builds the full AI analysis prompt from the day's log + context
@@ -266,7 +265,6 @@ Medications with `"time": "9AM and 9PM"` are auto-split into two daily entries. 
 
 Doctor/dietitian-approved rules loaded into every AI analysis:
 
-- `always_avoid` — hard no's (specific interactions, harmful ingredients), checked against every logged meal
 - `always_encourage` — foods to favour
 - `supplements_to_track` — prescribed supplements with timing and targets
 - `expert_panel` — reference nutritionist personas used to frame AI context
@@ -290,14 +288,10 @@ Pre-defined food lists, organised by `meal → category → [items]`. These feed
 
 ### `data/food_preferences.json`
 
-Your rich **Must Avoid** / **Good to Eat** lists, managed entirely from the Food Log section. Changes save immediately via the API.
+Your rich **Good to Eat** list, managed entirely from the Food Log section. Changes save immediately via the API.
 
 ```json
 {
-  "avoid": [
-    { "name": "White Rice (Regular Use)", "category": "Refined Grains",
-      "subcategory": "", "frequency": "Limit", "notes": "Spikes blood sugar", "enabled": true }
-  ],
   "encourage": [
     { "name": "Blueberries", "category": "Fruits",
       "subcategory": "Berries", "frequency": "Daily", "notes": "Polyphenols", "enabled": true }
@@ -305,8 +299,7 @@ Your rich **Must Avoid** / **Good to Eat** lists, managed entirely from the Food
 }
 ```
 
-- `avoid` items are cross-checked against every meal in Reports and highlighted in red (including inside the hover breakdown). Disabled items (`enabled: false`) are skipped.
-- `encourage` items power the **Good to Eat** list, the Food Log search pool, and the **next-day meal suggestions**.
+- `encourage` items power the **Good to Eat** list, the Food Log search pool, and the **next-day meal suggestions**. Disabled items (`enabled: false`) are skipped.
 
 ### `data/activities.json`
 
@@ -330,7 +323,7 @@ Injectable medication history. The Medications section shows the latest dose dat
 | `data/profile.json` | ✗ Gitignored | Your medical profile, medications, targets |
 | `data/food_rules.json` | ✗ Gitignored | Your food/drug interaction rules |
 | `data/food_items.json` | ✗ Gitignored | Your food lists |
-| `data/food_preferences.json` | ✗ Gitignored | Your Must Avoid / Good to Eat lists |
+| `data/food_preferences.json` | ✗ Gitignored | Your Good to Eat list |
 | `data/activities.json` | ✗ Gitignored | Your exercise definitions |
 | `data/bloodwork.json` | ✗ Gitignored | Your lab results |
 | `data/injectable_meds.json` | ✗ Gitignored | Your injection history |
@@ -377,7 +370,7 @@ WellnessTrax is entirely profile-driven — no hardcoded user details exist in t
 1. Edit `data/profile.json` with the person's name, age, weight, BMI, medications, and daily targets
 2. Edit `data/food_rules.json` with their specific food rules and supplement list
 3. Edit `data/food_items.json` to seed the food search pool per meal
-4. Build their **Must Avoid** / **Good to Eat** lists in-app (or seed `data/food_preferences.json`)
+4. Build their **Good to Eat** list in-app (or seed `data/food_preferences.json`)
 5. Restart the dev server — all changes take effect immediately
 
 The AI prompt is rebuilt from these files on every analysis call, so the model instantly reflects the updated profile.

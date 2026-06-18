@@ -17,7 +17,6 @@ export function buildAnalysisPrompt(
     )
     .join("\n");
 
-  const avoidRules = rules.always_avoid.map(r => `  ✗ ${r}`).join("\n");
   const encourageRules = rules.always_encourage.map(r => `  ✓ ${r}`).join("\n");
 
   const foodSummary = (["breakfast", "lunch", "dinner", "snacks"] as const)
@@ -69,9 +68,6 @@ PATIENT PROFILE
 
 MEDICATIONS (screen every food item against these):
 ${meds}
-
-FOOD RULES — ALWAYS AVOID:
-${avoidRules}
 
 FOOD RULES — ALWAYS ENCOURAGE:
 ${encourageRules}

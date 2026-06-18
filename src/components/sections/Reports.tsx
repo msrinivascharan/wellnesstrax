@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import type { DayAnalysis, DayLog, FoodEntry, FoodPreferenceItem, FoodPreferences, MealType, UserProfile, BloodWorkData } from "@/types";
-import { resolveCategory, mapToBalancedPlate, checkAlwaysAvoidRules } from "@/lib/food-utils";
+import type { DayAnalysis, DayLog, FoodEntry, MealType, UserProfile, BloodWorkData } from "@/types";
+import { resolveCategory, mapToBalancedPlate } from "@/lib/food-utils";
 import ActivityTrends from "@/components/sections/ActivityTrends";
 import HydrationTrends from "@/components/sections/HydrationTrends";
 import SleepTrends from "@/components/sections/SleepTrends";
@@ -12,8 +12,6 @@ interface Props {
   profile: UserProfile;
   onAnalysisComplete: (analysis: DayAnalysis) => void;
   bloodWork?: BloodWorkData;
-  alwaysAvoid?: string[];
-  foodPrefs?: FoodPreferences;
 }
 
 const LOADING_MSGS = [
@@ -95,22 +93,6 @@ function getBalancedPlateData(entries: FoodEntry[]): Array<{ cat: string; count:
     .map(([cat, items]) => ({ cat, count: items.length, color: BP_COLORS[cat] ?? "#64748b", items }));
 }
 
-/** Check a food name against the rich avoid list (enabled items only, case-insensitive substring).
- *  Tries the full avoid-item name first, then the base name with parenthetical qualifiers stripped.
- *  e.g. "White Rice" logged → matches avoid item "White Rice (Regular Use)" via the stripped base. */
-function checkSimpleAvoid(foodName: string, avoidList: FoodPreferenceItem[]): string | null {
-  const lc = foodName.toLowerCase().trim();
-  for (const item of avoidList.filter(a => a.enabled)) {
-    const full = item.name.toLowerCase().trim();
-    // 1. Full name match (e.g. "Ice Cream" matches "Ice Cream")
-    if (full.length >= 2 && lc.includes(full)) return item.name;
-    // 2. Base name match — strip parenthetical qualifiers like "(Regular Use)", "(Excess)", "(All Forms)"
-    const base = full.replace(/\s*\([^)]*\)/g, "").trim();
-    if (base.length >= 3 && base !== full && lc.includes(base)) return item.name;
-  }
-  return null;
-}
-
 /** Score a meal against the 5 balanced plate categories (max 100 pts). */
 function mealBalanceScore(entries: FoodEntry[]): { score: number; missing: string[] } {
   if (entries.length === 0) return { score: 0, missing: [] };
@@ -185,7 +167,7 @@ function DonutChart({ data, size = 100 }: {
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
-export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork, alwaysAvoid, foodPrefs }: Props) {
+export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork }: Props) {
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState("");
   const [error, setError] = useState("");
@@ -476,19 +458,6 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
               const catData   = getBalancedPlateData(entries);
               const isEmpty   = entries.length === 0;
               const { score, missing } = mealBalanceScore(entries);
-              // Flags from complex food_rules (alwaysAvoid)
-              const rulesFlags = alwaysAvoid && entries.length > 0
-                ? entries
-                    .map(e => ({ name: e.name, rule: checkAlwaysAvoidRules(e.name, alwaysAvoid), source: "rules" as const }))
-                    .filter(f => f.rule !== null)
-                : [];
-              // Flags from user's simple avoid list (foodPrefs.avoid)
-              const simpleFlags = foodPrefs?.avoid?.length && entries.length > 0
-                ? entries
-                    .map(e => ({ name: e.name, rule: checkSimpleAvoid(e.name, foodPrefs.avoid), source: "prefs" as const }))
-                    .filter(f => f.rule !== null && !rulesFlags.some(r => r.name === f.name))
-                : [];
-              const avoidFlags = [...rulesFlags, ...simpleFlags];
 
               const scoreColor = isEmpty    ? "#334155"
                 : score >= 80 ? "#22c55e"
@@ -557,18 +526,13 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
                           {hd.cat} — {hd.count} item{hd.count !== 1 ? "s" : ""}
                         </div>
                         <div className="flex flex-wrap gap-1">
-                          {hd.items.map(name => {
-                            const isAvoid = avoidFlags.some(f => f.name === name);
-                            return (
-                              <span key={name}
-                                className="px-1.5 py-0.5 rounded text-xs"
-                                style={isAvoid
-                                  ? { background: "rgba(239,68,68,0.15)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)" }
-                                  : { background: "rgba(255,255,255,0.05)", color: "#94a3b8" }}>
-                                {isAvoid && "⚠ "}{name}
-                              </span>
-                            );
-                          })}
+                          {hd.items.map(name => (
+                            <span key={name}
+                              className="px-1.5 py-0.5 rounded text-xs"
+                              style={{ background: "rgba(255,255,255,0.05)", color: "#94a3b8" }}>
+                              {name}
+                            </span>
+                          ))}
                         </div>
                       </div>
                     );
@@ -605,26 +569,10 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
                   )}
 
                   {/* Full balance celebration */}
-                  {!isEmpty && missing.length === 0 && avoidFlags.length === 0 && (
+                  {!isEmpty && missing.length === 0 && (
                     <div className="text-xs px-2 py-1 rounded-lg"
                       style={{ background: "rgba(34,197,94,0.08)", color: "#86efac" }}>
                       ✓ Well-balanced plate
-                    </div>
-                  )}
-
-                  {/* Avoid violations (rules + simple list) */}
-                  {avoidFlags.length > 0 && (
-                    <div className="space-y-1">
-                      <div className="text-xs font-semibold" style={{ color: "#ef4444" }}>⚠ Avoid list:</div>
-                      {avoidFlags.map(f => (
-                        <div key={f.name} className="p-1.5 rounded-lg space-y-0.5"
-                          style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
-                          <div className="text-xs font-semibold" style={{ color: "#f87171" }}>✕ {f.name}</div>
-                          <div className="text-xs" style={{ color: "#94a3b8" }}>
-                            {f.source === "prefs" ? "In your Must Avoid list" : f.rule}
-                          </div>
-                        </div>
-                      ))}
                     </div>
                   )}
 

@@ -16,9 +16,9 @@ interface Props {
   onRemoveFromList: (meal: string, category: string, name: string) => Promise<void>;
   /** Called when an item should be moved to a different category */
   onMoveItem: (meal: string, oldCat: string, newCat: string, name: string) => Promise<void>;
-  /** Current avoid / encourage preference lists */
+  /** Current Good to Eat preference list */
   foodPrefs: FoodPreferences;
-  /** Called when either preference list changes */
+  /** Called when the preference list changes */
   onUpdatePrefs: (prefs: FoodPreferences) => Promise<void>;
   /** Apply a planned plate to a date's meal log */
   onApplyMealPlan: (meal: MealType, date: string, items: { name: string; qty_g: number }[]) => Promise<void>;
@@ -304,13 +304,8 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showPlanner, setShowPlanner] = useState(false);
   // ── Preference list UI state ──────────────────────────────────────────────
-  const [avoidCatFilter, setAvoidCatFilter]       = useState("");
   const [encourageCatFilter, setEncourageCatFilter] = useState("");
-  const [showAvoidAdd, setShowAvoidAdd]           = useState(false);
   const [showEncourageAdd, setShowEncourageAdd]   = useState(false);
-  const [newAvoidName, setNewAvoidName]           = useState("");
-  const [newAvoidCat, setNewAvoidCat]             = useState("");
-  const [newAvoidNotes, setNewAvoidNotes]         = useState("");
   const [newEncName, setNewEncName]               = useState("");
   const [newEncCat, setNewEncCat]                 = useState("");
   const [newEncNotes, setNewEncNotes]             = useState("");
@@ -318,23 +313,14 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
   const meal = activeMeal;
   const entries = dayLog.food[meal] ?? [];
 
-  // ── Search pool: encourage + avoid lists + food_items.json, deduplicated ──
-  // Must Avoid items ARE searchable — you log what you actually ate, and
-  // Reports flags it. They carry an avoid marker so the dropdown warns you.
-  const searchPool: Array<{ name: string; category: string; avoid?: boolean }> = (() => {
+  // ── Search pool: Good to Eat list + food_items.json, deduplicated ──
+  const searchPool: Array<{ name: string; category: string }> = (() => {
     const seen = new Set<string>();
-    const pool: Array<{ name: string; category: string; avoid?: boolean }> = [];
+    const pool: Array<{ name: string; category: string }> = [];
     // Primary: Good to Eat list (with full category info)
     for (const item of foodPrefs.encourage) {
       const lc = item.name.toLowerCase();
       if (!seen.has(lc)) { seen.add(lc); pool.push({ name: item.name, category: item.category }); }
-    }
-    // Must Avoid list — category "Custom" so the entry is auto-categorised
-    // into the right plate group on add (avoid categories like "Refined
-    // Grains" don't map to balanced-plate buckets)
-    for (const item of foodPrefs.avoid) {
-      const lc = item.name.toLowerCase();
-      if (!seen.has(lc)) { seen.add(lc); pool.push({ name: item.name, category: "Custom", avoid: true }); }
     }
     // Secondary: food_items.json (all meals, all categories)
     for (const cats of Object.values(foodItems.meals)) {
@@ -391,7 +377,7 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
     return [...new Set(list.map(i => i.category))].sort();
   }
 
-  async function togglePrefItem(list: "avoid" | "encourage", name: string) {
+  async function togglePrefItem(list: "encourage", name: string) {
     await onUpdatePrefs({
       ...foodPrefs,
       [list]: foodPrefs[list].map((i: FoodPreferenceItem) =>
@@ -400,30 +386,11 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
     });
   }
 
-  async function deletePrefItem(list: "avoid" | "encourage", name: string) {
+  async function deletePrefItem(list: "encourage", name: string) {
     await onUpdatePrefs({
       ...foodPrefs,
       [list]: foodPrefs[list].filter((i: FoodPreferenceItem) => i.name !== name),
     });
-  }
-
-  async function addAvoid() {
-    const name = newAvoidName.trim();
-    if (!name) return;
-    if (foodPrefs.avoid.some(a => a.name.toLowerCase() === name.toLowerCase())) {
-      setNewAvoidName(""); return;
-    }
-    const item: FoodPreferenceItem = {
-      name,
-      category: newAvoidCat.trim() || "Custom",
-      subcategory: "",
-      frequency: "Avoid",
-      notes: newAvoidNotes.trim(),
-      enabled: true,
-    };
-    await onUpdatePrefs({ ...foodPrefs, avoid: [...foodPrefs.avoid, item] });
-    setNewAvoidName(""); setNewAvoidCat(""); setNewAvoidNotes("");
-    setShowAvoidAdd(false);
   }
 
   async function addEncourage() {
@@ -681,12 +648,7 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
                         {already && (
                           <span className="text-xs font-medium" style={{ color: "#14b8a6" }}>✓ added</span>
                         )}
-                        {s.avoid ? (
-                          <span className="text-xs px-1.5 py-0.5 rounded font-medium"
-                            style={{ background: "rgba(239,68,68,0.12)", color: "#f87171", border: "1px solid rgba(239,68,68,0.25)" }}>
-                            ⚠ Must Avoid
-                          </span>
-                        ) : s.category && (
+                        {s.category && (
                           <span className="text-xs px-1.5 py-0.5 rounded"
                             style={{ background: "var(--bg-input)", color: "#64748b" }}>
                             {s.category}
@@ -701,33 +663,9 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
           )}
         </div>
         <div className="text-xs" style={{ color: "#334155" }}>
-          {searchPool.length} items across your Good to Eat, Must Avoid &amp; pre-defined lists — select one to set quantity
+          {searchPool.length} items across your Good to Eat &amp; pre-defined lists — select one to set quantity
         </div>
       </div>
-
-      {/* ── Must Avoid ────────────────────────────────────────────────────── */}
-      <PrefListCard
-        title="Must Avoid"
-        icon="🚫"
-        subtitle="Never eat — flagged in Reports"
-        accentColor="#ef4444"
-        accentBg="rgba(239,68,68,0.1)"
-        accentBorder="rgba(239,68,68,0.2)"
-        accentText="#f87171"
-        items={foodPrefs.avoid}
-        catFilter={avoidCatFilter}
-        setCatFilter={setAvoidCatFilter}
-        getCategories={getPrefCategories}
-        onToggle={name => togglePrefItem("avoid", name)}
-        onDelete={name => deletePrefItem("avoid", name)}
-        showAdd={showAvoidAdd}
-        setShowAdd={setShowAvoidAdd}
-        newName={newAvoidName} setNewName={setNewAvoidName}
-        newCat={newAvoidCat}   setNewCat={setNewAvoidCat}
-        newNotes={newAvoidNotes} setNewNotes={setNewAvoidNotes}
-        onAdd={addAvoid}
-        addPlaceholder='e.g. "Carbonated drinks"'
-      />
 
       {/* ── Good to Eat ───────────────────────────────────────────────────── */}
       <PrefListCard

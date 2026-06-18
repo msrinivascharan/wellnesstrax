@@ -125,8 +125,7 @@ export default function Home() {
   const [booting, setBooting]                 = useState(true);
   const [bootError, setBootError]             = useState("");
   const [bloodWork, setBloodWork]             = useState<import("@/types").BloodWorkData | undefined>(undefined);
-  const [alwaysAvoid, setAlwaysAvoid]         = useState<string[]>([]);
-  const [foodPrefs, setFoodPrefs]             = useState<FoodPreferences>({ avoid: [], encourage: [] });
+  const [foodPrefs, setFoodPrefs]             = useState<FoodPreferences>({ encourage: [] });
   const [selectedDate, setSelectedDate]       = useState<string>(todayStr);
   const [dateLoading, setDateLoading]         = useState(false);
 
@@ -277,15 +276,14 @@ export default function Home() {
 
         const rulesRes = await fetch("/api/food-rules");
         const { rules } = rulesRes.ok
-          ? await rulesRes.json() as { rules: { supplements_to_track: { name: string; dose?: string; target: string }[]; always_avoid?: string[] } }
-          : { rules: { supplements_to_track: [], always_avoid: [] } };
+          ? await rulesRes.json() as { rules: { supplements_to_track: { name: string; dose?: string; target: string }[] } }
+          : { rules: { supplements_to_track: [] } };
         const suppDefs: SuppDef[] = rules.supplements_to_track.map(s => ({
           name: s.name,
           dose: s.dose ?? "",
           scheduled_time: s.target,
         }));
         suppDefsRef.current = suppDefs;
-        if (rules.always_avoid?.length) setAlwaysAvoid(rules.always_avoid);
 
         const fresh = makeEmptyLog(p, suppDefs, today);
 
@@ -563,7 +561,7 @@ export default function Home() {
               <WaterSleep dayLog={dayLog} profile={profile} onUpdate={onWaterSleepUpdate} />
             )}
             {section === "reports" && (
-              <Reports dayLog={dayLog} profile={profile} onAnalysisComplete={onAnalysisComplete} bloodWork={bloodWork} alwaysAvoid={alwaysAvoid} foodPrefs={foodPrefs} />
+              <Reports dayLog={dayLog} profile={profile} onAnalysisComplete={onAnalysisComplete} bloodWork={bloodWork} />
             )}
           </>
         )}

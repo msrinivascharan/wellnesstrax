@@ -123,27 +123,3 @@ export function mapToBalancedPlate(cat: string): string {
   }
 }
 
-/**
- * Checks whether a food item name appears to violate any always_avoid rule.
- * Each rule string is expected in the format "Food description — reason".
- * Only the description part (before the dash) is used for matching.
- *
- * Returns the violated rule label (before the dash), or null if no match.
- */
-export function checkAlwaysAvoidRules(foodName: string, rules: string[]): string | null {
-  const lc = foodName.toLowerCase();
-  for (const rule of rules) {
-    // Use only the label part (before em-dash / en-dash / plain hyphen-dash)
-    const label = rule.split(/\s*[—–]\s*/)[0].trim();
-    // Strip contextual qualifiers that describe when/how much — not what the food is
-    const stripped = label.toLowerCase()
-      .replace(/\b(added|excessive|very|raw|high.?sodium|in excess|at the same meal as|at meal time|near \S+ dose time|more than \d+\S*( per \w+)?|longer than \d+\S*|per week|single|packaged)\b/gi, "")
-      .replace(/\s{2,}/g, " ")
-      .trim();
-    if (!stripped) continue;
-    // Split into individual keyword phrases by comma, semicolon, or "or"
-    const phrases = stripped.split(/\s*[,;]\s*|\s+or\s+/).map(p => p.trim()).filter(p => p.length >= 3);
-    if (phrases.some(p => lc.includes(p))) return label;
-  }
-  return null;
-}

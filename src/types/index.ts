@@ -63,7 +63,6 @@ export interface ExpertPanelMember {
 }
 
 export interface FoodRules {
-  always_avoid: string[];
   always_encourage: string[];
   supplements_to_track: SupplementRule[];
   expert_panel: ExpertPanelMember[];
@@ -376,7 +375,6 @@ export interface FoodPreferenceItem {
 }
 
 export interface FoodPreferences {
-  avoid: FoodPreferenceItem[];
   encourage: FoodPreferenceItem[];
 }
 
