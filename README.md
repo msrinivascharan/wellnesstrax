@@ -54,7 +54,8 @@ Your health data **never leaves your machine** except the anonymised text log se
   - Each meal has its own config (slots, seeded foods, target) in `lib/meal-planner-config.ts`
 
 ### Reports & AI analysis
-- **Meal-wise balanced plate** — a donut per meal (breakfast/lunch/dinner/snacks) with a per-meal balance score, missing-group hints, a hover item breakdown, and a **Nutrition** card (estimated calories/protein/fiber vs target)
+- **Meal-wise balanced plate** — a donut per meal (breakfast/lunch/dinner/snacks) with a per-meal balance score, missing-group hints, a hover item breakdown, and a per-meal **calories + macros** line
+- **Deterministic nutrition** — calories, protein, carbs, and fiber are computed **directly from your planner Foods DB** (`qty_g ÷ 100 × per-100g value`, the same math as the planner's TOTAL PLATE), **not** estimated by AI. The **Nutrition** card (per-meal lines + daily total vs target) shows live as soon as food is logged — no need to run an analysis. Logged items not found in the Foods DB are flagged and excluded from the totals. AI still adds the qualitative highlights/concerns/assessment after Re-analyse
 - **Per-meal next-day suggestions** — after Re-analyse, each meal card shows 3–4 "Try tomorrow" picks drawn from your **Good to Eat** list that you have **not** eaten in the past 7 days
 - **Sectioned Activity trends** *(own section)* — daily / weekly / monthly charts and per-section AI insights for:
   - **Overall movement** — stacked gym/walk/soleus/badminton minutes, active-day / gym-day / current-gap tiles, plus an AI synthesis (summary, how your body benefits, activity balance, consistency)
@@ -65,7 +66,7 @@ Your health data **never leaves your machine** except the anonymised text log se
 - **Breathing insights** — daily / weekly / monthly charts of Box 4-4-4-4 and 4-7-8 rounds, plus an AI write-up (summary, what's good, improvements, why it helps your heart, consistency)
 - **Hydration trends** — daily / weekly / monthly average-intake bars vs your target line, target-met days, with AI analysis
 - **Sleep trends** — average sleep-hours bars vs a 7h target, nights ≥7h, average nap, sleep-quality distribution, post-lunch-dip counts, with AI analysis
-- **AI health score** — overall daily score with macro estimates, nutrition highlights/concerns, top wins, and areas to improve
+- **AI health score** — overall daily score, nutrition highlights/concerns, top wins, and areas to improve
 - **Latest vitals & blood-work snapshot** — most recent weight & BMI, blood pressure, and lipid & thyroid markers vs cardiac-patient targets, colour-coded
 - **Date navigator** — jump to any previous day and view that day's data and analysis
 

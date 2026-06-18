@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import type { DayAnalysis, DayLog, FoodEntry, MealType, UserProfile, BloodWorkData } from "@/types";
+import type { DayAnalysis, DayLog, FoodEntry, MealFood, MealType, UserProfile, BloodWorkData } from "@/types";
 import { resolveCategory, mapToBalancedPlate } from "@/lib/food-utils";
 import ActivityTrends from "@/components/sections/ActivityTrends";
 import HydrationTrends from "@/components/sections/HydrationTrends";
@@ -116,6 +116,27 @@ function mealBalanceScore(entries: FoodEntry[]): { score: number; missing: strin
   return { score: pts, missing };
 }
 
+/** Round to one decimal (for grams). */
+const r1 = (x: number) => Math.round(x * 10) / 10;
+
+/** Per-100g macro lookup keyed by lowercased item name (built from the meal Foods DBs). */
+export type MacroLookup = Record<string, { kcal: number; protein: number; carbs: number; fiber: number }>;
+
+/** Deterministically sum a meal's nutrition straight from the hardcoded Foods DB —
+ *  no AI. Mirrors the planner's own math: (qty_g / 100) × per-100g value, matching
+ *  each logged item by name. Items not in the DB are counted (unmatched) but not summed. */
+function computeMealNutrition(entries: FoodEntry[], macros: MacroLookup) {
+  let kcal = 0, protein = 0, carbs = 0, fiber = 0, matched = 0, unmatched = 0;
+  for (const e of entries) {
+    const m = macros[e.name.toLowerCase().trim()];
+    if (!m) { unmatched++; continue; }
+    const q = (e.quantity_g || 0) / 100;
+    kcal += q * m.kcal; protein += q * m.protein; carbs += q * m.carbs; fiber += q * m.fiber;
+    matched++;
+  }
+  return { kcal, protein, carbs, fiber, matched, unmatched };
+}
+
 function DonutChart({ data, size = 100 }: {
   data: Array<{ cat: string; count: number; color: string }>;
   size?: number;
@@ -173,6 +194,10 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
   const [error, setError] = useState("");
   const [backingUp, setBackingUp] = useState(false);
   const [hoveredCell, setHoveredCell] = useState<{ meal: MealType; cat: string } | null>(null);
+  // Per-100g macro lookup, built from the planner Foods DBs (breakfast/lunch/dinner).
+  // Calories & macros are computed deterministically from this — never from AI.
+  const [foodMacros, setFoodMacros] = useState<MacroLookup>({});
+  const macrosReady = Object.keys(foodMacros).length > 0;
 
   // ── History navigation ────────────────────────────────────────────────────
   const todayStr = format(new Date(), "yyyy-MM-dd");
@@ -190,6 +215,26 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
       .then(r => r.json())
       .then((d: { sessions?: string[] }) => setAvailDates(d.sessions ?? []))
       .catch(() => {});
+  }, []);
+
+  // Load the per-100g Foods DBs once and flatten into a name→macros lookup.
+  useEffect(() => {
+    Promise.all(
+      (["breakfast", "lunch", "dinner"] as const).map(m =>
+        fetch(`/api/meal-foods/${m}`).then(r => (r.ok ? r.json() : { data: null })).catch(() => ({ data: null }))
+      )
+    ).then(results => {
+      const map: MacroLookup = {};
+      for (const res of results) {
+        const foods: MealFood[] = res?.data?.foods ?? [];
+        for (const f of foods) {
+          map[f.item.toLowerCase().trim()] = {
+            kcal: f.kcal_100g, protein: f.protein_100g, carbs: f.carbs_100g, fiber: f.fiber_100g,
+          };
+        }
+      }
+      setFoodMacros(map);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -458,6 +503,7 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
               const catData   = getBalancedPlateData(entries);
               const isEmpty   = entries.length === 0;
               const { score, missing } = mealBalanceScore(entries);
+              const nut       = computeMealNutrition(entries, foodMacros);
 
               const scoreColor = isEmpty    ? "#334155"
                 : score >= 80 ? "#22c55e"
@@ -514,6 +560,28 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
                       )}
                     </div>
                   </div>
+
+                  {/* Calories & macros — computed straight from the Foods DB (no AI) */}
+                  {!isEmpty && macrosReady && (
+                    nut.matched > 0 ? (
+                      <div className="flex items-center justify-between rounded-lg px-2 py-1.5"
+                        style={{ background: "rgba(251,146,60,0.06)", border: "1px solid rgba(251,146,60,0.15)" }}>
+                        <span className="text-xs font-bold tabular-nums" style={{ color: "#fb923c" }}>
+                          {Math.round(nut.kcal)} kcal
+                        </span>
+                        <span className="text-xs tabular-nums" style={{ color: "#64748b" }}>
+                          {r1(nut.protein)}P · {r1(nut.carbs)}C · {r1(nut.fiber)}F g
+                          {nut.unmatched > 0 && (
+                            <span style={{ color: "#475569" }}> · {nut.unmatched} not in DB</span>
+                          )}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="text-xs px-2 py-1.5 rounded-lg" style={{ color: "#475569", background: "rgba(255,255,255,0.02)" }}>
+                        {nut.unmatched} item{nut.unmatched !== 1 ? "s" : ""} not in your Foods DB — no kcal
+                      </div>
+                    )
+                  )}
 
                   {/* Hover: item breakdown for the hovered category */}
                   {hoveredCell?.meal === meal && (() => {
@@ -605,38 +673,63 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
           </div>
         </div>
 
-        {/* Nutrition — shown alongside the meal-wise plate balance */}
-        {analysis && (
-          <InsightCard title="Nutrition" icon="🍽️">
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: "Est. Calories", val: `${analysis.nutrition.estimated_calories} kcal`, target: `target ${profile.daily_targets.calories}`, color: "#fb923c" },
-                { label: "Protein", val: `${analysis.nutrition.estimated_protein_g}g`, target: `target ${profile.daily_targets.protein_g}g`, color: "#a78bfa" },
-                { label: "Fiber", val: `${analysis.nutrition.estimated_fiber_g}g`, target: `target ${profile.daily_targets.fiber_g}g`, color: "#86efac" },
-              ].map(n => (
-                <div key={n.label} className="p-2.5 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
-                  <div className="text-base font-bold" style={{ color: n.color }}>{n.val}</div>
-                  <div className="text-xs mt-0.5 text-white">{n.label}</div>
-                  <div className="text-xs" style={{ color: "#475569" }}>{n.target}</div>
+        {/* Nutrition — calories & macros computed straight from the Foods DB (no AI).
+            Shows live as soon as food is logged; AI adds only the qualitative commentary. */}
+        {(() => {
+          const meals: MealType[] = ["breakfast", "lunch", "dinner", "snacks"];
+          const hasFood = meals.some(m => (logForChart.food[m]?.length ?? 0) > 0);
+          if (!hasFood) return null;
+          const day = meals.reduce((a, m) => {
+            const n = computeMealNutrition(logForChart.food[m] ?? [], foodMacros);
+            return {
+              kcal: a.kcal + n.kcal, protein: a.protein + n.protein,
+              carbs: a.carbs + n.carbs, fiber: a.fiber + n.fiber, unmatched: a.unmatched + n.unmatched,
+            };
+          }, { kcal: 0, protein: 0, carbs: 0, fiber: 0, unmatched: 0 });
+          const tiles = [
+            { label: "Calories", val: `${Math.round(day.kcal)} kcal`, target: `target ${profile.daily_targets.calories}`, color: "#fb923c" },
+            { label: "Protein",  val: `${r1(day.protein)}g`, target: `target ${profile.daily_targets.protein_g}g`, color: "#a78bfa" },
+            { label: "Carbs",    val: `${r1(day.carbs)}g`,   target: "", color: "#60a5fa" },
+            { label: "Fiber",    val: `${r1(day.fiber)}g`,   target: `target ${profile.daily_targets.fiber_g}g`, color: "#86efac" },
+          ];
+          return (
+            <InsightCard title="Nutrition" icon="🍽️">
+              {!macrosReady ? (
+                <p className="text-xs" style={{ color: "#475569" }}>Loading your Foods database…</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-4 gap-3">
+                    {tiles.map(n => (
+                      <div key={n.label} className="p-2.5 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
+                        <div className="text-base font-bold" style={{ color: n.color }}>{n.val}</div>
+                        <div className="text-xs mt-0.5 text-white">{n.label}</div>
+                        <div className="text-xs" style={{ color: "#475569" }}>{n.target || "from Foods DB"}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-xs" style={{ color: "#475569" }}>
+                    🧮 Calculated from your planner Foods DB — not AI
+                    {day.unmatched > 0 && ` · ${day.unmatched} logged item${day.unmatched !== 1 ? "s" : ""} not in the DB (not counted)`}
+                  </div>
+                </>
+              )}
+              {analysis && analysis.nutrition.highlights.length > 0 && (
+                <div className="space-y-1">
+                  {analysis.nutrition.highlights.map((h, i) => (
+                    <div key={i} className="text-xs flex gap-1.5"><span style={{ color: "#22c55e" }}>+</span><span style={{ color: "#94a3b8" }}>{h}</span></div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            {analysis.nutrition.highlights.length > 0 && (
-              <div className="space-y-1 mt-1">
-                {analysis.nutrition.highlights.map((h, i) => (
-                  <div key={i} className="text-xs flex gap-1.5"><span style={{ color: "#22c55e" }}>+</span><span style={{ color: "#94a3b8" }}>{h}</span></div>
-                ))}
-              </div>
-            )}
-            {analysis.nutrition.concerns.length > 0 && (
-              <div className="space-y-1">
-                {analysis.nutrition.concerns.map((c, i) => (
-                  <div key={i} className="text-xs flex gap-1.5"><span style={{ color: "#f59e0b" }}>⚠</span><span style={{ color: "#94a3b8" }}>{c}</span></div>
-                ))}
-              </div>
-            )}
-          </InsightCard>
-        )}
+              )}
+              {analysis && analysis.nutrition.concerns.length > 0 && (
+                <div className="space-y-1">
+                  {analysis.nutrition.concerns.map((c, i) => (
+                    <div key={i} className="text-xs flex gap-1.5"><span style={{ color: "#f59e0b" }}>⚠</span><span style={{ color: "#94a3b8" }}>{c}</span></div>
+                  ))}
+                </div>
+              )}
+            </InsightCard>
+          );
+        })()}
 
       </div>
 
