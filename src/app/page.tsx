@@ -117,6 +117,7 @@ export default function Home() {
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
   const [section, setSection]                 = useState<SectionId>("dashboard");
+  const [navOpen, setNavOpen]                 = useState(false);   // mobile drawer
   const [dayLog, setDayLog]                   = useState<DayLog | null>(null);
   const [profile, setProfile]                 = useState<UserProfile | null>(null);
   const [foodItems, setFoodItems]             = useState<FoodItemsData | null>(null);
@@ -497,6 +498,11 @@ export default function Home() {
   // ── Main render ───────────────────────────────────────────────────────────
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg-base)" }}>
+      {/* Mobile drawer backdrop */}
+      {navOpen && (
+        <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={() => setNavOpen(false)} />
+      )}
+
       <Sidebar
         active={section}
         onNavigate={setSection}
@@ -505,9 +511,25 @@ export default function Home() {
         saveStatus={saveStatus}
         selectedDate={selectedDate}
         onDateChange={handleDateChange}
+        open={navOpen}
+        onClose={() => setNavOpen(false)}
       />
 
-      <main className="flex-1 overflow-y-auto flex flex-col">
+      <main className="flex-1 min-w-0 overflow-y-auto flex flex-col">
+
+        {/* ── Mobile top bar (hamburger) — hidden on desktop ─────────────── */}
+        <div className="lg:hidden sticky top-0 z-30 shrink-0 flex items-center gap-3 px-4 py-3 border-b"
+          style={{ background: "var(--bg-sidebar)", borderColor: "var(--border)" }}>
+          <button onClick={() => setNavOpen(true)} aria-label="Open menu"
+            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-lg"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", color: "#94a3b8" }}>
+            ☰
+          </button>
+          <span className="text-sm font-bold text-white truncate">WellnessTrax</span>
+          <span className="ml-auto text-xs truncate" style={{ color: "#64748b" }}>
+            {format(new Date(selectedDate + "T12:00:00"), "EEE, dd MMM")}
+          </span>
+        </div>
 
         {/* ── Past-date editing banner ─────────────────────────────────── */}
         {!isToday && (

@@ -153,6 +153,16 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). The app creates `data/sessions/` automatically on first use.
 
+### Use it on your phone (same WiFi)
+
+The UI is responsive (a slide-in drawer replaces the sidebar on small screens), so it works on a phone — handy for the planner's **Cook mode** checklist in the kitchen.
+
+```bash
+npm run dev:lan      # binds to 0.0.0.0 so other devices on your WiFi can reach it
+```
+
+Then open `http://<your-laptop-IP>:3000` on the phone (find the IP with `ipconfig` → IPv4). **Security note:** `dev:lan` exposes the app — and your health data — to every device on the network, so run it only when needed; the default `npm run dev` stays localhost-only.
+
 ---
 
 ## Project Structure

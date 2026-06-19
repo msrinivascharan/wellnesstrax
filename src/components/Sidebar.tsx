@@ -90,11 +90,14 @@ interface SidebarProps {
   saveStatus: "saved" | "saving" | "error" | "idle";
   selectedDate: string;
   onDateChange: (date: string) => void;
+  /** Mobile drawer: whether it's open, and a close callback */
+  open?: boolean;
+  onClose?: () => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function Sidebar({ active, onNavigate, dayLog, profile, saveStatus, selectedDate, onDateChange }: SidebarProps) {
+export default function Sidebar({ active, onNavigate, dayLog, profile, saveStatus, selectedDate, onDateChange, open = false, onClose }: SidebarProps) {
   const completion = computeCompletion(dayLog, profile);
   const todayStr   = format(new Date(), "yyyy-MM-dd");
   const isToday    = selectedDate === todayStr;
@@ -117,7 +120,7 @@ export default function Sidebar({ active, onNavigate, dayLog, profile, saveStatu
 
   return (
     <aside
-      className="shrink-0 flex flex-col h-screen border-r"
+      className={`shrink-0 flex flex-col h-screen border-r fixed lg:static inset-y-0 left-0 z-50 transition-transform duration-200 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
       style={{ width: 230, background: "var(--bg-sidebar)", borderColor: "var(--border)" }}
     >
       {/* Logo */}
@@ -129,10 +132,16 @@ export default function Sidebar({ active, onNavigate, dayLog, profile, saveStatu
           >
             🧬
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="text-sm font-bold text-white tracking-tight">WellnessTrax</div>
             <div className="text-xs" style={{ color: "#475569" }}>Smart wellness tracker</div>
           </div>
+          {/* Mobile-only close button */}
+          <button onClick={onClose} aria-label="Close menu"
+            className="lg:hidden ml-auto w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-lg"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", color: "#94a3b8" }}>
+            ✕
+          </button>
         </div>
       </div>
 
@@ -207,7 +216,7 @@ export default function Sidebar({ active, onNavigate, dayLog, profile, saveStatu
           return (
             <button
               key={item.id}
-              onClick={() => onNavigate(item.id)}
+              onClick={() => { onNavigate(item.id); onClose?.(); }}
               className={`nav-item w-full text-left ${isActive ? "active" : ""}`}
             >
               <span className="text-base leading-none shrink-0">{item.icon}</span>

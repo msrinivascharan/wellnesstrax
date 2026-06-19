@@ -240,6 +240,9 @@ export default function MealPlanner({ meal, onApply }: {
 
     return (
       <div className="space-y-1">
+        {/* Horizontal scroll on narrow screens so the 7-column plate never breaks the layout */}
+        <div className="overflow-x-auto -mx-3 px-3">
+        <div className="space-y-1" style={{ minWidth: 520 }}>
         <div className="grid gap-2 pb-1" style={{ gridTemplateColumns: grid, borderBottom: "1px solid var(--border)" }}>
           {["Slot", "Item", "Qty (g)", "kcal", "P", "C", "F"].map((h, i) => (
             <div key={h} className="text-xs" style={{ color: "#64748b", textAlign: i >= 2 ? "right" : "left" }}>{h}</div>
@@ -284,6 +287,8 @@ export default function MealPlanner({ meal, onApply }: {
             ))}
           </div>
         ))}
+        </div>
+        </div>
         {/* vs target in words */}
         <div className="pt-2 space-y-1.5" style={{ borderTop: "1px dashed var(--border)" }}>
           <div className="text-xs font-semibold" style={{ color: "#94a3b8" }}>How the plate compares to the target</div>
