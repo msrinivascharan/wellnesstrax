@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import type { MealFoodsData, MealFood, MealPlan, MealKey } from "@/types";
-import { MEAL_PLANNER } from "@/lib/meal-planner-config";
+import { MEAL_PLANNER, kitchenGroups } from "@/lib/meal-planner-config";
 
 function genId() {
   return (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -89,17 +89,25 @@ export default function MealPlanner({ meal, onApply }: {
     }
   }
 
-  // Plain-text "kitchen list" — item + grams only, in slot order — scaled by the
-  // number of people eating (servings affects this list ONLY, not the plate/totals).
+  // Plain-text "kitchen list" — grouped into kitchen prep stages (slow-cook items first,
+  // ready-to-serve last) so it reads like a cooking sequence, and scaled by the number of
+  // people eating (servings affects this list ONLY, not the plate/totals).
   function planText(): string {
     const plan = plans[planDate] ?? {};
-    const lines = SLOTS
+    const chosen = SLOTS
       .map(s => plan[s.id])
       .filter((c): c is { item: string; qty_g: number } => !!c?.item && c.qty_g > 0)
-      .map(c => `• ${c.item} — ${Math.round(c.qty_g * servings)}g`);
-    if (lines.length === 0) return "";
+      .map(c => ({ item: c.item, qty_g: Math.round(c.qty_g * servings) }));
+    if (chosen.length === 0) return "";
     const who = servings === 1 ? "" : ` · for ${servings} people`;
-    return `${cfg.title} plan · ${prettyDate(planDate)}${who}\n${lines.join("\n")}`;
+    const head = `🍽️ ${cfg.title} — ${prettyDate(planDate)}${who}`;
+    const groups = kitchenGroups(chosen, fd!.foods);
+    const line = (c: { item: string; qty_g: number }) => `• ${c.item} — ${c.qty_g}g`;
+    // Single stage → no need for headers; otherwise label each stage and space them out.
+    const body = groups.length <= 1
+      ? groups.flatMap(g => g.items).map(line).join("\n")
+      : groups.map(g => `${g.stage.emoji} ${g.stage.label}\n${g.items.map(line).join("\n")}`).join("\n\n");
+    return `${head}\n\n${body}`;
   }
   function shareWhatsApp() {
     const text = planText();
@@ -295,7 +303,7 @@ export default function MealPlanner({ meal, onApply }: {
           {hasItems && (
             <div className="rounded-xl p-3 space-y-2.5" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="text-xs font-semibold" style={{ color: "#94a3b8" }}>📋 Kitchen list — item &amp; grams</div>
+                <div className="text-xs font-semibold" style={{ color: "#94a3b8" }}>📋 Kitchen list — in cooking order</div>
                 {/* People stepper — scales this list only */}
                 <div className="flex items-center gap-2">
                   <span className="text-xs" style={{ color: "#64748b" }}>People eating</span>

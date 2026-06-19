@@ -321,3 +321,52 @@ export const MEAL_PLANNER: Partial<Record<MealKey, MealPlannerConfig>> = {
 export function isPlannerMeal(meal: string): meal is MealKey {
   return meal === "breakfast" || meal === "lunch" || meal === "dinner";
 }
+
+// ─── Kitchen-list ordering ──────────────────────────────────────────────────────
+// Re-order a day's chosen plate into kitchen prep stages so the WhatsApp list reads
+// like a cooking sequence (start the slow-cook items first; leave the just-measure-
+// and-serve items for last) instead of fixed slot order. Used by the planner's
+// "Kitchen list". Shared across breakfast / lunch / dinner.
+
+export interface KitchenItem { item: string; qty_g: number; }
+export interface KitchenStage { emoji: string; label: string; }
+
+const KITCHEN_STAGES: KitchenStage[] = [
+  { emoji: "🔥", label: "Start first (takes time to cook)" },
+  { emoji: "🥘", label: "Vegetables — cut & cook" },
+  { emoji: "🧂", label: "Add while cooking" },
+  { emoji: "🧊", label: "Ready — just measure & serve" },
+];
+
+// category → [stage index (0-3), sort order within the stage]
+const CATEGORY_RANK: Record<string, [number, number]> = {
+  "Base": [0, 5], "Protein": [0, 10], "Grain": [0, 20], "Dal": [0, 21], "Legumes": [0, 22],
+  "Curry base": [1, 30], "Veg": [1, 40], "Veg A1 (main)": [1, 41], "Veg A2 (main)": [1, 42], "Leafy (greens)": [1, 43],
+  "Spices": [2, 50], "Seed powders": [2, 51], "Cooking Fat": [2, 52],
+  "Dairy": [3, 60], "Fruit": [3, 61], "Nuts & Seeds": [3, 62], "Pre-meal": [3, 63],
+};
+
+const COOKS_RE = /\b(saute|saut|stir|cook|grill|tandoori|boil|bake|fry|steam|roast|pan|sear|tawa|curry|bhurji|omelette|poach|scrambl|batter|dosa|chilla)\b/;
+const RAW_RE   = /\b(raw|as-is|as is|salad|chilled|fresh)\b/;
+
+function rankFor(food: MealFood | undefined): [number, number] {
+  if (!food) return [1, 45]; // unknown item → middle (cook stage)
+  const base = CATEGORY_RANK[food.category] ?? [1, 45];
+  const cm = (food.cooking_method || "").toLowerCase();
+  // A clearly raw / no-cook item sitting in a cooked category (e.g. cucumber "Raw / salad")
+  // → move it to the ready-to-serve stage so it's measured and plated last.
+  if (base[0] !== 3 && RAW_RE.test(cm) && !COOKS_RE.test(cm)) return [3, 59];
+  return base;
+}
+
+/** Group a day's chosen items into kitchen prep stages (only non-empty stages, in cook order). */
+export function kitchenGroups(items: KitchenItem[], foods: MealFood[]): { stage: KitchenStage; items: KitchenItem[] }[] {
+  const byName = new Map(foods.map(f => [f.item, f] as const));
+  const ranked = items.map(it => ({ it, rank: rankFor(byName.get(it.item)) }));
+  return KITCHEN_STAGES
+    .map((stage, idx) => ({
+      stage,
+      items: ranked.filter(r => r.rank[0] === idx).sort((a, b) => a.rank[1] - b.rank[1]).map(r => r.it),
+    }))
+    .filter(g => g.items.length > 0);
+}
