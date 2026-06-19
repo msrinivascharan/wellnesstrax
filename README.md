@@ -30,7 +30,7 @@ Your health data **never leaves your machine** except the anonymised text log se
 | 4 | **Medications** | Mark each scheduled medication and supplement taken with timestamp. Periodic injectable tracking with auto-calculated next-due status badge |
 | 5 | **Blood Work & Vitals** | Log and track **lipid, thyroid, blood-pressure, weight, and daily mood** over time with trend arrows and reference ranges. Thyroid supports **TSH-only panels**; BP captures systolic/diastolic + optional pulse, time of day, and cuff arm; the Weight tab sets a target and shows a **weight-goal panel** (current vs target, BMI, to-go, progress bar); mood is a 10-second circumplex check-in |
 | 6 | **Water & Sleep** | Hydration tracker, sleep log (hours, quality, bedtime/wake), **multiple daytime naps**, and **post-lunch dip** + **evening dip** trackers |
-| 7 | **Reports** | Run AI analysis; meal-wise balanced-plate donuts (with Nutrition); **per-meal next-day suggestions**; **sectioned Activity trends** (Overall, Cardio, Strength + body **muscle map**, Indoor, Badminton); **Breathing**, **Hydration**, and **Sleep** trend sections — all with charts and AI insights; blood-work snapshot; and a date navigator to revisit any past day |
+| 7 | **Reports** | Run AI analysis; meal-wise balanced-plate donuts (with Nutrition); **per-meal next-day suggestions**; **sectioned Activity trends** (Overall, Cardio, Strength + body **muscle map**, Indoor, Badminton); **Breathing**, **Hydration**, and **Sleep** trend sections — all with charts and AI insights; a **Blood Work & Vitals trends** panel (history line charts with healthy-zone bands + computed insights for weight, BP, lipids, thyroid & mood); and a date navigator to revisit any past day |
 
 ---
 
@@ -67,7 +67,7 @@ Your health data **never leaves your machine** except the anonymised text log se
 - **Hydration trends** — daily / weekly / monthly average-intake bars vs your target line, target-met days, with AI analysis
 - **Sleep trends** — average sleep-hours bars vs a 7h target, nights ≥7h, average nap, sleep-quality distribution, post-lunch-dip counts, with AI analysis
 - **AI health score** — overall daily score, nutrition highlights/concerns, top wins, and areas to improve
-- **Latest vitals & blood-work snapshot** — most recent weight & BMI, blood pressure, and lipid & thyroid markers vs cardiac-patient targets, colour-coded
+- **Blood Work & Vitals trends & insights** — per-metric **history line charts** with a shaded healthy-zone band and dashed target line, latest-value status tiles, a trend badge (improving / steady / worsening), and a computed plain-language insight for **weight & BMI** (with rate-to-target ETA), **blood pressure** (last-N average, classification, and a morning-vs-evening pattern when times are logged), **lipids** (LDL-focused trend vs the &lt;70 cardiac target, plus HDL/triglycerides/total), **thyroid** (TSH), and **mood** (average + high-stress frequency). All computed deterministically from your history — no AI needed
 - **Date navigator** — jump to any previous day and view that day's data and analysis
 
 ### Activity & wellness

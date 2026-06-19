@@ -6,6 +6,7 @@ import { resolveCategory, mapToBalancedPlate } from "@/lib/food-utils";
 import ActivityTrends from "@/components/sections/ActivityTrends";
 import HydrationTrends from "@/components/sections/HydrationTrends";
 import SleepTrends from "@/components/sections/SleepTrends";
+import BloodWorkTrends from "@/components/sections/BloodWorkTrends";
 
 interface Props {
   dayLog: DayLog;
@@ -785,141 +786,8 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
             </InsightCard>
           </div>
 
-          {/* ── Blood work snapshot (if data exists) ── */}
-          {bloodWork && (bloodWork.lipid_profile.length > 0 || bloodWork.thyroid_profile.length > 0 || (bloodWork.bp_readings?.length ?? 0) > 0 || (bloodWork.weight_readings?.length ?? 0) > 0) && (
-            <InsightCard title="Latest vitals & blood work" icon="🩸">
-              <p className="text-xs mb-3" style={{ color: "#64748b" }}>
-                Most recent results vs. cardiac-patient targets. Go to Blood Work &amp; Vitals to add new entries.
-              </p>
-              {(bloodWork.weight_readings?.length ?? 0) > 0 && (() => {
-                const latest = bloodWork.weight_readings![0];
-                const prev = bloodWork.weight_readings![1];
-                const h = (profile.height_ft ?? 0) * 0.3048;
-                const bmi = h > 0 ? Math.round((latest.weight_kg / (h * h)) * 10) / 10 : null;
-                const delta = prev ? Math.round((latest.weight_kg - prev.weight_kg) * 10) / 10 : null;
-                const bmiColor = bmi == null ? "#64748b"
-                  : bmi >= 18.5 && bmi < 25 ? "#22c55e"
-                  : (bmi >= 25 && bmi < 30) || (bmi >= 17 && bmi < 18.5) ? "#f59e0b" : "#ef4444";
-                return (
-                  <div className="mb-3">
-                    <div className="text-xs font-semibold mb-2" style={{ color: "#94a3b8" }}>
-                      Weight &amp; BMI · {new Date(latest.test_date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <div className="text-center px-2.5 py-1.5 rounded-lg" style={{ background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)", minWidth: 90 }}>
-                        <div className="text-xs" style={{ color: "#64748b" }}>
-                          Weight{bloodWork.weight_target_kg != null ? ` (target ${bloodWork.weight_target_kg} kg)` : ""}
-                        </div>
-                        <div className="text-sm font-bold" style={{ color: "#5eead4" }}>
-                          {latest.weight_kg} kg
-                          {delta !== null && delta !== 0 && (
-                            <span className="text-xs ml-1" style={{ color: delta < 0 ? "#22c55e" : "#f59e0b" }}>{delta < 0 ? "▼" : "▲"}{Math.abs(delta)}</span>
-                          )}
-                        </div>
-                      </div>
-                      {bmi != null && (
-                        <div className="text-center px-2.5 py-1.5 rounded-lg" style={{ background: `${bmiColor}10`, border: `1px solid ${bmiColor}25`, minWidth: 90 }}>
-                          <div className="text-xs" style={{ color: "#64748b" }}>BMI{profile.target_bmi_range ? ` (target ${profile.target_bmi_range})` : ""}</div>
-                          <div className="text-sm font-bold" style={{ color: bmiColor }}>{bmi}</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
-              {(bloodWork.bp_readings?.length ?? 0) > 0 && (() => {
-                const latest = bloodWork.bp_readings![0];
-                const sColor = (good: boolean, warn: boolean) => good ? "#22c55e" : warn ? "#f59e0b" : "#ef4444";
-                const sysColor = sColor(latest.systolic < 120, latest.systolic <= 139);
-                const diaColor = sColor(latest.diastolic < 80, latest.diastolic <= 89);
-                return (
-                  <div className="mb-3">
-                    <div className="text-xs font-semibold mb-2" style={{ color: "#94a3b8" }}>
-                      Blood pressure · {new Date(latest.test_date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                      {latest.arm && <span style={{ color: "#64748b" }}> · {latest.arm} arm</span>}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <div className="text-center px-2.5 py-1.5 rounded-lg" style={{ background: `${sysColor}10`, border: `1px solid ${sysColor}25`, minWidth: 78 }}>
-                        <div className="text-xs" style={{ color: "#64748b" }}>Systolic</div>
-                        <div className="text-sm font-bold" style={{ color: sysColor }}>{latest.systolic}</div>
-                      </div>
-                      <div className="text-center px-2.5 py-1.5 rounded-lg" style={{ background: `${diaColor}10`, border: `1px solid ${diaColor}25`, minWidth: 78 }}>
-                        <div className="text-xs" style={{ color: "#64748b" }}>Diastolic</div>
-                        <div className="text-sm font-bold" style={{ color: diaColor }}>{latest.diastolic}</div>
-                      </div>
-                      {latest.pulse != null && (
-                        <div className="text-center px-2.5 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)", minWidth: 78 }}>
-                          <div className="text-xs" style={{ color: "#64748b" }}>Pulse</div>
-                          <div className="text-sm font-bold" style={{ color: "#94a3b8" }}>{latest.pulse}</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
-              {bloodWork.lipid_profile.length > 0 && (() => {
-                const latest = bloodWork.lipid_profile[0];
-                type LipidKey = "total_cholesterol" | "hdl" | "ldl" | "triglycerides" | "chol_hdl_ratio";
-                const ranges: Record<LipidKey, { label: string; good: (v: number) => boolean; warn: (v: number) => boolean }> = {
-                  total_cholesterol: { label: "Total Chol", good: v => v < 150, warn: v => v <= 200 },
-                  hdl:               { label: "HDL",        good: v => v >= 60,  warn: v => v >= 40  },
-                  ldl:               { label: "LDL",        good: v => v < 70,   warn: v => v <= 100 },
-                  triglycerides:     { label: "Triglyc.",   good: v => v < 100,  warn: v => v <= 150 },
-                  chol_hdl_ratio:    { label: "Chol/HDL",   good: v => v < 3.5,  warn: v => v <= 5.0 },
-                };
-                return (
-                  <div className="mb-3">
-                    <div className="text-xs font-semibold mb-2" style={{ color: "#94a3b8" }}>
-                      Lipid panel · {new Date(latest.test_date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {(Object.keys(ranges) as LipidKey[]).map(k => {
-                        const v = latest[k] as number;
-                        const s = ranges[k].good(v) ? "good" : ranges[k].warn(v) ? "warn" : "risk";
-                        const c = s === "good" ? "#22c55e" : s === "warn" ? "#f59e0b" : "#ef4444";
-                        return (
-                          <div key={k} className="text-center px-2 py-1.5 rounded-lg" style={{ background: `${c}10`, border: `1px solid ${c}25`, minWidth: 68 }}>
-                            <div className="text-xs" style={{ color: "#64748b" }}>{ranges[k].label}</div>
-                            <div className="text-sm font-bold" style={{ color: c }}>{v}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })()}
-              {bloodWork.thyroid_profile.length > 0 && (() => {
-                const latest = bloodWork.thyroid_profile[0];
-                type ThyKey = "t3_ng_ml" | "t4_ug_dl" | "tsh_uiu_ml";
-                const ranges: Record<ThyKey, { label: string; unit: string; good: (v: number) => boolean; warn: (v: number) => boolean }> = {
-                  t3_ng_ml:    { label: "T3",  unit: "ng/mL",  good: v => v >= 0.8 && v <= 2.0, warn: v => v >= 0.6 && v <= 2.5 },
-                  t4_ug_dl:    { label: "T4",  unit: "μg/dL",  good: v => v >= 5.1 && v <= 14.1, warn: v => v >= 3.0 && v <= 16.0 },
-                  tsh_uiu_ml:  { label: "TSH", unit: "μIU/mL", good: v => v >= 0.5 && v <= 2.5, warn: v => v >= 0.3 && v <= 4.0 },
-                };
-                return (
-                  <div>
-                    <div className="text-xs font-semibold mb-2" style={{ color: "#94a3b8" }}>
-                      Thyroid panel · {new Date(latest.test_date + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                    </div>
-                    <div className="flex gap-2">
-                      {(Object.keys(ranges) as ThyKey[]).map(k => {
-                        const v = latest[k] as number;
-                        const s = ranges[k].good(v) ? "good" : ranges[k].warn(v) ? "warn" : "risk";
-                        const c = s === "good" ? "#22c55e" : s === "warn" ? "#f59e0b" : "#ef4444";
-                        return (
-                          <div key={k} className="flex-1 text-center px-2 py-1.5 rounded-lg" style={{ background: `${c}10`, border: `1px solid ${c}25` }}>
-                            <div className="text-xs" style={{ color: "#64748b" }}>{ranges[k].label}</div>
-                            <div className="text-sm font-bold" style={{ color: c }}>{v}</div>
-                            <div className="text-xs" style={{ color: "#334155" }}>{ranges[k].unit}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })()}
-            </InsightCard>
-          )}
+          {/* ── Blood Work & Vitals — trends, charts & insights ── */}
+          {bloodWork && <BloodWorkTrends bloodWork={bloodWork} profile={profile} />}
         </div>
       )}
     </div>
