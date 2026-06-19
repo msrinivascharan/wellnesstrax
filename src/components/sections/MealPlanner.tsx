@@ -29,6 +29,30 @@ export default function MealPlanner({ meal, onApply }: {
   const [confirmApply, setConfirmApply] = useState(false);
   const [applying, setApplying] = useState(false);
   const [servings, setServings] = useState(1);   // people eating — scales the kitchen list only
+  const [cookMode, setCookMode] = useState(false);          // kitchen list: text vs tap-to-strike checklist
+  const [doneItems, setDoneItems] = useState<Set<string>>(new Set());   // struck-off items (phone, in the kitchen)
+
+  const doneKey = `wt-kitchen-done:${meal}:${planDate}`;
+  // Load strike-off progress for this meal+date (persists across reloads while cooking).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`wt-kitchen-done:${meal}:${planDate}`);
+      setDoneItems(new Set(raw ? (JSON.parse(raw) as string[]) : []));
+    } catch { setDoneItems(new Set()); }
+  }, [meal, planDate]);
+
+  function toggleDone(name: string) {
+    setDoneItems(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      try { localStorage.setItem(doneKey, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }
+  function resetDone() {
+    setDoneItems(new Set());
+    try { localStorage.removeItem(doneKey); } catch {}
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -113,6 +137,63 @@ export default function MealPlanner({ meal, onApply }: {
     const text = planText();
     if (!text) return;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+  }
+
+  // Tap-to-strike checklist (for cooking on the phone) — same kitchen order as the text,
+  // each item toggles done on tap; progress is kept in localStorage per meal+date.
+  function renderCookList() {
+    const plan = plans[planDate] ?? {};
+    const chosen = SLOTS
+      .map(s => plan[s.id])
+      .filter((c): c is { item: string; qty_g: number } => !!c?.item && c.qty_g > 0)
+      .map(c => ({ item: c.item, qty_g: Math.round(c.qty_g * servings) }));
+    const groups = kitchenGroups(chosen, fd!.foods);
+    const total = chosen.length;
+    const done = chosen.filter(c => doneItems.has(c.item)).length;
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium" style={{ color: total > 0 && done === total ? "#22c55e" : "#94a3b8" }}>
+            {total > 0 && done === total ? "✓ All done!" : `${done} / ${total} done`}
+          </span>
+          {done > 0 && (
+            <button onClick={resetDone} className="text-xs px-2 py-0.5 rounded-lg"
+              style={{ background: "rgba(255,255,255,0.05)", color: "#64748b", border: "1px solid var(--border)" }}>
+              Reset
+            </button>
+          )}
+        </div>
+        {groups.map((g, gi) => (
+          <div key={gi} className="space-y-1">
+            <div className="text-xs font-semibold" style={{ color: "#64748b" }}>{g.stage.emoji} {g.stage.label}</div>
+            {g.items.map(c => {
+              const isDone = doneItems.has(c.item);
+              return (
+                <button key={c.item} type="button" onClick={() => toggleDone(c.item)}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition-colors"
+                  style={{
+                    background: isDone ? "rgba(34,197,94,0.07)" : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${isDone ? "rgba(34,197,94,0.25)" : "var(--border)"}`,
+                  }}>
+                  <span className="w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold shrink-0"
+                    style={{
+                      background: isDone ? "#22c55e" : "transparent",
+                      border: `1.5px solid ${isDone ? "#22c55e" : "#475569"}`,
+                      color: "#0f1729",
+                    }}>
+                    {isDone ? "✓" : ""}
+                  </span>
+                  <span className="text-sm flex-1"
+                    style={{ textDecoration: isDone ? "line-through" : "none", color: isDone ? "#475569" : "#e2e8f0" }}>
+                    {c.item} <span className="tabular-nums" style={{ color: isDone ? "#475569" : "#94a3b8" }}>— {c.qty_g}g</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    );
   }
 
   if (loading || !fd) {
@@ -319,9 +400,26 @@ export default function MealPlanner({ meal, onApply }: {
                 </div>
               </div>
               {servings > 1 && (
-                <div className="text-xs" style={{ color: "#475569" }}>Quantities below are scaled ×{servings} for {servings} people (the plate above stays per-person).</div>
+                <div className="text-xs" style={{ color: "#475569" }}>Quantities are scaled ×{servings} for {servings} people (the plate above stays per-person).</div>
               )}
-              <pre className="text-xs whitespace-pre-wrap" style={{ color: "#cbd5e1", fontFamily: "inherit", margin: 0 }}>{planText()}</pre>
+
+              {/* Mode toggle — plain text (for WhatsApp) vs tap-to-strike (for cooking on the phone) */}
+              <div className="flex items-center gap-1 p-0.5 rounded-lg" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)", width: "fit-content" }}>
+                <button onClick={() => setCookMode(false)} className="px-2.5 py-1 rounded-md text-xs font-medium transition-colors"
+                  style={!cookMode ? { background: "rgba(20,184,166,0.18)", color: "#14b8a6" } : { color: "#64748b" }}>📋 Text</button>
+                <button onClick={() => setCookMode(true)} className="px-2.5 py-1 rounded-md text-xs font-medium transition-colors"
+                  style={cookMode ? { background: "rgba(20,184,166,0.18)", color: "#14b8a6" } : { color: "#64748b" }}>✅ Cook mode</button>
+              </div>
+
+              {cookMode ? (
+                <>
+                  <div className="text-xs" style={{ color: "#475569" }}>Tap an item to cross it off as you go — saved on this device.</div>
+                  {renderCookList()}
+                </>
+              ) : (
+                <pre className="text-xs whitespace-pre-wrap" style={{ color: "#cbd5e1", fontFamily: "inherit", margin: 0 }}>{planText()}</pre>
+              )}
+
               <button onClick={shareWhatsApp}
                 className="w-full py-2 rounded-xl text-xs font-medium transition-all"
                 style={{ background: "rgba(37,211,102,0.12)", color: "#25d366", border: "1px solid rgba(37,211,102,0.4)" }}>
