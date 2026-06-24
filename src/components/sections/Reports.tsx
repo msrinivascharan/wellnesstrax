@@ -195,6 +195,7 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
   const [error, setError] = useState("");
   const [backingUp, setBackingUp] = useState(false);
   const [backupMsg, setBackupMsg] = useState("");
+  const [lastBackup, setLastBackup] = useState("");   // ISO timestamp of last successful backup (this device)
   const [hoveredCell, setHoveredCell] = useState<{ meal: MealType; cat: string } | null>(null);
   // Per-100g macro lookup, built from the planner Foods DBs (breakfast/lunch/dinner).
   // Calories & macros are computed deterministically from this — never from AI.
@@ -237,6 +238,11 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
       }
       setFoodMacros(map);
     }).catch(() => {});
+  }, []);
+
+  // Remember the last successful backup (this device) for the button tooltip.
+  useEffect(() => {
+    try { setLastBackup(localStorage.getItem("wt-last-backup") || ""); } catch {}
   }, []);
 
   useEffect(() => {
@@ -292,15 +298,15 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
   async function downloadBackup() {
     setBackingUp(true);
     setBackupMsg("");
-    let mirror: { mirrored: boolean; dest?: string; reason?: string } = { mirrored: false };
+    let mirror: { mirrored: boolean; dest?: string; file?: string; at?: string; reason?: string } = { mirrored: false };
     try {
-      // 1. Mirror the whole data/ folder to the external backup dir (best-effort)
+      // 1. Write the JSON file + mirror the data/ folder to the external backup dir
       try {
         const m = await fetch("/api/backup", { method: "POST" });
         mirror = await m.json();
-      } catch { /* mirror is best-effort — never blocks the download */ }
+      } catch { /* best-effort — never blocks the local download */ }
 
-      // 2. Download the JSON bundle (existing behaviour)
+      // 2. Also download the JSON bundle to this device
       const res = await fetch("/api/backup");
       if (!res.ok) throw new Error("Backup request failed");
       const blob = await res.blob();
@@ -313,14 +319,24 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      setBackupMsg(mirror.mirrored
-        ? `✓ Downloaded · folder copied to ${mirror.dest}`
-        : `✓ Downloaded · ⚠ folder copy failed (${mirror.reason ?? "destination unavailable"})`);
+      if (mirror.mirrored) {
+        const at = mirror.at || new Date().toISOString();
+        try { localStorage.setItem("wt-last-backup", at); } catch {}
+        setLastBackup(at);
+        setBackupMsg(`✓ Downloaded · saved ${mirror.file ?? "backup"} + data folder to ${mirror.dest}`);
+      } else {
+        setBackupMsg(`✓ Downloaded · ⚠ Drive save failed (${mirror.reason ?? "destination unavailable"})`);
+      }
     } catch {
       setBackupMsg("⚠ Backup failed");
     } finally {
       setBackingUp(false);
     }
+  }
+
+  function fmtBackupTime(iso: string): string {
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? "" : d.toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
   }
 
   // ── Chart data computations (uses activeLog so history works) ────────────
@@ -345,7 +361,9 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
             <button
               onClick={downloadBackup}
               disabled={backingUp}
-              title="Download a JSON backup and copy the data folder to your external backup folder"
+              title={lastBackup
+                ? `Last backup: ${fmtBackupTime(lastBackup)}\nClick to back up again (downloads + writes the file & data folder to your Drive folder)`
+                : "No backup yet on this device. Click to download + write the file & data folder to your Drive folder"}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all"
               style={backingUp
                 ? { background: "rgba(255,255,255,0.04)", color: "#475569", border: "1px solid var(--border)", cursor: "not-allowed" }
