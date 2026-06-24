@@ -88,7 +88,7 @@ Your health data **never leaves your machine** except the anonymised text log se
 ### App
 - **Past-date editing** — navigate to any previous day from the sidebar to log or correct data
 - **Auto-save** — debounced 900 ms auto-save on every change, no manual save button
-- **Data backup** — one-click **📦 Backup** in Reports (a) downloads the JSON archive to this device, and (b) writes it into an external backup folder (default `G:\My Drive\MyApps`, override via `BACKUP_MIRROR_DIR`) **both** as `wellnesstrax-backup-<date>.json` (replacing any older app backup file) **and** as a full mirror of the `data/` folder at `<dest>/data` — overwriting the previous copy. The external write is best-effort: if the drive isn't available the download still happens and the button reports it. Hovering the button shows the **last successful backup** time
+- **Data backup** — one-click **📦 Backup** in Reports writes the backup straight into an external backup folder (default `G:\My Drive\MyApps`, override via `BACKUP_MIRROR_DIR`) — **both** as `wellnesstrax-backup-<date>.json` (replacing any older app backup file) **and** as a full mirror of the `data/` folder at `<dest>/data`, overwriting the previous copy. No second copy is downloaded to the browser. If the drive isn't available the button reports the failure. Hovering the button shows the **last successful backup** time. (`GET /api/backup` still serves the same archive as a manual download if you ever want one.)
 - **Fully local** — no database, no cloud sync, no account required
 - **Pluggable profile** — every personal detail lives in `data/*.json`; no user specifics are hardcoded in the source, so the app adapts to any person by editing data files alone
 
@@ -320,7 +320,7 @@ Injectable medication history. The Medications section shows the latest dose dat
 
 **No personal details are hardcoded in the source** — the app is fully data-driven from `data/*.json`. **No external data transmission** except the AI analysis call, which sends the day's text log (plus recent food/activity history for trend context) to Groq when you click Generate / Re-analyse. Nothing else leaves your machine.
 
-> ⚠️ **Back up your `data/` folder.** Because the whole folder is gitignored, git is **not** a backup. Use the in-app **📦 Backup** button in Reports — it downloads a full JSON archive **and** writes both that JSON file and a full mirror of the `data/` folder to your external backup folder (default `G:\My Drive\MyApps`, set `BACKUP_MIRROR_DIR` to change it), overwriting the previous copy. Hover the button to see the last successful backup time.
+> ⚠️ **Back up your `data/` folder.** Because the whole folder is gitignored, git is **not** a backup. Use the in-app **📦 Backup** button in Reports — it writes both the JSON archive and a full mirror of the `data/` folder straight to your external backup folder (default `G:\My Drive\MyApps`, set `BACKUP_MIRROR_DIR` to change it), overwriting the previous copy. Hover the button to see the last successful backup time.
 
 ---
 

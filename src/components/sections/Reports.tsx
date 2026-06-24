@@ -295,40 +295,24 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
   }
 
   // ── Backup: mirror data/ to the external folder + download the JSON bundle ──
-  async function downloadBackup() {
+  async function runBackup() {
     setBackingUp(true);
     setBackupMsg("");
-    let mirror: { mirrored: boolean; dest?: string; file?: string; at?: string; reason?: string } = { mirrored: false };
     try {
-      // 1. Write the JSON file + mirror the data/ folder to the external backup dir
-      try {
-        const m = await fetch("/api/backup", { method: "POST" });
-        mirror = await m.json();
-      } catch { /* best-effort — never blocks the local download */ }
-
-      // 2. Also download the JSON bundle to this device
-      const res = await fetch("/api/backup");
-      if (!res.ok) throw new Error("Backup request failed");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `wellnesstrax-backup-${new Date().toISOString().split("T")[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
+      // Write the JSON file + mirror the data/ folder to the external backup folder.
+      // No browser download — the backup lives only in the Drive folder.
+      const m = await fetch("/api/backup", { method: "POST" });
+      const mirror = await m.json() as { mirrored: boolean; dest?: string; file?: string; at?: string; reason?: string };
       if (mirror.mirrored) {
         const at = mirror.at || new Date().toISOString();
         try { localStorage.setItem("wt-last-backup", at); } catch {}
         setLastBackup(at);
-        setBackupMsg(`✓ Downloaded · saved ${mirror.file ?? "backup"} + data folder to ${mirror.dest}`);
+        setBackupMsg(`✓ Saved ${mirror.file ?? "backup"} + data folder to ${mirror.dest}`);
       } else {
-        setBackupMsg(`✓ Downloaded · ⚠ Drive save failed (${mirror.reason ?? "destination unavailable"})`);
+        setBackupMsg(`⚠ Backup failed — couldn't write to ${mirror.dest ?? "the backup folder"} (${mirror.reason ?? "unavailable"})`);
       }
     } catch {
-      setBackupMsg("⚠ Backup failed");
+      setBackupMsg("⚠ Backup failed — could not reach the server");
     } finally {
       setBackingUp(false);
     }
@@ -359,11 +343,11 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
           {/* Backup button — today only */}
           {isToday && (
             <button
-              onClick={downloadBackup}
+              onClick={runBackup}
               disabled={backingUp}
               title={lastBackup
-                ? `Last backup: ${fmtBackupTime(lastBackup)}\nClick to back up again (downloads + writes the file & data folder to your Drive folder)`
-                : "No backup yet on this device. Click to download + write the file & data folder to your Drive folder"}
+                ? `Last backup: ${fmtBackupTime(lastBackup)}\nClick to back up again (writes the file & data folder to your Drive folder)`
+                : "No backup yet on this device. Click to write the file & data folder to your Drive folder"}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all"
               style={backingUp
                 ? { background: "rgba(255,255,255,0.04)", color: "#475569", border: "1px solid var(--border)", cursor: "not-allowed" }
