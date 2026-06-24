@@ -60,3 +60,25 @@ export async function GET() {
     );
   }
 }
+
+/**
+ * POST /api/backup
+ * Mirrors the local `data/` folder into an external backup directory (e.g. a
+ * Google Drive folder), overwriting the previous copy. Destination is taken from
+ * BACKUP_MIRROR_DIR, defaulting to "G:\My Drive\MyApps". The copy lands at
+ * <dest>/data. Failures (e.g. the drive isn't mounted) are reported, not thrown.
+ */
+export async function POST() {
+  const DATA_DIR = path.join(process.cwd(), "data");
+  const dest = process.env.BACKUP_MIRROR_DIR || "G:\\My Drive\\MyApps";
+  const destData = path.join(dest, "data");
+  try {
+    await fs.access(DATA_DIR);                        // nothing to copy if there's no data/
+    await fs.mkdir(dest, { recursive: true });        // ensure the destination base exists
+    await fs.cp(DATA_DIR, destData, { recursive: true, force: true });  // overwrite previous copy
+    return NextResponse.json({ mirrored: true, dest: destData });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "copy failed";
+    return NextResponse.json({ mirrored: false, dest: destData, reason }, { status: 200 });
+  }
+}

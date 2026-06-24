@@ -194,6 +194,7 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
   const [loadingMsg, setLoadingMsg] = useState("");
   const [error, setError] = useState("");
   const [backingUp, setBackingUp] = useState(false);
+  const [backupMsg, setBackupMsg] = useState("");
   const [hoveredCell, setHoveredCell] = useState<{ meal: MealType; cat: string } | null>(null);
   // Per-100g macro lookup, built from the planner Foods DBs (breakfast/lunch/dinner).
   // Calories & macros are computed deterministically from this — never from AI.
@@ -287,10 +288,19 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
     }
   }
 
-  // ── Backup download ───────────────────────────────────────────────────────
+  // ── Backup: mirror data/ to the external folder + download the JSON bundle ──
   async function downloadBackup() {
     setBackingUp(true);
+    setBackupMsg("");
+    let mirror: { mirrored: boolean; dest?: string; reason?: string } = { mirrored: false };
     try {
+      // 1. Mirror the whole data/ folder to the external backup dir (best-effort)
+      try {
+        const m = await fetch("/api/backup", { method: "POST" });
+        mirror = await m.json();
+      } catch { /* mirror is best-effort — never blocks the download */ }
+
+      // 2. Download the JSON bundle (existing behaviour)
       const res = await fetch("/api/backup");
       if (!res.ok) throw new Error("Backup request failed");
       const blob = await res.blob();
@@ -302,8 +312,12 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+
+      setBackupMsg(mirror.mirrored
+        ? `✓ Downloaded · folder copied to ${mirror.dest}`
+        : `✓ Downloaded · ⚠ folder copy failed (${mirror.reason ?? "destination unavailable"})`);
     } catch {
-      // silently ignore — backup is non-critical
+      setBackupMsg("⚠ Backup failed");
     } finally {
       setBackingUp(false);
     }
@@ -331,7 +345,7 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
             <button
               onClick={downloadBackup}
               disabled={backingUp}
-              title="Download all data as JSON backup"
+              title="Download a JSON backup and copy the data folder to your external backup folder"
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all"
               style={backingUp
                 ? { background: "rgba(255,255,255,0.04)", color: "#475569", border: "1px solid var(--border)", cursor: "not-allowed" }
@@ -360,6 +374,12 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
           )}
         </div>
       </div>
+
+      {backupMsg && (
+        <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(255,255,255,0.03)", color: backupMsg.includes("⚠") ? "#fbbf24" : "#86efac", border: "1px solid var(--border)" }}>
+          {backupMsg}
+        </div>
+      )}
 
       {/* ── Date navigation bar ──────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 p-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>

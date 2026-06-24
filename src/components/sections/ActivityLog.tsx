@@ -187,7 +187,7 @@ export default function ActivityLog({ dayLog, activitiesData, onUpdate }: Props)
   function togglePrandial(type: "post_prandial_walks" | "soleus_pumps", meal: MealType) {
     const arr = activity[type] as PrandialActivity[];
     const existing = arr.find(a => a.after_meal === meal);
-    const defaultMin = activitiesData.daily_activities[type === "post_prandial_walks" ? "post_prandial_walk" : "soleus_pump"]?.default_duration_min ?? 10;
+    const defaultMin = activitiesData.daily_activities[type === "post_prandial_walks" ? "post_prandial_walk" : "soleus_pump"]?.default_duration_min ?? (type === "post_prandial_walks" ? 15 : 5);
     if (existing) {
       onUpdate({ ...activity, [type]: arr.filter(a => a.after_meal !== meal) });
     } else {
@@ -337,7 +337,7 @@ export default function ActivityLog({ dayLog, activitiesData, onUpdate }: Props)
           <span className="text-xl">🚶</span>
           <div>
             <div className="text-sm font-semibold text-white">Post-prandial walks</div>
-            <div className="text-xs" style={{ color: "#475569" }}>10-min walk after meals to lower blood glucose</div>
+            <div className="text-xs" style={{ color: "#475569" }}>15-min walk after meals to lower blood glucose</div>
           </div>
         </div>
         {(["breakfast", "lunch", "dinner"] as MealType[]).map(meal => {
