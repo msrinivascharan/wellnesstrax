@@ -25,7 +25,7 @@ Your health data **never leaves your machine** except the anonymised text log se
 | # | Section | What you do here |
 |---|---------|-----------------|
 | 1 | **Dashboard** | At-a-glance daily rings (food = 3 main meals logged, water, activity, sleep, meds), time-aware missed-medication alerts, quick stats, and today's AI score if analysed |
-| 2 | **Food Log** | Log breakfast/lunch/dinner/snacks with meal time. **Typeahead search** (from `food_items.json`) adds items, then a quantity/unit picker; or **add a custom food by name + calories** for unplanned / cheat / eating-out meals. A **Meal Planner** (breakfast, lunch & dinner; 3-tab: plate builder + per-100g Foods DB + Notes) lets you build a plate for any chosen day and **Apply** it into that day's meal log |
+| 2 | **Food Log** | Log breakfast/lunch/dinner/snacks with meal time. Daily food comes from the **Meal Planner** (3-tab: plate builder + per-100g Foods DB + Notes) — build a plate for any chosen day and **Apply** it. For unplanned / cheat / eating-out meals, **add a custom food by name + quantity + calories**, with an **✨ AI estimate** for the calories & macros |
 | 3 | **Activity** | Log gym session with in/out time and auto-calculated duration, exercises with sets/reps/weights, post-prandial walks, soleus pumps, **badminton** (duration/intensity/games), and breathing exercises |
 | 4 | **Medications** | Mark each scheduled medication and supplement taken with timestamp. Periodic injectable tracking with auto-calculated next-due status badge |
 | 5 | **Blood Work & Vitals** | Log and track **lipid, thyroid, blood-pressure, weight, and daily mood** over time with trend arrows and reference ranges. Thyroid supports **TSH-only panels**; BP captures systolic/diastolic + optional pulse, time of day, and cuff arm; the Weight tab sets a target and shows a **weight-goal panel** (current vs target, BMI, to-go, progress bar); mood is a 10-second circumplex check-in |
@@ -37,9 +37,9 @@ Your health data **never leaves your machine** except the anonymised text log se
 ## Key Features
 
 ### Food logging
-- **Typeahead search** — start typing and pick from the pre-defined `food_items.json` pool; already-logged items are shown as crossed-out so you never double-add
-- **Quantity + unit picker** — after selecting an item, set the amount with smart default units (g / ml / pieces / cups / tbsp / tsp), auto-guessed from the food name
-- **Custom / cheat-meal logging** — for eating-out or no-plan days, "Add a custom food" lets you log any food by **name + calories** (protein/carbs/fiber optional). The calories are stored on the entry and counted in Reports **as-is** (no Foods-DB lookup, no gram scaling); the entry is tagged 🍔 custom and its kcal is editable inline
+- **Two ways to log** — planned meals come from the **Meal Planner → Apply** (below), and ad-hoc food comes from **Add a custom food**. (The old typeahead search was removed — daily food is planner-driven and everything else is a custom entry.)
+- **Custom / cheat-meal logging** — for eating-out or no-plan days, "Add a custom food" logs any food by **name + quantity + calories** (protein/carbs/fiber optional). A **✨ Estimate with AI** button fills the calories and macros from the name + quantity (Groq). The calories are stored on the entry and counted in Reports **as-is** (no Foods-DB lookup, no gram scaling); the entry is tagged 🍔 custom and its kcal is editable inline
+- **Inline edit** — logged items show an editable quantity + unit (planner items) or editable calories (custom items)
 - **Meal time logging** — record the actual clock time of each meal
 - **Balanced-plate categorisation** — every item maps to 5 canonical groups (Complex Carbohydrates, Lean/Plant Proteins, Dietary Fiber, Micronutrients, Essential Lipids)
 - **Meal Planner** (Breakfast, Lunch & Dinner views) — a 3-tab tool mirroring meal-planning spreadsheets, parameterised per meal:
@@ -190,6 +190,7 @@ wellnesstrax/
 │   │       ├── sessions/         # GET list of available session dates
 │   │       ├── sessions/[date]/  # GET, PUT, DELETE a specific day's session
 │   │       ├── backup/           # GET — JSON archive download · POST — mirror data/ to external folder
+│   │       ├── estimate-food/    # POST — AI-estimate kcal + macros for a custom food
 │   │       ├── bloodwork/        # GET, PUT — blood work history
 │   │       ├── injectable-meds/  # GET, PUT — injectable medication history
 │   │       ├── profile/          # GET profile.json
@@ -203,7 +204,7 @@ wellnesstrax/
 │   │   ├── Sidebar.tsx          # Navigation sidebar with completion rings + date navigation
 │   │   └── sections/
 │   │       ├── Dashboard.tsx       # Overview: rings, missed meds, quick stats, score summary
-│   │       ├── FoodLog.tsx         # Meal logging: typeahead search + meal planner
+│   │       ├── FoodLog.tsx         # Meal logging: meal planner + custom/cheat food (AI-estimated)
 │   │       ├── MealPlanner.tsx     # 3-tab meal planner (plate + Foods DB + Notes), per meal
 │   │       ├── ActivityLog.tsx     # Gym + walks + soleus + badminton + breathing
 │   │       ├── ActivityTrends.tsx  # Sectioned activity (cardio/strength/indoor/badminton) + breathing trends
