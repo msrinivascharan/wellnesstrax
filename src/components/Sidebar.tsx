@@ -253,7 +253,6 @@ export default function Sidebar({ active, onNavigate, dayLog, profile, saveStatu
         {profile && (
           <div className="text-xs" style={{ color: "#334155" }}>
             <span className="block">← data/profile.json</span>
-            <span className="block">← data/food_items.json</span>
           </div>
         )}
       </div>

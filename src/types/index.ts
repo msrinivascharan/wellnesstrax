@@ -55,17 +55,9 @@ export interface SupplementRule {
   note: string;
 }
 
-export interface ExpertPanelMember {
-  id: string;
-  name: string;
-  title: string;
-  focus: string;
-}
-
 export interface FoodRules {
   always_encourage: string[];
   supplements_to_track: SupplementRule[];
-  expert_panel: ExpertPanelMember[];
 }
 
 // ─── Food tracking ────────────────────────────────────────────────────────────
@@ -363,11 +355,7 @@ export interface DailyActivityPoint {
   postLunchDip: string;     // "" | none | controllable | uncontrollable
 }
 
-// ─── Data files (food_items.json + activities.json) ───────────────────────────
-
-export interface FoodItemsData {
-  meals: Record<string, Record<string, string[]>>;
-}
+// ─── Data files (activities.json) ─────────────────────────────────────────────
 
 export interface ActivityDefinition {
   name: string;

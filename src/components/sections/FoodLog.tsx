@@ -1,21 +1,14 @@
 "use client";
 import { useState } from "react";
-import type { DayLog, FoodEntry, FoodItemsData, MealType } from "@/types";
+import type { DayLog, FoodEntry, MealType } from "@/types";
 import { autoCategory, resolveCategory } from "@/lib/food-utils";
 import MealPlanner from "@/components/sections/MealPlanner";
 import type { MealKey } from "@/types";
 
 interface Props {
   dayLog: DayLog;
-  foodItems: FoodItemsData;
   onUpdate: (food: Record<MealType, FoodEntry[]>) => void;
   onMealTimeUpdate: (meal: MealType, time: string) => void;
-  /** Called when a custom item should be saved to food_items.json */
-  onSaveToList: (meal: string, category: string, name: string) => Promise<void>;
-  /** Called when an item should be removed from the pre-defined list */
-  onRemoveFromList: (meal: string, category: string, name: string) => Promise<void>;
-  /** Called when an item should be moved to a different category */
-  onMoveItem: (meal: string, oldCat: string, newCat: string, name: string) => Promise<void>;
   /** Apply a planned plate to a date's meal log */
   onApplyMealPlan: (meal: MealType, date: string, items: { name: string; qty_g: number }[]) => Promise<void>;
 }
@@ -39,7 +32,7 @@ function genId() { return crypto.randomUUID(); }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function FoodLog({ dayLog, foodItems: _foodItems, onUpdate, onMealTimeUpdate, onSaveToList: _onSaveToList, onRemoveFromList: _onRemoveFromList, onMoveItem: _onMoveItem, onApplyMealPlan }: Props) {
+export default function FoodLog({ dayLog, onUpdate, onMealTimeUpdate, onApplyMealPlan }: Props) {
   const [activeMeal, setActiveMeal] = useState<MealType>("breakfast");
   const [showPlanner, setShowPlanner] = useState(false);
   // ── Custom / cheat-meal entry (unplanned, eating-out days) ──

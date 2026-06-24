@@ -167,8 +167,7 @@ Then open `http://<your-laptop-IP>:3000` on the phone (find the IP with `ipconfi
 wellnesstrax/
 ├── data/                        # All personal health data — gitignored, local only
 │   ├── profile.json             # User profile: age, weight, medications, targets
-│   ├── food_rules.json          # Always-encourage rules + supplements + expert panel
-│   ├── food_items.json          # Pre-defined food lists per meal (search source)
+│   ├── food_rules.json          # Always-encourage rules + supplements
 │   ├── activities.json          # Exercise definitions: gym + daily activities
 │   ├── breakfast_foods.json     # Breakfast per-100g DB + notes + target (editable in-app)
 │   ├── breakfast_plans.json     # Per-day planned breakfast plates + applied dates
@@ -195,7 +194,6 @@ wellnesstrax/
 │   │       ├── injectable-meds/  # GET, PUT — injectable medication history
 │   │       ├── profile/          # GET profile.json
 │   │       ├── food-rules/       # GET food_rules.json
-│   │       ├── food-items/       # GET · PUT add · DELETE remove · PATCH recategorise
 │   │       ├── meal-foods/[meal]/ # GET + PUT — per-meal per-100g food DB + notes + target
 │   │       ├── meal-plans/[meal]/ # GET + PUT — per-day planned plates + applied dates
 │   │       └── activities/       # GET activities.json
@@ -273,24 +271,6 @@ Doctor/dietitian-approved rules loaded into every AI analysis:
 
 - `always_encourage` — foods to favour
 - `supplements_to_track` — prescribed supplements with timing and targets
-- `expert_panel` — reference nutritionist personas used to frame AI context
-
-### `data/food_items.json`
-
-Pre-defined food lists, organised by `meal → category → [items]`. These feed the Food Log **typeahead search** pool. Edit freely; the API also supports add/remove/recategorise.
-
-```json
-{
-  "meals": {
-    "breakfast": {
-      "Fruits":        ["Blueberries", "Guava", "Avocado"],
-      "Nuts & Seeds":  ["Groundnuts", "Walnuts"],
-      "Dietary Fiber": ["Psyllium husk"]
-    },
-    "lunch": {}, "dinner": {}, "snacks": {}
-  }
-}
-```
 
 ### `data/activities.json`
 
@@ -313,7 +293,6 @@ Injectable medication history. The Medications section shows the latest dose dat
 | `data/` *(entire folder)* | ✗ Gitignored | All personal health data — stays on your machine only |
 | `data/profile.json` | ✗ Gitignored | Your medical profile, medications, targets |
 | `data/food_rules.json` | ✗ Gitignored | Your food/drug interaction rules |
-| `data/food_items.json` | ✗ Gitignored | Your food lists |
 | `data/activities.json` | ✗ Gitignored | Your exercise definitions |
 | `data/bloodwork.json` | ✗ Gitignored | Your lab results |
 | `data/injectable_meds.json` | ✗ Gitignored | Your injection history |
@@ -358,8 +337,7 @@ WellnessTrax is entirely profile-driven — no hardcoded user details exist in t
 
 1. Edit `data/profile.json` with the person's name, age, weight, BMI, medications, and daily targets
 2. Edit `data/food_rules.json` with their specific food rules and supplement list
-3. Edit `data/food_items.json` to seed the food search pool per meal
-4. Restart the dev server — all changes take effect immediately
+3. Restart the dev server — all changes take effect immediately
 
 The AI prompt is rebuilt from these files on every analysis call, so the model instantly reflects the updated profile.
 

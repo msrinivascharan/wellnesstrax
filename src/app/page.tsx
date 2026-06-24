@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { format } from "date-fns";
 import type {
-  DayLog, UserProfile, FoodItemsData, ActivitiesData,
+  DayLog, UserProfile, ActivitiesData,
   MealType, FoodEntry, ActivityLog, MedicationEntry, SupplementEntry,
   SleepLog, DayAnalysis, ExerciseEntry,
 } from "@/types";
@@ -120,7 +120,6 @@ export default function Home() {
   const [navOpen, setNavOpen]                 = useState(false);   // mobile drawer
   const [dayLog, setDayLog]                   = useState<DayLog | null>(null);
   const [profile, setProfile]                 = useState<UserProfile | null>(null);
-  const [foodItems, setFoodItems]             = useState<FoodItemsData | null>(null);
   const [activitiesData, setActivitiesData]   = useState<ActivitiesData | null>(null);
   const [saveStatus, setSaveStatus]           = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [booting, setBooting]                 = useState(true);
@@ -242,9 +241,8 @@ export default function Home() {
     async function boot() {
       const today = format(new Date(), "yyyy-MM-dd");
       try {
-        const [profRes, foodRes, actRes, sessRes, bwRes] = await Promise.all([
+        const [profRes, actRes, sessRes, bwRes] = await Promise.all([
           fetch("/api/profile"),
-          fetch("/api/food-items"),
           fetch("/api/activities"),
           fetch(`/api/sessions/${today}`),
           fetch("/api/bloodwork"),
@@ -259,10 +257,6 @@ export default function Home() {
         const { profile: p } = await profRes.json() as { profile: UserProfile };
         setProfile(p);
         profileRef.current = p;
-
-        if (!foodRes.ok) throw new Error("Failed to load food_items.json");
-        const { data: fi } = await foodRes.json() as { data: FoodItemsData };
-        setFoodItems(fi);
 
         if (!actRes.ok) throw new Error("Failed to load activities.json");
         const { data: ad } = await actRes.json() as { data: ActivitiesData };
@@ -395,48 +389,6 @@ export default function Home() {
     }
   }
 
-  async function onSaveToList(meal: string, category: string, name: string) {
-    try {
-      const res = await fetch("/api/food-items", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ meal, category, name }),
-      });
-      if (res.ok) {
-        const { data } = await res.json() as { data: FoodItemsData };
-        setFoodItems(data);
-      }
-    } catch { /* non-critical */ }
-  }
-
-  async function onRemoveFromList(meal: string, category: string, name: string) {
-    try {
-      const res = await fetch("/api/food-items", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ meal, category, name }),
-      });
-      if (res.ok) {
-        const { data } = await res.json() as { data: FoodItemsData };
-        setFoodItems(data);
-      }
-    } catch { /* non-critical */ }
-  }
-
-
-  async function onMoveItem(meal: string, oldCat: string, newCat: string, name: string) {
-    try {
-      const res = await fetch("/api/food-items", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ meal, oldCategory: oldCat, newCategory: newCat, name }),
-      });
-      if (res.ok) {
-        const { data } = await res.json() as { data: FoodItemsData };
-        setFoodItems(data);
-      }
-    } catch { /* non-critical */ }
-  }
 
   // ── Boot screen ───────────────────────────────────────────────────────────
   if (booting) {
@@ -461,8 +413,7 @@ export default function Home() {
           <div className="text-base font-semibold text-white">Startup failed</div>
           <div className="text-sm" style={{ color: "#ef4444" }}>{bootError}</div>
           <div className="text-xs" style={{ color: "#475569" }}>
-            Make sure <code className="text-teal-400">data/profile.json</code>,{" "}
-            <code className="text-teal-400">data/food_items.json</code>, and{" "}
+            Make sure <code className="text-teal-400">data/profile.json</code> and{" "}
             <code className="text-teal-400">data/activities.json</code> exist,
             then restart <code className="text-teal-400">npm run dev</code>.
           </div>
@@ -471,7 +422,7 @@ export default function Home() {
     );
   }
 
-  if (!profile || !foodItems || !activitiesData) return null;
+  if (!profile || !activitiesData) return null;
 
   const isToday = selectedDate === todayStr;
 
@@ -548,7 +499,7 @@ export default function Home() {
               <Dashboard dayLog={dayLog} profile={profile} onNavigate={s => setSection(s as SectionId)} />
             )}
             {section === "food" && (
-              <FoodLog dayLog={dayLog} foodItems={foodItems} onUpdate={onFoodUpdate} onMealTimeUpdate={onMealTimeUpdate} onSaveToList={onSaveToList} onRemoveFromList={onRemoveFromList} onMoveItem={onMoveItem} onApplyMealPlan={onApplyMealPlan} />
+              <FoodLog dayLog={dayLog} onUpdate={onFoodUpdate} onMealTimeUpdate={onMealTimeUpdate} onApplyMealPlan={onApplyMealPlan} />
             )}
             {section === "activity" && (
               <ActivityLogSection dayLog={dayLog} activitiesData={activitiesData} onUpdate={onActivityUpdate} />

@@ -10,10 +10,9 @@ const MIRROR_DIR = process.env.BACKUP_MIRROR_DIR || "G:\\My Drive\\MyApps";
 
 /** Build the full backup bundle: all config files + the last 30 daily sessions. */
 async function buildBackup(): Promise<{ bundle: unknown; fileName: string }> {
-  const [profileResult, foodItemsResult, activitiesResult, foodRulesResult] =
+  const [profileResult, activitiesResult, foodRulesResult] =
     await Promise.allSettled([
       fs.readFile(path.join(DATA_DIR, "profile.json"), "utf-8").then(JSON.parse),
-      fs.readFile(path.join(DATA_DIR, "food_items.json"), "utf-8").then(JSON.parse),
       fs.readFile(path.join(DATA_DIR, "activities.json"), "utf-8").then(JSON.parse),
       fs.readFile(path.join(DATA_DIR, "food_rules.json"), "utf-8").then(JSON.parse),
     ]);
@@ -32,7 +31,6 @@ async function buildBackup(): Promise<{ bundle: unknown; fileName: string }> {
     version: "1.0.0",
     data_files: {
       profile:    profileResult.status    === "fulfilled" ? profileResult.value    : null,
-      food_items: foodItemsResult.status  === "fulfilled" ? foodItemsResult.value  : null,
       activities: activitiesResult.status === "fulfilled" ? activitiesResult.value : null,
       food_rules: foodRulesResult.status  === "fulfilled" ? foodRulesResult.value  : null,
     },
