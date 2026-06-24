@@ -21,8 +21,11 @@ export function buildAnalysisPrompt(
     .map(meal => {
       const items = log.food[meal];
       if (!items || items.length === 0) return `  ${meal}: nothing logged`;
-      // quantity_g holds the logged amount in the item's own unit (g / ml / pieces / cups / …)
-      const list = items.map(f => `${f.name} (${f.quantity_g} ${f.unit || "g"})`).join(", ");
+      // quantity_g holds the logged amount in the item's own unit (g / ml / pieces / cups / …).
+      // Custom / cheat entries carry their own manually-entered calories instead.
+      const list = items.map(f =>
+        f.kcal != null ? `${f.name} (~${f.kcal} kcal, custom)` : `${f.name} (${f.quantity_g} ${f.unit || "g"})`
+      ).join(", ");
       return `  ${meal}: ${list}`;
     })
     .join("\n");

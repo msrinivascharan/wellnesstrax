@@ -123,12 +123,18 @@ const r1 = (x: number) => Math.round(x * 10) / 10;
 /** Per-100g macro lookup keyed by lowercased item name (built from the meal Foods DBs). */
 export type MacroLookup = Record<string, { kcal: number; protein: number; carbs: number; fiber: number }>;
 
-/** Deterministically sum a meal's nutrition straight from the hardcoded Foods DB —
- *  no AI. Mirrors the planner's own math: (qty_g / 100) × per-100g value, matching
- *  each logged item by name. Items not in the DB are counted (unmatched) but not summed. */
+/** Deterministically sum a meal's nutrition. Custom / cheat entries carry their own
+ *  manually-entered calories (and optional macros) and are used as-is. Everything else
+ *  is matched by name against the hardcoded Foods DB: (qty_g / 100) × per-100g value.
+ *  Items that are neither are counted (unmatched) but not summed. */
 function computeMealNutrition(entries: FoodEntry[], macros: MacroLookup) {
   let kcal = 0, protein = 0, carbs = 0, fiber = 0, matched = 0, unmatched = 0;
   for (const e of entries) {
+    if (e.kcal != null) {   // manually-entered (cheat / unplanned) — totals as eaten
+      kcal += e.kcal; protein += e.protein_g || 0; carbs += e.carbs_g || 0; fiber += e.fiber_g || 0;
+      matched++;
+      continue;
+    }
     const m = macros[e.name.toLowerCase().trim()];
     if (!m) { unmatched++; continue; }
     const q = (e.quantity_g || 0) / 100;

@@ -85,6 +85,13 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showPlanner, setShowPlanner] = useState(false);
+  // ── Custom / cheat-meal entry (unplanned, eating-out days) ──
+  const [showCustom, setShowCustom] = useState(false);
+  const [cName, setCName]     = useState("");
+  const [cKcal, setCKcal]     = useState("");
+  const [cProtein, setCProtein] = useState("");
+  const [cCarbs, setCCarbs]   = useState("");
+  const [cFiber, setCFiber]   = useState("");
 
   const meal = activeMeal;
   const entries = dayLog.food[meal] ?? [];
@@ -141,9 +148,33 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
     setPendingItem(null);
   }
 
+  // Log an unplanned / cheat-meal food by name + calories (macros optional). The
+  // calories are stored on the entry and used directly in Reports.
+  function addCustomFood() {
+    const name = cName.trim();
+    const kcal = parseFloat(cKcal);
+    if (!name || isNaN(kcal) || kcal <= 0) return;
+    const num = (s: string) => { const n = parseFloat(s); return isNaN(n) || n < 0 ? undefined : n; };
+    const entry: FoodEntry = {
+      id: genId(),
+      name,
+      category: autoCategory(name),
+      quantity_g: 1,
+      unit: "serving",
+      custom: true,
+      logged_at: new Date().toISOString(),
+      kcal: Math.round(kcal),
+      protein_g: num(cProtein),
+      carbs_g: num(cCarbs),
+      fiber_g: num(cFiber),
+    };
+    onUpdate({ ...dayLog.food, [meal]: [...entries, entry] });
+    setCName(""); setCKcal(""); setCProtein(""); setCCarbs(""); setCFiber("");
+    setShowCustom(false);
+  }
 
-  // Update quantity or unit of already-logged entry
-  function updateEntry(id: string, patch: Partial<Pick<FoodEntry, "quantity_g" | "unit">>) {
+  // Update an already-logged entry (grams/unit for DB items, or kcal for cheat items)
+  function updateEntry(id: string, patch: Partial<Pick<FoodEntry, "quantity_g" | "unit" | "kcal">>) {
     onUpdate({ ...dayLog.food, [meal]: entries.map(e => e.id === id ? { ...e, ...patch } : e) });
   }
 
@@ -298,32 +329,49 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
               <div className="flex-1 min-w-0">
                 <span className="text-sm font-medium text-white">{entry.name}</span>
                 <span className="ml-2 text-xs" style={{ color: "#475569" }}>{displayCat}</span>
-                {entry.custom && (
+                {entry.kcal != null ? (
+                  <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded font-medium"
+                    style={{ background: "rgba(251,146,60,0.12)", color: "#fb923c", border: "1px solid rgba(251,146,60,0.25)" }}>🍔 custom</span>
+                ) : entry.custom && (
                   <span className="ml-1.5 text-xs px-1 py-0.5 rounded"
                     style={{ background: "#1e293b", color: "#334155" }}>+added</span>
                 )}
               </div>
-              {/* Inline quantity + unit edit */}
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  className="nb-input-sm text-center"
-                  style={{ width: 72 }}
-                  value={entry.quantity_g}
-                  onChange={e => updateEntry(entry.id, { quantity_g: parseFloat(e.target.value) || 0 })}
-                />
-                {/* Compact unit switcher */}
-                <select
-                  className="nb-input-sm"
-                  style={{ width: 66, paddingLeft: 6, paddingRight: 2 }}
-                  value={entry.unit ?? "g"}
-                  onChange={e => updateEntry(entry.id, { unit: e.target.value })}
-                >
-                  {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                </select>
-              </div>
+              {entry.kcal != null ? (
+                /* Cheat / custom entry — edit calories directly (no gram scaling) */
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number" min="0" step="10"
+                    className="nb-input-sm text-center"
+                    style={{ width: 72 }}
+                    value={entry.kcal}
+                    onChange={e => updateEntry(entry.id, { kcal: Math.round(parseFloat(e.target.value)) || 0 })}
+                  />
+                  <span className="text-xs" style={{ color: "#64748b" }}>kcal</span>
+                </div>
+              ) : (
+                /* Inline quantity + unit edit */
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    className="nb-input-sm text-center"
+                    style={{ width: 72 }}
+                    value={entry.quantity_g}
+                    onChange={e => updateEntry(entry.id, { quantity_g: parseFloat(e.target.value) || 0 })}
+                  />
+                  {/* Compact unit switcher */}
+                  <select
+                    className="nb-input-sm"
+                    style={{ width: 66, paddingLeft: 6, paddingRight: 2 }}
+                    value={entry.unit ?? "g"}
+                    onChange={e => updateEntry(entry.id, { unit: e.target.value })}
+                  >
+                    {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </div>
+              )}
               <button onClick={() => removeEntry(entry.id)}
                 className="text-xs p-1.5 rounded-lg transition-colors hover:bg-red-950/50"
                 style={{ color: "#ef4444" }}>✕</button>
@@ -354,7 +402,7 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
               style={{ background: "var(--bg-card)", border: "1px solid var(--border)", maxHeight: 256, overflowY: "auto" }}>
               {suggestions.length === 0 ? (
                 <div className="px-4 py-3 text-sm" style={{ color: "#475569" }}>
-                  Not in your food list — add it in the planner&apos;s <strong className="text-white">Foods</strong> tab or <strong className="text-white">food_items.json</strong>
+                  Not in your food list — use <strong style={{ color: "#fb923c" }}>Add a custom food</strong> below to log it with calories, or add it to the planner&apos;s <strong className="text-white">Foods</strong> tab
                 </div>
               ) : (
                 suggestions.map(s => {
@@ -394,6 +442,57 @@ export default function FoodLog({ dayLog, foodItems, onUpdate, onMealTimeUpdate,
         </div>
         <div className="text-xs" style={{ color: "#334155" }}>
           {searchPool.length} items in your food list — select one to set quantity
+        </div>
+
+        {/* Unplanned / cheat-meal: log a food by name + calories (for eating-out / no-plan days) */}
+        <div className="pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+          {!showCustom ? (
+            <button onClick={() => setShowCustom(true)}
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-medium transition-all"
+              style={{ background: "rgba(251,146,60,0.08)", color: "#fb923c", border: "1px solid rgba(251,146,60,0.25)" }}>
+              🍔 Eating out / cheat meal? Add a custom food with calories
+            </button>
+          ) : (
+            <div className="space-y-2.5 fade-in-up">
+              <div className="text-xs font-semibold text-white">Add a custom food <span style={{ color: "#64748b", fontWeight: 400 }}>(unplanned / cheat meal)</span></div>
+              <input className="nb-input w-full" placeholder="Food name — e.g. Restaurant biryani, 2 pizza slices"
+                value={cName} onChange={e => setCName(e.target.value)} autoFocus />
+              <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col">
+                  <label className="text-xs mb-0.5" style={{ color: "#fb923c" }}>Calories *</label>
+                  <input className="nb-input-sm" style={{ width: 92 }} type="number" min="0" step="10" placeholder="e.g. 650"
+                    value={cKcal} onChange={e => setCKcal(e.target.value)} onKeyDown={e => e.key === "Enter" && addCustomFood()} />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs mb-0.5" style={{ color: "#64748b" }}>Protein g</label>
+                  <input className="nb-input-sm" style={{ width: 80 }} type="number" min="0" placeholder="opt"
+                    value={cProtein} onChange={e => setCProtein(e.target.value)} />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs mb-0.5" style={{ color: "#64748b" }}>Carbs g</label>
+                  <input className="nb-input-sm" style={{ width: 80 }} type="number" min="0" placeholder="opt"
+                    value={cCarbs} onChange={e => setCCarbs(e.target.value)} />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs mb-0.5" style={{ color: "#64748b" }}>Fiber g</label>
+                  <input className="nb-input-sm" style={{ width: 80 }} type="number" min="0" placeholder="opt"
+                    value={cFiber} onChange={e => setCFiber(e.target.value)} />
+                </div>
+              </div>
+              <div className="text-xs" style={{ color: "#475569" }}>Only calories are required — enter the total for what you actually ate. It counts toward today&apos;s nutrition as-is (no gram scaling).</div>
+              <div className="flex gap-2">
+                <button onClick={addCustomFood} disabled={!cName.trim() || !cKcal.trim()}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                  style={(cName.trim() && cKcal.trim())
+                    ? { background: "rgba(251,146,60,0.15)", color: "#fb923c", border: "1px solid rgba(251,146,60,0.35)" }
+                    : { background: "transparent", color: "#334155", border: "1px solid var(--border)", opacity: 0.5 }}>
+                  Add to {MEAL_META[meal].label} ✓
+                </button>
+                <button onClick={() => { setShowCustom(false); setCName(""); setCKcal(""); setCProtein(""); setCCarbs(""); setCFiber(""); }}
+                  className="px-3 py-2 rounded-lg text-sm" style={{ color: "#475569" }}>Cancel</button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

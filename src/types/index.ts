@@ -80,6 +80,13 @@ export interface FoodEntry {
   unit?: string;          // override unit label (e.g. "cups", "pieces")
   custom: boolean;
   logged_at: string;
+  // ── Manually-entered nutrition (unplanned / cheat / eating-out items) ──
+  // When `kcal` is set, these are the TOTALS for the item as eaten and are used
+  // directly by Reports (no Foods-DB lookup, no gram scaling). Macros optional.
+  kcal?: number;
+  protein_g?: number;
+  carbs_g?: number;
+  fiber_g?: number;
 }
 
 // ─── Activity tracking ────────────────────────────────────────────────────────
