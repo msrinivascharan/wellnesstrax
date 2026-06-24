@@ -25,24 +25,20 @@ Your health data **never leaves your machine** except the anonymised text log se
 | # | Section | What you do here |
 |---|---------|-----------------|
 | 1 | **Dashboard** | At-a-glance daily rings (food = 3 main meals logged, water, activity, sleep, meds), time-aware missed-medication alerts, quick stats, and today's AI score if analysed |
-| 2 | **Food Log** | Log breakfast/lunch/dinner/snacks with meal time. **Typeahead search** adds items, then a quantity/unit picker. A rich **Good to Eat** list with filters and enable/disable. A **Meal Planner** (breakfast, lunch & dinner; 3-tab: plate builder + per-100g Foods DB + Notes) lets you build a plate for any chosen day and **Apply** it into that day's meal log |
+| 2 | **Food Log** | Log breakfast/lunch/dinner/snacks with meal time. **Typeahead search** (from `food_items.json`) adds items, then a quantity/unit picker. A **Meal Planner** (breakfast, lunch & dinner; 3-tab: plate builder + per-100g Foods DB + Notes) lets you build a plate for any chosen day and **Apply** it into that day's meal log |
 | 3 | **Activity** | Log gym session with in/out time and auto-calculated duration, exercises with sets/reps/weights, post-prandial walks, soleus pumps, **badminton** (duration/intensity/games), and breathing exercises |
 | 4 | **Medications** | Mark each scheduled medication and supplement taken with timestamp. Periodic injectable tracking with auto-calculated next-due status badge |
 | 5 | **Blood Work & Vitals** | Log and track **lipid, thyroid, blood-pressure, weight, and daily mood** over time with trend arrows and reference ranges. Thyroid supports **TSH-only panels**; BP captures systolic/diastolic + optional pulse, time of day, and cuff arm; the Weight tab sets a target and shows a **weight-goal panel** (current vs target, BMI, to-go, progress bar); mood is a 10-second circumplex check-in |
 | 6 | **Water & Sleep** | Hydration tracker, sleep log (hours, quality, bedtime/wake), **multiple daytime naps**, and **post-lunch dip** + **evening dip** trackers |
-| 7 | **Reports** | Run AI analysis; meal-wise balanced-plate donuts (with Nutrition); **per-meal next-day suggestions**; **sectioned Activity trends** (Overall, Cardio, Strength + body **muscle map**, Indoor, Badminton); **Breathing**, **Hydration**, and **Sleep** trend sections — all with charts and AI insights; a **Blood Work & Vitals trends** panel (history line charts with healthy-zone bands + computed insights for weight, BP, lipids, thyroid & mood); and a date navigator to revisit any past day |
+| 7 | **Reports** | Run AI analysis; meal-wise balanced-plate donuts (with Nutrition); **sectioned Activity trends** (Overall, Cardio, Strength + body **muscle map**, Indoor, Badminton); **Breathing**, **Hydration**, and **Sleep** trend sections — all with charts and AI insights; a **Blood Work & Vitals trends** panel (history line charts with healthy-zone bands + computed insights for weight, BP, lipids, thyroid & mood); and a date navigator to revisit any past day |
 
 ---
 
 ## Key Features
 
 ### Food logging
-- **Typeahead search** — start typing and pick from a deduplicated pool of your **Good to Eat** list plus the pre-defined `food_items.json`; already-logged items are shown as crossed-out so you never double-add
+- **Typeahead search** — start typing and pick from the pre-defined `food_items.json` pool; already-logged items are shown as crossed-out so you never double-add
 - **Quantity + unit picker** — after selecting an item, set the amount with smart default units (g / ml / pieces / cups / tbsp / tsp), auto-guessed from the food name
-- **Rich Good to Eat list** — each item carries `{ name, category, subcategory, frequency, notes, enabled }`
-  - **Category filter pills** to slice each list by group (Vegetables, Fruits, Fried Foods, Sweets, etc.)
-  - **Per-item enable/disable** (soft toggle) — pause an item without deleting it, or remove entirely
-  - Add new items inline with category + notes
 - **Meal time logging** — record the actual clock time of each meal
 - **Balanced-plate categorisation** — every item maps to 5 canonical groups (Complex Carbohydrates, Lean/Plant Proteins, Dietary Fiber, Micronutrients, Essential Lipids)
 - **Meal Planner** (Breakfast, Lunch & Dinner views) — a 3-tab tool mirroring meal-planning spreadsheets, parameterised per meal:
@@ -56,7 +52,6 @@ Your health data **never leaves your machine** except the anonymised text log se
 ### Reports & AI analysis
 - **Meal-wise balanced plate** — a donut per meal (breakfast/lunch/dinner/snacks) with a per-meal balance score, missing-group hints, a hover item breakdown, and a per-meal **calories + macros** line
 - **Deterministic nutrition** — calories, protein, carbs, and fiber are computed **directly from your planner Foods DB** (`qty_g ÷ 100 × per-100g value`, the same math as the planner's TOTAL PLATE), **not** estimated by AI. The **Nutrition** card (per-meal lines + daily total vs target) shows live as soon as food is logged — no need to run an analysis. Logged items not found in the Foods DB are flagged and excluded from the totals. AI still adds the qualitative highlights/concerns/assessment after Re-analyse
-- **Per-meal next-day suggestions** — after Re-analyse, each meal card shows 3–4 "Try tomorrow" picks drawn from your **Good to Eat** list that you have **not** eaten in the past 7 days
 - **Sectioned Activity trends** *(own section)* — daily / weekly / monthly charts and per-section AI insights for:
   - **Overall movement** — stacked gym/walk/soleus/badminton minutes, active-day / gym-day / current-gap tiles, plus an AI synthesis (summary, how your body benefits, activity balance, consistency)
   - **Cardio** — cardio minutes trend
@@ -173,7 +168,6 @@ wellnesstrax/
 │   ├── profile.json             # User profile: age, weight, medications, targets
 │   ├── food_rules.json          # Always-encourage rules + supplements + expert panel
 │   ├── food_items.json          # Pre-defined food lists per meal (search source)
-│   ├── food_preferences.json    # Rich Good to Eat list (edit in-app)
 │   ├── activities.json          # Exercise definitions: gym + daily activities
 │   ├── breakfast_foods.json     # Breakfast per-100g DB + notes + target (editable in-app)
 │   ├── breakfast_plans.json     # Per-day planned breakfast plates + applied dates
@@ -200,7 +194,6 @@ wellnesstrax/
 │   │       ├── profile/          # GET profile.json
 │   │       ├── food-rules/       # GET food_rules.json
 │   │       ├── food-items/       # GET · PUT add · DELETE remove · PATCH recategorise
-│   │       ├── food-preferences/ # GET + PUT — Good to Eat list
 │   │       ├── meal-foods/[meal]/ # GET + PUT — per-meal per-100g food DB + notes + target
 │   │       ├── meal-plans/[meal]/ # GET + PUT — per-day planned plates + applied dates
 │   │       └── activities/       # GET activities.json
@@ -209,7 +202,7 @@ wellnesstrax/
 │   │   ├── Sidebar.tsx          # Navigation sidebar with completion rings + date navigation
 │   │   └── sections/
 │   │       ├── Dashboard.tsx       # Overview: rings, missed meds, quick stats, score summary
-│   │       ├── FoodLog.tsx         # Meal logging: typeahead search + Good to Eat list
+│   │       ├── FoodLog.tsx         # Meal logging: typeahead search + meal planner
 │   │       ├── MealPlanner.tsx     # 3-tab meal planner (plate + Foods DB + Notes), per meal
 │   │       ├── ActivityLog.tsx     # Gym + walks + soleus + badminton + breathing
 │   │       ├── ActivityTrends.tsx  # Sectioned activity (cardio/strength/indoor/badminton) + breathing trends
@@ -297,21 +290,6 @@ Pre-defined food lists, organised by `meal → category → [items]`. These feed
 }
 ```
 
-### `data/food_preferences.json`
-
-Your rich **Good to Eat** list, managed entirely from the Food Log section. Changes save immediately via the API.
-
-```json
-{
-  "encourage": [
-    { "name": "Blueberries", "category": "Fruits",
-      "subcategory": "Berries", "frequency": "Daily", "notes": "Polyphenols", "enabled": true }
-  ]
-}
-```
-
-- `encourage` items power the **Good to Eat** list, the Food Log search pool, and the **next-day meal suggestions**. Disabled items (`enabled: false`) are skipped.
-
 ### `data/activities.json`
 
 Defines available gym exercises and daily activities (post-prandial walks, soleus pumps) with default sets/reps/weights/durations used to pre-populate the activity log.
@@ -334,7 +312,6 @@ Injectable medication history. The Medications section shows the latest dose dat
 | `data/profile.json` | ✗ Gitignored | Your medical profile, medications, targets |
 | `data/food_rules.json` | ✗ Gitignored | Your food/drug interaction rules |
 | `data/food_items.json` | ✗ Gitignored | Your food lists |
-| `data/food_preferences.json` | ✗ Gitignored | Your Good to Eat list |
 | `data/activities.json` | ✗ Gitignored | Your exercise definitions |
 | `data/bloodwork.json` | ✗ Gitignored | Your lab results |
 | `data/injectable_meds.json` | ✗ Gitignored | Your injection history |
@@ -359,14 +336,13 @@ Injectable medication history. The Medications section shows the latest dose dat
 - Estimated macros (calories, protein, fiber) with a one-line assessment, highlights, and concerns
 - Overall daily health score (0–100)
 - Top wins and areas to improve
-- **Per-meal next-day suggestions** — items from your Good to Eat list not eaten in the past 7 days
 - **Sectioned activity analysis** *(when ≥ 2 days of history exist)* — an overall synthesis (summary, how your body benefits, activity balance, consistency) plus per-section insights for **cardio**, **strength** (with muscle-balance notes), **indoor** movement, and **badminton**
 - **Breathing trend analysis** — summary, what's good, improvements, cardiovascular benefit, consistency
 - **Hydration trend analysis** and **sleep trend analysis** — summary, what's good, improvements, consistency
 
 > The model also generates cardiac-safety, inflammation, medication-adherence, and hydration/sleep daily notes that are retained in each session's data; some are surfaced in their relevant trend sections rather than as standalone cards.
 
-The analyze route assembles context server-side: today's log, your medications and food rules, the enabled Good to Eat list, the past 7 days of foods per meal, and a 90-day activity + hydration/sleep rollup. To switch the model, edit `src/app/api/analyze/route.ts`:
+The analyze route assembles context server-side: today's log, your medications and food rules, and a 90-day activity + hydration/sleep rollup. To switch the model, edit `src/app/api/analyze/route.ts`:
 
 ```typescript
 model: "llama-3.3-70b-versatile",  // or "llama-3.1-8b-instant" for faster/cheaper
@@ -381,8 +357,7 @@ WellnessTrax is entirely profile-driven — no hardcoded user details exist in t
 1. Edit `data/profile.json` with the person's name, age, weight, BMI, medications, and daily targets
 2. Edit `data/food_rules.json` with their specific food rules and supplement list
 3. Edit `data/food_items.json` to seed the food search pool per meal
-4. Build their **Good to Eat** list in-app (or seed `data/food_preferences.json`)
-5. Restart the dev server — all changes take effect immediately
+4. Restart the dev server — all changes take effect immediately
 
 The AI prompt is rebuilt from these files on every analysis call, so the model instantly reflects the updated profile.
 
@@ -393,7 +368,6 @@ The AI prompt is rebuilt from these files on every analysis call, so the model i
 - [x] Activity trend charts (daily / weekly / monthly)
 - [x] Sectioned activity reports (cardio / strength + muscle map / indoor / badminton)
 - [x] Breathing, hydration, and sleep trend insights
-- [x] Per-meal next-day food suggestions
 - [x] Badminton tracking
 - [x] Blood-pressure tracking
 - [x] Weight & BMI logging

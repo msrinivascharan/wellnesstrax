@@ -311,13 +311,6 @@ export interface DayAnalysis {
   inflammation_note: string;
   top_wins: string[];
   areas_to_improve: string[];
-  /** Per-meal next-day food suggestions from the Good to Eat list, not eaten this week */
-  next_day_meal_suggestions?: {
-    breakfast: string[];
-    lunch:     string[];
-    dinner:    string[];
-    snacks:    string[];
-  };
   /** Trend-based activity analysis over the past weeks (optional, legacy single-block) */
   activity_trend_analysis?: ActivityTrendAnalysis;
   /** Sectioned activity analyses — cardio, strength, indoor, badminton + overall */
@@ -361,21 +354,6 @@ export interface DailyActivityPoint {
   sleepQuality: string;     // "" | excellent | good | fair | poor
   napHours: number;
   postLunchDip: string;     // "" | none | controllable | uncontrollable
-}
-
-// ─── Food preference lists (food_preferences.json) ───────────────────────────
-
-export interface FoodPreferenceItem {
-  name: string;
-  category: string;
-  subcategory: string;
-  frequency: string;
-  notes: string;
-  enabled: boolean;
-}
-
-export interface FoodPreferences {
-  encourage: FoodPreferenceItem[];
 }
 
 // ─── Data files (food_items.json + activities.json) ───────────────────────────

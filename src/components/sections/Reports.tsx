@@ -665,29 +665,6 @@ export default function Reports({ dayLog, profile, onAnalysisComplete, bloodWork
                     </div>
                   )}
 
-                  {/* Next-day suggestions — only after analysis */}
-                  {(() => {
-                    // No suggestions on plates with nothing logged today
-                    if (isEmpty) return null;
-                    const suggestions = analysis?.next_day_meal_suggestions?.[meal];
-                    if (!suggestions || suggestions.length === 0) return null;
-                    return (
-                      <div className="pt-1 border-t space-y-1.5"
-                        style={{ borderColor: "rgba(20,184,166,0.12)" }}>
-                        <div className="text-xs font-medium" style={{ color: "#14b8a6" }}>
-                          🌱 Try tomorrow
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {suggestions.map(item => (
-                            <span key={item} className="text-xs px-2 py-0.5 rounded-full"
-                              style={{ background: "rgba(20,184,166,0.08)", color: "#2dd4bf", border: "1px solid rgba(20,184,166,0.18)" }}>
-                              {item}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()}
                 </div>
               );
             })}

@@ -1,34 +1,10 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { loadProfile, loadFoodRules, loadFoodPreferences } from "@/lib/profile-loader";
+import { loadProfile, loadFoodRules } from "@/lib/profile-loader";
 import { buildAnalysisPrompt } from "@/lib/prompt-builder";
-import { saveSession, getSession } from "@/lib/session-store";
+import { saveSession } from "@/lib/session-store";
 import { loadActivityHistory, summariseActivityHistory, summariseWellnessHistory } from "@/lib/activity-trends";
 import type { DayLog, DayAnalysis } from "@/types";
-
-/** Collect unique food names per meal from the 7 days before `logDate`. */
-async function loadWeekFoods(logDate: string): Promise<Record<string, string[]>> {
-  const base = new Date(logDate + "T12:00:00");
-  const byMeal: Record<string, Set<string>> = {
-    breakfast: new Set(), lunch: new Set(), dinner: new Set(), snacks: new Set(),
-  };
-  await Promise.all(
-    Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(base);
-      d.setDate(base.getDate() - (i + 1));
-      return d.toISOString().split("T")[0];
-    }).map(async date => {
-      const session = await getSession(date) as { food?: Record<string, Array<{ name: string }>> } | null;
-      if (!session?.food) return;
-      for (const meal of Object.keys(byMeal)) {
-        for (const item of session.food[meal] ?? []) {
-          if (item.name) byMeal[meal].add(item.name);
-        }
-      }
-    })
-  );
-  return Object.fromEntries(Object.entries(byMeal).map(([k, v]) => [k, [...v]]));
-}
 
 function getGroqClient() {
   const key = process.env.GROQ_API_KEY;
@@ -45,23 +21,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid log data" }, { status: 400 });
     }
 
-    const [profile, rules, foodPrefs, weekFoodsByMeal, activityHistory] = await Promise.all([
+    const [profile, rules, activityHistory] = await Promise.all([
       loadProfile(),
       loadFoodRules(),
-      loadFoodPreferences(),
-      loadWeekFoods(log.date),
       loadActivityHistory(90),
     ]);
-
-    // Good to Eat options, pre-filtered to items NOT eaten in the past 7 days.
-    // Doing this server-side keeps the prompt smaller (and the suggestions identical).
-    const eatenThisWeek = new Set<string>();
-    for (const names of Object.values(weekFoodsByMeal)) {
-      for (const n of names) eatenThisWeek.add(n.toLowerCase());
-    }
-    const goodToEatNames = foodPrefs.encourage
-      .filter(i => i.enabled && !eatenThisWeek.has(i.name.toLowerCase()))
-      .map(i => i.name);
 
     // Only ask the AI for trend analysis once there's enough history to be meaningful
     const activityHistorySummary =
@@ -72,7 +36,7 @@ export async function POST(req: Request) {
         : "";
 
     const prompt = buildAnalysisPrompt(
-      profile, rules, log, goodToEatNames, activityHistorySummary, wellnessHistorySummary
+      profile, rules, log, activityHistorySummary, wellnessHistorySummary
     );
 
     const groq = getGroqClient();
@@ -105,19 +69,6 @@ export async function POST(req: Request) {
         { error: "AI returned malformed JSON. Please try again." },
         { status: 500 }
       );
-    }
-
-    // Validate next-day suggestions: keep only items that exist in the
-    // Good-to-Eat options we actually provided (drops LLM hallucinations),
-    // max 4 per meal. If the options list was empty, everything is dropped.
-    if (structured.next_day_meal_suggestions) {
-      const allowed = new Set(goodToEatNames.map(n => n.toLowerCase().trim()));
-      for (const m of ["breakfast", "lunch", "dinner", "snacks"] as const) {
-        const arr = structured.next_day_meal_suggestions[m];
-        structured.next_day_meal_suggestions[m] = Array.isArray(arr)
-          ? arr.filter(s => typeof s === "string" && allowed.has(s.toLowerCase().trim())).slice(0, 4)
-          : [];
-      }
     }
 
     const updatedLog: DayLog = {

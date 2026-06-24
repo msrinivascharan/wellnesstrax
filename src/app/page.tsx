@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import type {
   DayLog, UserProfile, FoodItemsData, ActivitiesData,
   MealType, FoodEntry, ActivityLog, MedicationEntry, SupplementEntry,
-  SleepLog, DayAnalysis, FoodPreferences, ExerciseEntry,
+  SleepLog, DayAnalysis, ExerciseEntry,
 } from "@/types";
 import { autoCategory } from "@/lib/food-utils";
 import Sidebar, { type SectionId } from "@/components/Sidebar";
@@ -126,7 +126,6 @@ export default function Home() {
   const [booting, setBooting]                 = useState(true);
   const [bootError, setBootError]             = useState("");
   const [bloodWork, setBloodWork]             = useState<import("@/types").BloodWorkData | undefined>(undefined);
-  const [foodPrefs, setFoodPrefs]             = useState<FoodPreferences>({ encourage: [] });
   const [selectedDate, setSelectedDate]       = useState<string>(todayStr);
   const [dateLoading, setDateLoading]         = useState(false);
 
@@ -243,23 +242,17 @@ export default function Home() {
     async function boot() {
       const today = format(new Date(), "yyyy-MM-dd");
       try {
-        const [profRes, foodRes, actRes, sessRes, bwRes, prefsRes] = await Promise.all([
+        const [profRes, foodRes, actRes, sessRes, bwRes] = await Promise.all([
           fetch("/api/profile"),
           fetch("/api/food-items"),
           fetch("/api/activities"),
           fetch(`/api/sessions/${today}`),
           fetch("/api/bloodwork"),
-          fetch("/api/food-preferences"),
         ]);
 
         if (bwRes.ok) {
           const bwJson = await bwRes.json() as { data: import("@/types").BloodWorkData };
           setBloodWork(bwJson.data);
-        }
-
-        if (prefsRes.ok) {
-          const { data: fp } = await prefsRes.json() as { data: FoodPreferences };
-          setFoodPrefs(fp);
         }
 
         if (!profRes.ok) throw new Error("Failed to load profile.json");
@@ -430,19 +423,6 @@ export default function Home() {
     } catch { /* non-critical */ }
   }
 
-  async function onUpdatePrefs(prefs: FoodPreferences) {
-    try {
-      const res = await fetch("/api/food-preferences", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(prefs),
-      });
-      if (res.ok) {
-        const { data } = await res.json() as { data: FoodPreferences };
-        setFoodPrefs(data);
-      }
-    } catch { /* non-critical */ }
-  }
 
   async function onMoveItem(meal: string, oldCat: string, newCat: string, name: string) {
     try {
@@ -568,7 +548,7 @@ export default function Home() {
               <Dashboard dayLog={dayLog} profile={profile} onNavigate={s => setSection(s as SectionId)} />
             )}
             {section === "food" && (
-              <FoodLog dayLog={dayLog} foodItems={foodItems} onUpdate={onFoodUpdate} onMealTimeUpdate={onMealTimeUpdate} onSaveToList={onSaveToList} onRemoveFromList={onRemoveFromList} onMoveItem={onMoveItem} foodPrefs={foodPrefs} onUpdatePrefs={onUpdatePrefs} onApplyMealPlan={onApplyMealPlan} />
+              <FoodLog dayLog={dayLog} foodItems={foodItems} onUpdate={onFoodUpdate} onMealTimeUpdate={onMealTimeUpdate} onSaveToList={onSaveToList} onRemoveFromList={onRemoveFromList} onMoveItem={onMoveItem} onApplyMealPlan={onApplyMealPlan} />
             )}
             {section === "activity" && (
               <ActivityLogSection dayLog={dayLog} activitiesData={activitiesData} onUpdate={onActivityUpdate} />

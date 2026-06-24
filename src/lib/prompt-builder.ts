@@ -4,8 +4,6 @@ export function buildAnalysisPrompt(
   profile: UserProfile,
   rules: FoodRules,
   log: DayLog,
-  /** Good to Eat items already filtered to those NOT eaten in the past 7 days */
-  goodToEatNames: string[] = [],
   /** Compact summary of activity history for trend analysis (empty = skip) */
   activityHistorySummary: string = "",
   /** Compact summary of hydration + sleep history (empty = skip) */
@@ -91,10 +89,6 @@ ${soleusSummary}
 Water: ${log.water_ml}ml / ${profile.daily_targets.water_ml}ml target
 Sleep:
 ${sleepSummary}
-${goodToEatNames.length > 0 ? `
-NEXT DAY MEAL SUGGESTIONS CONTEXT:
-Suggest ONLY from this Good to Eat list — it is already filtered to items NOT eaten in the past 7 days (${goodToEatNames.length} options):
-  ${goodToEatNames.join(", ")}` : ""}
 ${activityHistorySummary ? `
 ACTIVITY HISTORY (for activity_section_analysis + breathing_trend_analysis — analyse trends, not just today):
 ${activityHistorySummary}` : ""}
@@ -124,13 +118,7 @@ Return ONLY this JSON structure (all fields required):
   "cardiac_safety_note": "<MOST IMPORTANT — cardiac safety assessment. Patient has coronary stents. Flag any risks.>",
   "inflammation_note": "<anti vs pro-inflammatory balance of today's food choices>",
   "top_wins": ["<win 1>", "<win 2>", "<win 3>"],
-  "areas_to_improve": ["<area 1>", "<area 2>"],
-  "next_day_meal_suggestions": {
-    "breakfast": ["<3-4 items from the Good to Eat list above, cardiac-appropriate for breakfast>"],
-    "lunch":     ["<3-4 items from the Good to Eat list above, cardiac-appropriate for lunch>"],
-    "dinner":    ["<3-4 items from the Good to Eat list above, cardiac-appropriate for dinner>"],
-    "snacks":    ["<3-4 items from the Good to Eat list above, cardiac-appropriate for snacks>"]
-  },${activityHistorySummary ? `
+  "areas_to_improve": ["<area 1>", "<area 2>"],${activityHistorySummary ? `
   "activity_section_analysis": {
     "overall": {
       "summary": "<2-3 sentences synthesising the WHOLE movement picture using real numbers from ACTIVITY HISTORY: weekly frequency, total active minutes, the mix of cardio vs strength vs walks/soleus vs badminton, and the trend direction (improving / steady / declining). Cite actual figures, not generic statements.>",
